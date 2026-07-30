@@ -15,6 +15,9 @@ Prices, guideline numbers, and statutes below were verified against primary sour
 | CI | **Xcode Cloud** (§11.8) |
 | Age rating | **16+** (§18.4) |
 | Apple Developer org | BHC organization account; **D-U-N-S number to be provided** (§1) |
+| Dev bundle ID | `com.breathehealthcenter.cal.dev` — the clean `…cal` is deliberately **unregistered** until the BHC org account exists, because a bundle ID claimed on one team can't be registered on another |
+
+**Phase 0 is built** (§19). What exists: the renamed project on iOS 18 / Swift 6, five local packages, `CalKit` with the scoring, streak, digest and crisis logic under 54 tests, the app shell with Emergency reachable from every tab, and the full schema + RLS + seed + pgTAP suite. See [`README.md`](README.md) for how to run it.
 
 ---
 
@@ -136,6 +139,8 @@ Cal.xcworkspace
 - action-plan rules engine
 
 **`CalDesign`** — one `#Preview` per component per state: breath ring, 0–10 score slider, coherence dial, category sparkline. Use `@Previewable` (Xcode 16+) for stateful previews with inline `@State`. Note `#Preview` does **not** support `previewDevice` — size with `.frame` instead.
+
+**One concurrency detail worth knowing before you fight it.** Xcode 26 sets `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` on app targets, so every type in the `Cal` module is implicitly main-actor isolated. That's a good default for UI code and it's kept — but it means app-target tests need `@MainActor` on the suite, while the `Packages/*` targets (which don't carry the setting) stay nonisolated and `Sendable`. If you see "main actor-isolated property cannot be referenced from a nonisolated context" in a test, that's this, not a design problem.
 
 **State management:** `@Observable` view models, `async`/`await`, no Combine. Views own no business logic. Dependencies are protocols so previews and tests inject mocks:
 
@@ -784,7 +789,9 @@ Dr. Mia will want to change exercise wording, add motivations, post events, and 
 
 ## 14. Campus data integrations
 
-**Hand-curate the location dataset. This is not a close call** — and it's already started: **[`content/berkeley-locations-raw.json`](content/berkeley-locations-raw.json) holds all 235 official campus locations with names, slugs, and exact coordinates**, extracted from `berkeley.edu/map`. I spot-validated it: 227 fall inside the main-campus bounding box, and the 8 outliers are genuine off-campus UCB properties (the Richmond library facilities, the Botanical Garden, 1608 4th Street).
+**Hand-curate the location dataset. This is not a close call** — and it's already started: **[`content/berkeley-locations-raw.json`](content/berkeley-locations-raw.json) holds all 235 official campus locations with names, slugs, and exact coordinates**, extracted from `berkeley.edu/map`, and loaded by `CalContent`. I spot-validated it: 227 fall inside the main-campus bounding box, and the 8 outliers are genuine off-campus UCB properties (the Richmond library facilities, the Botanical Garden, 1608 4th Street).
+
+One data-quality issue found while validating: **the source page lists four libraries twice** — Doe Memorial, Moffitt, Hargrove Music, and Starr East Asian — as `<slug>` and `<slug>-2` at *identical* coordinates. Left alone that draws two pins on one building, so `CampusPlaceSeed` collapses exact (name, lat, lng) matches at load and keeps the un-suffixed slug; 235 raw becomes 231 distinct. Only exact matches collapse, so two genuinely different rooms sharing a name still both survive, and a test fails if a re-scrape introduces a *new* duplicate.
 
 Buildings essentially never move, so a static bundled JSON is the correct architecture, not a runtime dependency. Treat the extraction as one-time seeding plus a quarterly re-run.
 
@@ -845,26 +852,33 @@ Three Supabase projects: `local` (CLI), `staging`, `prod`. Never point a debug b
 
 ## 17. Repo layout
 
+There is deliberately **no separate `.xcworkspace`**: the five packages are wired
+into the project as `XCLocalSwiftPackageReference`s, so they already open and edit
+live inside `Cal.xcodeproj`. A workspace would be a second thing to keep in sync
+for no gain. `✓` marks what Phase 0 built.
+
 ```
 CalAI/
-├── ARCHITECTURE.md              ← this file
-├── Cal.xcworkspace
+├── ARCHITECTURE.md              ← this file                              ✓
+├── README.md                    how to run everything                    ✓
+├── Cal.xcodeproj                packages wired as local references       ✓
 ├── Cal/                         app target
-│   ├── App/                     entry, DI container, deep links
-│   ├── Features/
-│   │   ├── Home/  CheckIn/  Navigate/  Planner/  Chat/
-│   │   ├── Journal/  Exercises/  Analytics/  Profile/
-│   │   ├── Emergency/           fully offline
-│   │   └── Paywall/
+│   ├── CalApp.swift             entry + AppContainer (DI, launch args)   ✓
+│   ├── RootView.swift           the five-tab shell                       ✓
+│   ├── EmergencyView.swift      offline, one tap from every tab          ✓
+│   ├── Features/                Home/ CheckIn/ Navigate/ … (Phases 1–5)
 │   └── Resources/               Assets, .storekit, PrivacyInfo.xcprivacy
 ├── Packages/
-│   ├── CalKit/                  pure logic + fixtures
-│   ├── CalDesign/  CalData/  CalAI/  CalContent/
-├── CalTests/  CalUITests/
+│   ├── CalKit/                  pure logic + fixtures, 54 tests          ✓
+│   ├── CalDesign/               ScoreScale + tokens                      ✓
+│   ├── CalData/                 CoherenceStoring + in-memory store       ✓
+│   ├── CalAI/                   CoachClient contract + MockCoachClient   ✓
+│   └── CalContent/              bundled campus seed (231 places)         ✓
+├── CalTests/  CalUITests/       app wiring + 4 UI flows                  ✓
 ├── supabase/
-│   ├── migrations/
-│   ├── seed.sql                 deterministic test user, 60 days of check-ins
-│   ├── tests/                   pgTAP: RLS, security_invoker, cascade
+│   ├── migrations/              schema, view, RLS                        ✓
+│   ├── seed.sql                 test user, 60 days of check-ins          ✓
+│   ├── tests/                   pgTAP: 9 catalog invariants              ✓
 │   └── functions/
 │       ├── coach/               streaming chat proxy
 │       ├── navigate/            retrieval over campus data
@@ -1022,9 +1036,10 @@ First three are blocking.
 6. **The 10 regulation exercises** — the spec describes each in a phrase ("Cal guides a grounding exercise"). Each needs authored copy.
 7. **Cal's voice.** Three or four transcripts of how she actually coaches would improve the system prompt more than any description.
 8. **Crisis protocol.** Exactly what Cal says and does at each severity, and which Berkeley resources in what order. She should own this copy — and SB 243 requires publishing the protocol.
-9. **Free/premium boundary** — confirm §1 matches her intent, particularly whether free users get any coach chat.
-10. **Sacred Care Fund** — how it's represented in-app, and what copy she wants. (§12)
-11. **Launch timing.** Fall semester start is the obvious moment for a Berkeley student app, and a real deadline worth scoping to.
+9. **The two specs disagree on the regulation threshold, and I need to know which is intended.** Free Cal §1 routes the `0–4` band into guided breathing, so a **5** gets "let's stay aware" and no exercise. Cal+ says "if a score is **5 or below**, Cal immediately guides the user through a brief regulation exercise." So a 5 regulates on premium but not on free. Both are implemented faithfully rather than averaged (`RegulationPolicy` in `CalKit`, with a test pinning the divergence) — but if it's an oversight rather than a design choice, it's a one-line change.
+10. **Free/premium boundary** — confirm §1 matches her intent, particularly whether free users get any coach chat.
+11. **Sacred Care Fund** — how it's represented in-app, and what copy she wants. (§12)
+12. **Launch timing.** Fall semester start is the obvious moment for a Berkeley student app, and a real deadline worth scoping to.
 
 ---
 

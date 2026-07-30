@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Breathwork keeps playing while the screen locks, so the user can put the
+	  phone down and follow the audio (ARCHITECTURE.md §2). Needs the plist key
+	  only — no entitlement, no capability.
+
+	  "remote-notification" was the template default and is not used: the morning
+	  check-in reminder is a local notification.
+	-->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
+</dict>
+</plist>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Deliberately empty for now.
+
+	  The Xcode template shipped CloudKit + aps-environment. Neither applies:
+	  Supabase is the backend (ARCHITECTURE.md §2), and the morning check-in
+	  reminder is a LOCAL notification, which needs no entitlement.
+
+	  Add aps-environment only when remote push is actually built — an unused
+	  push entitlement fails signing against an App ID lacking the capability.
+	-->
+</dict>
+</plist>

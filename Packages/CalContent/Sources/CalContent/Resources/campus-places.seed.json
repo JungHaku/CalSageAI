@@ -1,0 +1,1412 @@
+[
+ {
+  "slug": "1608-4th-street",
+  "name": "1608 4th Street - University of California, Berkeley",
+  "lat": 37.873215,
+  "lng": -122.302267
+ },
+ {
+  "slug": "1925-walnut-st",
+  "name": "1925 Walnut St - University of California, Berkeley",
+  "lat": 37.873014,
+  "lng": -122.266787
+ },
+ {
+  "slug": "2108-allston-way",
+  "name": "2108 Allston Way - University of California, Berkeley",
+  "lat": 37.869401,
+  "lng": -122.267342
+ },
+ {
+  "slug": "2224-piedmont-ave",
+  "name": "2224 Piedmont Ave. - University of California, Berkeley",
+  "lat": 37.870983,
+  "lng": -122.253048
+ },
+ {
+  "slug": "2232-piedmont-ave",
+  "name": "2232 Piedmont Ave. - University of California, Berkeley",
+  "lat": 37.870805,
+  "lng": -122.253027
+ },
+ {
+  "slug": "2240-piedmont-ave",
+  "name": "2240 Piedmont Ave. - University of California, Berkeley",
+  "lat": 37.870297,
+  "lng": -122.252813
+ },
+ {
+  "slug": "2334-bowditch",
+  "name": "2334 Bowditch - University of California, Berkeley",
+  "lat": 37.867743,
+  "lng": -122.256863
+ },
+ {
+  "slug": "2427-dwight-way",
+  "name": "2427 Dwight Way - University of California, Berkeley",
+  "lat": 37.86516,
+  "lng": -122.259503
+ },
+ {
+  "slug": "2440-bancroft-way",
+  "name": "2440 Bancroft Way - University of California, Berkeley",
+  "lat": 37.868283,
+  "lng": -122.260674
+ },
+ {
+  "slug": "2451-ridge-road",
+  "name": "2451 Ridge Road - University of California, Berkeley",
+  "lat": 37.876213,
+  "lng": -122.261071
+ },
+ {
+  "slug": "2481-hearst-ave",
+  "name": "2481 Hearst Ave. - University of California, Berkeley",
+  "lat": 37.875161,
+  "lng": -122.260488
+ },
+ {
+  "slug": "2483-hearst-ave",
+  "name": "2483 Hearst Ave. - University of California, Berkeley",
+  "lat": 37.875127,
+  "lng": -122.260593
+ },
+ {
+  "slug": "2515-channing-way",
+  "name": "2515 Channing Way - University of California, Berkeley",
+  "lat": 37.867215,
+  "lng": -122.25814
+ },
+ {
+  "slug": "2521-channing-way",
+  "name": "2521 Channing Way - University of California, Berkeley",
+  "lat": 37.867318,
+  "lng": -122.257882
+ },
+ {
+  "slug": "2535-channing-way",
+  "name": "2535 Channing Way - University of California, Berkeley",
+  "lat": 37.867449,
+  "lng": -122.257287
+ },
+ {
+  "slug": "2850-telegraph-ave",
+  "name": "2850 Telegraph Ave. - University of California, Berkeley",
+  "lat": 37.85832949010434,
+  "lng": -122.25982567428731
+ },
+ {
+  "slug": "academic-innovation-studio",
+  "name": "Academic Innovation Studio - University of California, Berkeley",
+  "lat": 37.87058,
+  "lng": -122.26041
+ },
+ {
+  "slug": "alumni-house",
+  "name": "Alumni House - University of California, Berkeley",
+  "lat": 37.86968,
+  "lng": -122.26119
+ },
+ {
+  "slug": "anna-head-alumnae-hall",
+  "name": "Anna Head Alumnae Hall - University of California, Berkeley",
+  "lat": 37.86637,
+  "lng": -122.25744
+ },
+ {
+  "slug": "anthony-hall",
+  "name": "Anthony Hall - University of California, Berkeley",
+  "lat": 37.87069,
+  "lng": -122.25819
+ },
+ {
+  "slug": "anthropology-and-art-practice-building",
+  "name": "Anthropology and Art Practice building - University of California, Berkeley",
+  "lat": 37.86988,
+  "lng": -122.2552
+ },
+ {
+  "slug": "anthropology-library",
+  "name": "Anthropology Library - University of California, Berkeley",
+  "lat": 37.86988,
+  "lng": -122.2552
+ },
+ {
+  "slug": "archaeological-research-facility",
+  "name": "Archaeological Research Facility - University of California, Berkeley",
+  "lat": 37.870221,
+  "lng": -122.253821
+ },
+ {
+  "slug": "architects-engineers-ae",
+  "name": "Architects &amp; Engineers (A&amp;E) - University of California, Berkeley",
+  "lat": 37.870162,
+  "lng": -122.258756
+ },
+ {
+  "slug": "art-history-classics-library",
+  "name": "Art History/Classics Library - University of California, Berkeley",
+  "lat": 37.87244,
+  "lng": -122.25956
+ },
+ {
+  "slug": "bancroft-dance-studio-2401-bancroft-way",
+  "name": "Bancroft Dance Studio (2401 Bancroft Way) - University of California, Berkeley",
+  "lat": 37.868662,
+  "lng": -122.261202
+ },
+ {
+  "slug": "bancroft-library",
+  "name": "Bancroft Library - University of California, Berkeley",
+  "lat": 37.8723,
+  "lng": -122.2587
+ },
+ {
+  "slug": "bancroft-library-university-archives",
+  "name": "Bancroft Library/University Archives - University of California, Berkeley",
+  "lat": 37.8723,
+  "lng": -122.2587
+ },
+ {
+  "slug": "bancroft-parking-structure",
+  "name": "Bancroft Parking Structure - University of California, Berkeley",
+  "lat": 37.869607,
+  "lng": -122.25582
+ },
+ {
+  "slug": "banway-building-2111-bancroft-way",
+  "name": "Banway Building (2111 Bancroft Way) - University of California, Berkeley",
+  "lat": 37.86788,
+  "lng": -122.26687
+ },
+ {
+  "slug": "barbara-and-gerson-bakar-gateway",
+  "name": "Barbara and Gerson Bakar Gateway - University of California, Berkeley",
+  "lat": 37.8740904,
+  "lng": -122.2639462
+ },
+ {
+  "slug": "barker-hall",
+  "name": "Barker Hall - University of California, Berkeley",
+  "lat": 37.87395,
+  "lng": -122.26549
+ },
+ {
+  "slug": "bauer-wurster-hall",
+  "name": "Bauer Wurster Hall - University of California, Berkeley",
+  "lat": 37.8705,
+  "lng": -122.25488
+ },
+ {
+  "slug": "berkeley-art-museum-and-pacific-film-archive",
+  "name": "Berkeley Art Museum and Pacific Film Archive - University of California, Berkeley",
+  "lat": 37.870942,
+  "lng": -122.266221
+ },
+ {
+  "slug": "berkeley-law-library",
+  "name": "Berkeley Law Library - University of California, Berkeley",
+  "lat": 37.86992,
+  "lng": -122.25341
+ },
+ {
+  "slug": "berkeley-way-west",
+  "name": "Berkeley Way West - University of California, Berkeley",
+  "lat": 37.873592,
+  "lng": -122.267912
+ },
+ {
+  "slug": "bioscience-natural-resources-public-health-library",
+  "name": "Bioscience, Natural Resources &amp; Public Health Library - University of California, Berkeley",
+  "lat": 37.87148,
+  "lng": -122.26211
+ },
+ {
+  "slug": "birge-hall",
+  "name": "Birge Hall - University of California, Berkeley",
+  "lat": 37.87219,
+  "lng": -122.25724
+ },
+ {
+  "slug": "blackwell-hall",
+  "name": "Blackwell Hall - University of California, Berkeley",
+  "lat": 37.868172,
+  "lng": -122.261142
+ },
+ {
+  "slug": "blum-hall",
+  "name": "Blum Hall - University of California, Berkeley",
+  "lat": 37.8748,
+  "lng": -122.25914
+ },
+ {
+  "slug": "botanical-garden",
+  "name": "Botanical Garden - University of California, Berkeley",
+  "lat": 37.87405,
+  "lng": -122.23741
+ },
+ {
+  "slug": "bowles-hall",
+  "name": "Bowles Hall - University of California, Berkeley",
+  "lat": 37.873357,
+  "lng": -122.253168
+ },
+ {
+  "slug": "business-library",
+  "name": "Business Library - University of California, Berkeley",
+  "lat": 37.87169,
+  "lng": -122.25384
+ },
+ {
+  "slug": "cal-1-card-office",
+  "name": "Cal 1 Card Office - University of California, Berkeley",
+  "lat": 37.8696,
+  "lng": -122.25878
+ },
+ {
+  "slug": "california-hall",
+  "name": "California Hall - University of California, Berkeley",
+  "lat": 37.87189,
+  "lng": -122.26038
+ },
+ {
+  "slug": "california-memorial-stadium",
+  "name": "California Memorial Stadium - University of California, Berkeley",
+  "lat": 37.87132,
+  "lng": -122.2506
+ },
+ {
+  "slug": "calvin-laboratory",
+  "name": "Calvin Laboratory - University of California, Berkeley",
+  "lat": 37.87099,
+  "lng": -122.25393
+ },
+ {
+  "slug": "campanile-sather-tower",
+  "name": "Campanile (Sather Tower) - University of California, Berkeley",
+  "lat": 37.872332,
+  "lng": -122.257964
+ },
+ {
+  "slug": "campbell-hall",
+  "name": "Campbell Hall - University of California, Berkeley",
+  "lat": 37.87298,
+  "lng": -122.25705
+ },
+ {
+  "slug": "career-counseling-library",
+  "name": "Career Counseling Library - University of California, Berkeley",
+  "lat": 37.867879,
+  "lng": -122.26455
+ },
+ {
+  "slug": "chancellors-esplanade",
+  "name": "Chancellor&#039;s Esplanade - University of California, Berkeley",
+  "lat": 37.874066,
+  "lng": -122.262519
+ },
+ {
+  "slug": "cheit-hall",
+  "name": "Cheit Hall - University of California, Berkeley",
+  "lat": 37.87169,
+  "lng": -122.25384
+ },
+ {
+  "slug": "chemistry-and-chemical-engineering-library",
+  "name": "Chemistry and Chemical Engineering Library - University of California, Berkeley",
+  "lat": 37.872895,
+  "lng": -122.255532
+ },
+ {
+  "slug": "chou-hall",
+  "name": "Chou Hall - University of California, Berkeley",
+  "lat": 37.872381,
+  "lng": -122.254107
+ },
+ {
+  "slug": "clark-kerr-campus",
+  "name": "Clark Kerr Campus - University of California, Berkeley",
+  "lat": 37.86442,
+  "lng": -122.2492
+ },
+ {
+  "slug": "class-of-1914-fountain",
+  "name": "Class of 1914 Fountain - University of California, Berkeley",
+  "lat": 37.869492,
+  "lng": -122.254642
+ },
+ {
+  "slug": "class-of-54-gate",
+  "name": "Class of &#039;54 Gate - University of California, Berkeley",
+  "lat": 37.87476,
+  "lng": -122.26017
+ },
+ {
+  "slug": "cleary-hall",
+  "name": "Cleary Hall - University of California, Berkeley",
+  "lat": 37.866692,
+  "lng": -122.25982
+ },
+ {
+  "slug": "cnmat-1750-arch-st",
+  "name": "CNMAT (1750 Arch St) - University of California, Berkeley",
+  "lat": 37.876666,
+  "lng": -122.264499
+ },
+ {
+  "slug": "cory-hall",
+  "name": "Cory Hall - University of California, Berkeley",
+  "lat": 37.87505,
+  "lng": -122.25752
+ },
+ {
+  "slug": "creekside-center",
+  "name": "Creekside Center - University of California, Berkeley",
+  "lat": 37.87035,
+  "lng": -122.26123
+ },
+ {
+  "slug": "crescent-springer-gateway",
+  "name": "Crescent / Springer Gateway - University of California, Berkeley",
+  "lat": 37.87185,
+  "lng": -122.26521
+ },
+ {
+  "slug": "davis-hall",
+  "name": "Davis Hall - University of California, Berkeley",
+  "lat": 37.87452,
+  "lng": -122.25829
+ },
+ {
+  "slug": "demography",
+  "name": "Demography - University of California, Berkeley",
+  "lat": 37.870805,
+  "lng": -122.253027
+ },
+ {
+  "slug": "doe-memorial-library",
+  "name": "Doe Memorial Library - University of California, Berkeley",
+  "lat": 37.87244,
+  "lng": -122.25956
+ },
+ {
+  "slug": "doe-memorial-library-2",
+  "name": "Doe Memorial Library - University of California, Berkeley",
+  "lat": 37.87244,
+  "lng": -122.25956
+ },
+ {
+  "slug": "donner-laboratory",
+  "name": "Donner Laboratory - University of California, Berkeley",
+  "lat": 37.87463,
+  "lng": -122.25649
+ },
+ {
+  "slug": "durant-hall",
+  "name": "Durant Hall - University of California, Berkeley",
+  "lat": 37.87126,
+  "lng": -122.26013
+ },
+ {
+  "slug": "durham-studio-theater",
+  "name": "Durham Studio Theater - University of California, Berkeley",
+  "lat": 37.870515,
+  "lng": -122.260722
+ },
+ {
+  "slug": "dwinelle-hall",
+  "name": "Dwinelle Hall - University of California, Berkeley",
+  "lat": 37.87058,
+  "lng": -122.26041
+ },
+ {
+  "slug": "earth-sciences-and-map-library",
+  "name": "Earth Sciences and Map Library - University of California, Berkeley",
+  "lat": 37.873996,
+  "lng": -122.25966
+ },
+ {
+  "slug": "earthquake-engineering-library",
+  "name": "Earthquake Engineering Library - University of California, Berkeley",
+  "lat": 37.918328,
+  "lng": -122.332485
+ },
+ {
+  "slug": "east-asian-studies-institute-of",
+  "name": "East Asian Studies, Institute of - University of California, Berkeley",
+  "lat": 37.8677138,
+  "lng": -122.2670115
+ },
+ {
+  "slug": "east-gate",
+  "name": "East Gate - University of California, Berkeley",
+  "lat": 37.8738,
+  "lng": -122.25544
+ },
+ {
+  "slug": "edwards-track-stadium-goldman-field",
+  "name": "Edwards Track Stadium / Goldman Field - University of California, Berkeley",
+  "lat": 37.869082,
+  "lng": -122.264866
+ },
+ {
+  "slug": "ellsworth-parking-structure",
+  "name": "Ellsworth Parking Structure - University of California, Berkeley",
+  "lat": 37.865971,
+  "lng": -122.262501
+ },
+ {
+  "slug": "engineering-library",
+  "name": "Engineering Library - University of California, Berkeley",
+  "lat": 37.87425,
+  "lng": -122.25807
+ },
+ {
+  "slug": "environmental-design-library",
+  "name": "Environmental Design Library - University of California, Berkeley",
+  "lat": 37.8705,
+  "lng": -122.25488
+ },
+ {
+  "slug": "eshleman-hall",
+  "name": "Eshleman Hall - University of California, Berkeley",
+  "lat": 37.868761,
+  "lng": -122.260471
+ },
+ {
+  "slug": "etcheverry-hall",
+  "name": "Etcheverry Hall - University of California, Berkeley",
+  "lat": 37.87587,
+  "lng": -122.2593
+ },
+ {
+  "slug": "ethnic-studies-library",
+  "name": "Ethnic Studies Library - University of California, Berkeley",
+  "lat": 37.87124,
+  "lng": -122.25761
+ },
+ {
+  "slug": "eucalyptus-grove",
+  "name": "Eucalyptus Grove - University of California, Berkeley",
+  "lat": 37.87122,
+  "lng": -122.26432
+ },
+ {
+  "slug": "evans-diamond",
+  "name": "Evans Diamond - University of California, Berkeley",
+  "lat": 37.86949,
+  "lng": -122.26334
+ },
+ {
+  "slug": "evans-hall",
+  "name": "Evans Hall - University of California, Berkeley",
+  "lat": 37.87363,
+  "lng": -122.25783
+ },
+ {
+  "slug": "extension",
+  "name": "Extension - University of California, Berkeley",
+  "lat": 37.87199,
+  "lng": -122.27127
+ },
+ {
+  "slug": "faculty-club",
+  "name": "Faculty Club - University of California, Berkeley",
+  "lat": 37.871783,
+  "lng": -122.255862
+ },
+ {
+  "slug": "faculty-glade",
+  "name": "Faculty Glade - University of California, Berkeley",
+  "lat": 37.87134,
+  "lng": -122.25652
+ },
+ {
+  "slug": "foothill-residence-halls",
+  "name": "Foothill Residence Halls - University of California, Berkeley",
+  "lat": 37.875429,
+  "lng": -122.255763
+ },
+ {
+  "slug": "founders-rock",
+  "name": "Founders&#039; Rock - University of California, Berkeley",
+  "lat": 37.87536,
+  "lng": -122.257001
+ },
+ {
+  "slug": "fox-cottage-2350-bowditch",
+  "name": "Fox Cottage (2350 Bowditch) - University of California, Berkeley",
+  "lat": 37.867561,
+  "lng": -122.256787
+ },
+ {
+  "slug": "free-speech-movement-cafe",
+  "name": "Free Speech Movement Caf\u00e9 - University of California, Berkeley",
+  "lat": 37.87257,
+  "lng": -122.26081
+ },
+ {
+  "slug": "genetics-and-plant-biology",
+  "name": "Genetics and Plant Biology - University of California, Berkeley",
+  "lat": 37.873513,
+  "lng": -122.264751
+ },
+ {
+  "slug": "giannini-hall",
+  "name": "Giannini Hall - University of California, Berkeley",
+  "lat": 37.87357,
+  "lng": -122.26234
+ },
+ {
+  "slug": "giauque-hall",
+  "name": "Giauque Hall - University of California, Berkeley",
+  "lat": 37.872446,
+  "lng": -122.25587
+ },
+ {
+  "slug": "gilman-hall",
+  "name": "Gilman Hall - University of California, Berkeley",
+  "lat": 37.87265,
+  "lng": -122.25629
+ },
+ {
+  "slug": "golden-bear-center-1995-university-ave",
+  "name": "Golden Bear Center (1995 University Ave) - University of California, Berkeley",
+  "lat": 37.87199,
+  "lng": -122.27127
+ },
+ {
+  "slug": "goldman-school",
+  "name": "Goldman School - University of California, Berkeley",
+  "lat": 37.87559,
+  "lng": -122.25804
+ },
+ {
+  "slug": "graduate-services",
+  "name": "Graduate Services - University of California, Berkeley",
+  "lat": 37.87244,
+  "lng": -122.25956
+ },
+ {
+  "slug": "graduate-theological-union",
+  "name": "Graduate Theological Union - University of California, Berkeley",
+  "lat": 37.875544,
+  "lng": -122.261843
+ },
+ {
+  "slug": "graduate-theological-union-library",
+  "name": "Graduate Theological Union Library - University of California, Berkeley",
+  "lat": 37.875544,
+  "lng": -122.261843
+ },
+ {
+  "slug": "grimes-engineering-center",
+  "name": "Grimes Engineering Center - University of California, Berkeley",
+  "lat": 37.87425,
+  "lng": -122.25807
+ },
+ {
+  "slug": "haas-clubhouse",
+  "name": "Haas Clubhouse - University of California, Berkeley",
+  "lat": 37.872505,
+  "lng": -122.246043
+ },
+ {
+  "slug": "haas-pavilion",
+  "name": "Haas Pavilion - University of California, Berkeley",
+  "lat": 37.8694,
+  "lng": -122.26222
+ },
+ {
+  "slug": "haas-school-of-business",
+  "name": "Haas School of Business - University of California, Berkeley",
+  "lat": 37.87169,
+  "lng": -122.25384
+ },
+ {
+  "slug": "hargrove-music-library",
+  "name": "Hargrove Music Library - University of California, Berkeley",
+  "lat": 37.87044,
+  "lng": -122.2561
+ },
+ {
+  "slug": "hargrove-music-library-2",
+  "name": "Hargrove Music Library - University of California, Berkeley",
+  "lat": 37.87044,
+  "lng": -122.2561
+ },
+ {
+  "slug": "haste-street-child-development-center",
+  "name": "Haste Street Child Development Center - University of California, Berkeley",
+  "lat": 37.865899,
+  "lng": -122.261513
+ },
+ {
+  "slug": "haviland-hall",
+  "name": "Haviland Hall - University of California, Berkeley",
+  "lat": 37.87374,
+  "lng": -122.26105
+ },
+ {
+  "slug": "hearst-field-annex",
+  "name": "Hearst Field Annex - University of California, Berkeley",
+  "lat": 37.86947,
+  "lng": -122.25817
+ },
+ {
+  "slug": "hearst-greek-theatre",
+  "name": "Hearst Greek Theatre - University of California, Berkeley",
+  "lat": 37.87355,
+  "lng": -122.25432
+ },
+ {
+  "slug": "hearst-memorial-gymnasium",
+  "name": "Hearst Memorial Gymnasium - University of California, Berkeley",
+  "lat": 37.86956,
+  "lng": -122.25687
+ },
+ {
+  "slug": "hearst-memorial-mining-building",
+  "name": "Hearst Memorial Mining Building - University of California, Berkeley",
+  "lat": 37.87446,
+  "lng": -122.25727
+ },
+ {
+  "slug": "hearst-mining-circle",
+  "name": "Hearst Mining Circle - University of California, Berkeley",
+  "lat": 37.87368,
+  "lng": -122.25702
+ },
+ {
+  "slug": "hellman-tennis-center",
+  "name": "Hellman Tennis Center - University of California, Berkeley",
+  "lat": 37.86995,
+  "lng": -122.26514
+ },
+ {
+  "slug": "henry-h-wheeler-brain-imaging-center",
+  "name": "Henry H. Wheeler, Jr. Brain Imaging Center (BIC) - University of California, Berkeley",
+  "lat": 37.8726214,
+  "lng": -122.26528
+ },
+ {
+  "slug": "hertz-hall",
+  "name": "Hertz Hall - University of California, Berkeley",
+  "lat": 37.8711,
+  "lng": -122.25567
+ },
+ {
+  "slug": "hesse-hall",
+  "name": "Hesse Hall - University of California, Berkeley",
+  "lat": 37.874167,
+  "lng": -122.259247
+ },
+ {
+  "slug": "hildebrand-hall",
+  "name": "Hildebrand Hall - University of California, Berkeley",
+  "lat": 37.872895,
+  "lng": -122.255532
+ },
+ {
+  "slug": "hilgard-hall",
+  "name": "Hilgard Hall - University of California, Berkeley",
+  "lat": 37.873164,
+  "lng": -122.263405
+ },
+ {
+  "slug": "howison-philosophy-library",
+  "name": "Howison Philosophy Library - University of California, Berkeley",
+  "lat": 37.87099,
+  "lng": -122.25799
+ },
+ {
+  "slug": "ida-louise-jackson-graduate-house",
+  "name": "Ida Louise Jackson Graduate House - University of California, Berkeley",
+  "lat": 37.86809,
+  "lng": -122.254
+ },
+ {
+  "slug": "innovative-genomics-institute-building",
+  "name": "Innovative Genomics Institute Building - University of California, Berkeley",
+  "lat": 37.873911,
+  "lng": -122.266478
+ },
+ {
+  "slug": "insectary-greenhouse",
+  "name": "Insectary Greenhouse - University of California, Berkeley",
+  "lat": 37.874606,
+  "lng": -122.26739
+ },
+ {
+  "slug": "institute-of-governmental-studies-library",
+  "name": "Institute of Governmental Studies Library - University of California, Berkeley",
+  "lat": 37.87099,
+  "lng": -122.25799
+ },
+ {
+  "slug": "institute-of-transportation-studies-library",
+  "name": "Institute of Transportation Studies Library - University of California, Berkeley",
+  "lat": 37.873829,
+  "lng": -122.259051
+ },
+ {
+  "slug": "international-house",
+  "name": "International House - University of California, Berkeley",
+  "lat": 37.86975,
+  "lng": -122.25145
+ },
+ {
+  "slug": "investigative-reporting-program",
+  "name": "Investigative Reporting Program - University of California, Berkeley",
+  "lat": 37.875161,
+  "lng": -122.260488
+ },
+ {
+  "slug": "jacobs-hall",
+  "name": "Jacobs Hall - University of California, Berkeley",
+  "lat": 37.876039,
+  "lng": -122.258809
+ },
+ {
+  "slug": "jones-child-study-center",
+  "name": "Jones Child Study Center - University of California, Berkeley",
+  "lat": 37.86572,
+  "lng": -122.2641
+ },
+ {
+  "slug": "julia-morgan-hall",
+  "name": "Julia Morgan Hall - University of California, Berkeley",
+  "lat": 37.87476,
+  "lng": -122.238312
+ },
+ {
+  "slug": "koret-visitor-center",
+  "name": "Koret Visitor Center - University of California, Berkeley",
+  "lat": 37.871044,
+  "lng": -122.251929
+ },
+ {
+  "slug": "koshland-hall",
+  "name": "Koshland Hall - University of California, Berkeley",
+  "lat": 37.87394,
+  "lng": -122.26487
+ },
+ {
+  "slug": "latimer-hall",
+  "name": "Latimer Hall - University of California, Berkeley",
+  "lat": 37.873215,
+  "lng": -122.255835
+ },
+ {
+  "slug": "law-building",
+  "name": "Law Building - University of California, Berkeley",
+  "lat": 37.86992,
+  "lng": -122.25341
+ },
+ {
+  "slug": "lawrence-berkeley-national-laboratory",
+  "name": "Lawrence Berkeley National Laboratory - University of California, Berkeley",
+  "lat": 37.87614,
+  "lng": -122.25082
+ },
+ {
+  "slug": "lawrence-hall-of-science",
+  "name": "Lawrence Hall of Science - University of California, Berkeley",
+  "lat": 37.87942,
+  "lng": -122.24662
+ },
+ {
+  "slug": "legends-aquatic-center",
+  "name": "Legends Aquatic Center - University of California, Berkeley",
+  "lat": 37.8671309,
+  "lng": -122.2654439
+ },
+ {
+  "slug": "levine-fricke-softball-field",
+  "name": "Levine-Fricke Softball Field - University of California, Berkeley",
+  "lat": 37.871711,
+  "lng": -122.247478
+ },
+ {
+  "slug": "lewis-hall",
+  "name": "Lewis Hall - University of California, Berkeley",
+  "lat": 37.873009,
+  "lng": -122.254878
+ },
+ {
+  "slug": "li-ka-shing-center",
+  "name": "Li Ka Shing Center - University of California, Berkeley",
+  "lat": 37.873,
+  "lng": -122.2654
+ },
+ {
+  "slug": "lower-hearst-parking-structure",
+  "name": "Lower Hearst Parking Structure - University of California, Berkeley",
+  "lat": 37.8753,
+  "lng": -122.26165
+ },
+ {
+  "slug": "lower-sproul-plaza",
+  "name": "Lower Sproul Plaza - University of California, Berkeley",
+  "lat": 37.869276,
+  "lng": -122.260285
+ },
+ {
+  "slug": "ludwigs-fountain",
+  "name": "Ludwig&#039;s Fountain - University of California, Berkeley",
+  "lat": 37.86957,
+  "lng": -122.25948
+ },
+ {
+  "slug": "magnes-collection-of-jewish-art-and-life",
+  "name": "Magnes Collection of Jewish Art and Life - University of California, Berkeley",
+  "lat": 37.8698,
+  "lng": -122.26686
+ },
+ {
+  "slug": "manville-hall",
+  "name": "Manville Hall - University of California, Berkeley",
+  "lat": 37.865639,
+  "lng": -122.267039
+ },
+ {
+  "slug": "martin-luther-king-jr-student-union",
+  "name": "Martin Luther King, Jr. Student Union - University of California, Berkeley",
+  "lat": 37.869137,
+  "lng": -122.259614
+ },
+ {
+  "slug": "martinez-commons",
+  "name": "Martinez Commons - University of California, Berkeley",
+  "lat": 37.866744,
+  "lng": -122.257665
+ },
+ {
+  "slug": "mathematical-sciences-research-institute-msri",
+  "name": "Mathematical Sciences Research Institute (MSRI) - University of California, Berkeley",
+  "lat": 37.87981,
+  "lng": -122.24434
+ },
+ {
+  "slug": "mathematics-statistics-library",
+  "name": "Mathematics Statistics Library - University of California, Berkeley",
+  "lat": 37.87363,
+  "lng": -122.25783
+ },
+ {
+  "slug": "maxwell-family-field-and-stadium-garage",
+  "name": "Maxwell Family Field and Stadium Garage - University of California, Berkeley",
+  "lat": 37.8723,
+  "lng": -122.25272
+ },
+ {
+  "slug": "mccone-hall",
+  "name": "McCone Hall - University of California, Berkeley",
+  "lat": 37.873996,
+  "lng": -122.25966
+ },
+ {
+  "slug": "mclaughlin-hall",
+  "name": "McLaughlin Hall - University of California, Berkeley",
+  "lat": 37.873829,
+  "lng": -122.259051
+ },
+ {
+  "slug": "media-resources-center",
+  "name": "Media Resources Center - University of California, Berkeley",
+  "lat": 37.87244,
+  "lng": -122.25956
+ },
+ {
+  "slug": "memorial-glade",
+  "name": "Memorial Glade - University of California, Berkeley",
+  "lat": 37.87308,
+  "lng": -122.25941
+ },
+ {
+  "slug": "memorial-pool",
+  "name": "Memorial Pool - University of California, Berkeley",
+  "lat": 37.87306,
+  "lng": -122.26022
+ },
+ {
+  "slug": "minor-hall",
+  "name": "Minor Hall - University of California, Berkeley",
+  "lat": 37.871525,
+  "lng": -122.254711
+ },
+ {
+  "slug": "minor-hall-addition",
+  "name": "Minor Hall Addition - University of California, Berkeley",
+  "lat": 37.871354,
+  "lng": -122.255141
+ },
+ {
+  "slug": "moffitt-library",
+  "name": "Moffitt Library - University of California, Berkeley",
+  "lat": 37.87255,
+  "lng": -122.26081
+ },
+ {
+  "slug": "moffitt-library-2",
+  "name": "Moffitt Library - University of California, Berkeley",
+  "lat": 37.87255,
+  "lng": -122.26081
+ },
+ {
+  "slug": "morgan-hall",
+  "name": "Morgan Hall - University of California, Berkeley",
+  "lat": 37.873164,
+  "lng": -122.264198
+ },
+ {
+  "slug": "morrison-hall",
+  "name": "Morrison Hall - University of California, Berkeley",
+  "lat": 37.87087,
+  "lng": -122.25644
+ },
+ {
+  "slug": "morrison-library",
+  "name": "Morrison Library - University of California, Berkeley",
+  "lat": 37.87244,
+  "lng": -122.25956
+ },
+ {
+  "slug": "mulford-hall",
+  "name": "Mulford Hall - University of California, Berkeley",
+  "lat": 37.87264,
+  "lng": -122.26449
+ },
+ {
+  "slug": "natural-resources-laboratory",
+  "name": "Natural Resources Laboratory - University of California, Berkeley",
+  "lat": 37.874892,
+  "lng": -122.266862
+ },
+ {
+  "slug": "newspapers-microform-library",
+  "name": "Newspapers &amp; Microform Library - University of California, Berkeley",
+  "lat": 37.87244,
+  "lng": -122.25956
+ },
+ {
+  "slug": "north-field",
+  "name": "Hearst North Field - University of California, Berkeley",
+  "lat": 37.87023,
+  "lng": -122.25667
+ },
+ {
+  "slug": "north-gate-hall",
+  "name": "North Gate Hall - University of California, Berkeley",
+  "lat": 37.874974,
+  "lng": -122.259826
+ },
+ {
+  "slug": "northern-regional-library",
+  "name": "Systemwide Shared Library Facility - North - University of California, Berkeley",
+  "lat": 37.917643,
+  "lng": -122.334985
+ },
+ {
+  "slug": "northern-regional-library-facility",
+  "name": "Northern Regional Library Facility - University of California, Berkeley",
+  "lat": 37.917643,
+  "lng": -122.334985
+ },
+ {
+  "slug": "obrien-hall",
+  "name": "O&#039;Brien Hall - University of California, Berkeley",
+  "lat": 37.874483,
+  "lng": -122.259094
+ },
+ {
+  "slug": "observatory-hill",
+  "name": "Observatory Hill - University of California, Berkeley",
+  "lat": 37.87424,
+  "lng": -122.2606
+ },
+ {
+  "slug": "old-art-gallery",
+  "name": "Old Art Gallery - University of California, Berkeley",
+  "lat": 37.87059,
+  "lng": -122.25861
+ },
+ {
+  "slug": "oxford-research-unit",
+  "name": "Oxford Research Unit - University of California, Berkeley",
+  "lat": 37.875366,
+  "lng": -122.267095
+ },
+ {
+  "slug": "pacific-earthquake-engineering-research-peer-library",
+  "name": "Pacific Earthquake Engineering Research (PEER) Library - University of California, Berkeley",
+  "lat": 37.918328,
+  "lng": -122.332485
+ },
+ {
+  "slug": "pacific-film-archive-and-study-center",
+  "name": "Pacific Film Archive and Study Center - University of California, Berkeley",
+  "lat": 37.86871000000001,
+  "lng": -122.255667
+ },
+ {
+  "slug": "pacific-film-archive-berkeley-art-museum-and",
+  "name": "Pacific Film Archive, Berkeley Art Museum and - University of California, Berkeley",
+  "lat": 37.870781,
+  "lng": -122.266425
+ },
+ {
+  "slug": "parking-and-transportation",
+  "name": "Parking and Transportation - University of California, Berkeley",
+  "lat": 37.87199,
+  "lng": -122.27127
+ },
+ {
+  "slug": "philosophy-hall",
+  "name": "Philosophy Hall - University of California, Berkeley",
+  "lat": 37.87099,
+  "lng": -122.25799
+ },
+ {
+  "slug": "physics-astronomy-library",
+  "name": "Physics-Astronomy Library - University of California, Berkeley",
+  "lat": 37.87249,
+  "lng": -122.25688
+ },
+ {
+  "slug": "physics-north-and-south",
+  "name": "Physics North and South - University of California, Berkeley",
+  "lat": 37.87249,
+  "lng": -122.25688
+ },
+ {
+  "slug": "pimentel-hall",
+  "name": "Pimentel Hall - University of California, Berkeley",
+  "lat": 37.87341,
+  "lng": -122.25602
+ },
+ {
+  "slug": "recreational-sports-facility",
+  "name": "Recreational Sports Facility - University of California, Berkeley",
+  "lat": 37.868652,
+  "lng": -122.262897
+ },
+ {
+  "slug": "redwood-grove-botanical-garden",
+  "name": "Redwood Grove (Botanical Garden) - University of California, Berkeley",
+  "lat": 37.87511,
+  "lng": -122.23969
+ },
+ {
+  "slug": "residential-student-services-building",
+  "name": "Residential &amp; Student Services Building - University of California, Berkeley",
+  "lat": 37.866884,
+  "lng": -122.255849
+ },
+ {
+  "slug": "sather-gate",
+  "name": "Sather Gate - University of California, Berkeley",
+  "lat": 37.87023,
+  "lng": -122.2596
+ },
+ {
+  "slug": "senior-hall",
+  "name": "Senior Hall - University of California, Berkeley",
+  "lat": 37.871946,
+  "lng": -122.255533
+ },
+ {
+  "slug": "simon-hall",
+  "name": "Simon Hall - University of California, Berkeley",
+  "lat": 37.86985,
+  "lng": -122.25266
+ },
+ {
+  "slug": "simpson-center-for-student-athlete-high-performance",
+  "name": "Simpson Center for Student-Athlete High Performance - University of California, Berkeley",
+  "lat": 37.87143,
+  "lng": -122.2522
+ },
+ {
+  "slug": "social-research-library",
+  "name": "Social Research Library - University of California, Berkeley",
+  "lat": 37.87374,
+  "lng": -122.26105
+ },
+ {
+  "slug": "social-sciences-building",
+  "name": "Social Sciences Building - University of California, Berkeley",
+  "lat": 37.87006,
+  "lng": -122.25791
+ },
+ {
+  "slug": "soda-hall",
+  "name": "Soda Hall - University of California, Berkeley",
+  "lat": 37.87567,
+  "lng": -122.25871
+ },
+ {
+  "slug": "south-hall",
+  "name": "South Hall - University of California, Berkeley",
+  "lat": 37.87133,
+  "lng": -122.25851
+ },
+ {
+  "slug": "south-southeast-asia-library",
+  "name": "South/Southeast Asia Library - University of California, Berkeley",
+  "lat": 37.87244,
+  "lng": -122.25956
+ },
+ {
+  "slug": "southeast-asian-studies-center-for",
+  "name": "Southeast Asian Studies, Center for - University of California, Berkeley",
+  "lat": 37.87199,
+  "lng": -122.27127
+ },
+ {
+  "slug": "space-sciences-laboratory",
+  "name": "Space Sciences Laboratory - University of California, Berkeley",
+  "lat": 37.88071,
+  "lng": -122.24431
+ },
+ {
+  "slug": "spieker-aquatics-complex",
+  "name": "Spieker Aquatics Complex - University of California, Berkeley",
+  "lat": 37.868809,
+  "lng": -122.262122
+ },
+ {
+  "slug": "springer-gateway",
+  "name": "Springer Gateway - University of California, Berkeley",
+  "lat": 37.87185,
+  "lng": -122.26521
+ },
+ {
+  "slug": "sproul-hall",
+  "name": "Sproul Hall - University of California, Berkeley",
+  "lat": 37.8696,
+  "lng": -122.25878
+ },
+ {
+  "slug": "sproul-plaza",
+  "name": "Sproul Plaza - University of California, Berkeley",
+  "lat": 37.86956,
+  "lng": -122.25905
+ },
+ {
+  "slug": "stanley-hall",
+  "name": "Stanley Hall - University of California, Berkeley",
+  "lat": 37.87404,
+  "lng": -122.25609
+ },
+ {
+  "slug": "starr-east-asian-library",
+  "name": "Starr East Asian Library - University of California, Berkeley",
+  "lat": 37.87357,
+  "lng": -122.26034
+ },
+ {
+  "slug": "starr-east-asian-library-2",
+  "name": "Starr East Asian Library - University of California, Berkeley",
+  "lat": 37.87357,
+  "lng": -122.26034
+ },
+ {
+  "slug": "stephens-hall",
+  "name": "Stephens Hall - University of California, Berkeley",
+  "lat": 37.87124,
+  "lng": -122.25761
+ },
+ {
+  "slug": "stern-hall",
+  "name": "Stern Hall - University of California, Berkeley",
+  "lat": 37.87481,
+  "lng": -122.25553
+ },
+ {
+  "slug": "stow-plaza",
+  "name": "Stow Plaza - University of California, Berkeley",
+  "lat": 37.87014,
+  "lng": -122.26438
+ },
+ {
+  "slug": "strawberry-canyon-recreational-area",
+  "name": "Strawberry Canyon Recreational Area - University of California, Berkeley",
+  "lat": 37.87203,
+  "lng": -122.24696
+ },
+ {
+  "slug": "stu-gordon-stadium",
+  "name": "Stu Gordon Stadium - University of California, Berkeley",
+  "lat": 37.8694288983,
+  "lng": -122.263396382
+ },
+ {
+  "slug": "student-center",
+  "name": "Student Center - University of California, Berkeley",
+  "lat": 37.8698,
+  "lng": -122.26015
+ },
+ {
+  "slug": "summer-session",
+  "name": "Summer Session - University of California, Berkeley",
+  "lat": 37.87199,
+  "lng": -122.27127
+ },
+ {
+  "slug": "sutardja-dai-hall",
+  "name": "Sutardja Dai Hall - University of California, Berkeley",
+  "lat": 37.874822,
+  "lng": -122.258389
+ },
+ {
+  "slug": "tan-hall",
+  "name": "Tan Hall - University of California, Berkeley",
+  "lat": 37.8731,
+  "lng": -122.25642
+ },
+ {
+  "slug": "tang-center",
+  "name": "Tang Center - University of California, Berkeley",
+  "lat": 37.867555,
+  "lng": -122.26426
+ },
+ {
+  "slug": "the-law-building",
+  "name": "The Law Building - University of California, Berkeley",
+  "lat": 37.86992,
+  "lng": -122.25341
+ },
+ {
+  "slug": "uc-berkeley-extension",
+  "name": "UC Berkeley Extension - University of California, Berkeley",
+  "lat": 37.87199,
+  "lng": -122.27127
+ },
+ {
+  "slug": "undergraduate-academic-building",
+  "name": "Undergraduate Academic Building - University of California, Berkeley",
+  "lat": 37.8707342,
+  "lng": -122.2619104
+ },
+ {
+  "slug": "underhill-parking-facility-playing-field",
+  "name": "Underhill Parking Facility &amp; Playing Field - University of California, Berkeley",
+  "lat": 37.86705,
+  "lng": -122.25492
+ },
+ {
+  "slug": "unit-1-resident-hall",
+  "name": "Unit 1 Resident Hall - University of California, Berkeley",
+  "lat": 37.86782,
+  "lng": -122.25512
+ },
+ {
+  "slug": "unit-2-resident-hall",
+  "name": "Unit 2 Resident Hall - University of California, Berkeley",
+  "lat": 37.86609,
+  "lng": -122.25477
+ },
+ {
+  "slug": "unit-3-resident-hall",
+  "name": "Unit 3 Resident Hall - University of California, Berkeley",
+  "lat": 37.867182,
+  "lng": -122.260358
+ },
+ {
+  "slug": "university-hall",
+  "name": "University Hall - University of California, Berkeley",
+  "lat": 37.87189,
+  "lng": -122.26635
+ },
+ {
+  "slug": "university-house",
+  "name": "University House - University of California, Berkeley",
+  "lat": 37.874536,
+  "lng": -122.262077
+ },
+ {
+  "slug": "upper-hearst-parking-structure",
+  "name": "Upper Hearst Parking Structure - University of California, Berkeley",
+  "lat": 37.87576,
+  "lng": -122.25735
+ },
+ {
+  "slug": "valley-life-sciences-building",
+  "name": "Valley Life Sciences Building - University of California, Berkeley",
+  "lat": 37.87148,
+  "lng": -122.26211
+ },
+ {
+  "slug": "visual-resources-center",
+  "name": "Visual Resources Center - University of California, Berkeley",
+  "lat": 37.8705,
+  "lng": -122.25488
+ },
+ {
+  "slug": "warren-hall",
+  "name": "Warren Hall - University of California, Berkeley",
+  "lat": 37.874307,
+  "lng": -122.266894
+ },
+ {
+  "slug": "weill-hall",
+  "name": "Weill Hall - University of California, Berkeley",
+  "lat": 37.87139,
+  "lng": -122.26325
+ },
+ {
+  "slug": "wellman-hall",
+  "name": "Wellman Hall - University of California, Berkeley",
+  "lat": 37.872982,
+  "lng": -122.262729
+ },
+ {
+  "slug": "west-circle",
+  "name": "West Circle - University of California, Berkeley",
+  "lat": 37.87214,
+  "lng": -122.26358
+ },
+ {
+  "slug": "west-gate",
+  "name": "West Gate - University of California, Berkeley",
+  "lat": 37.87189,
+  "lng": -122.26466
+ },
+ {
+  "slug": "wheeler-hall",
+  "name": "Wheeler Hall - University of California, Berkeley",
+  "lat": 37.87129,
+  "lng": -122.25914
+ },
+ {
+  "slug": "wickson-natural-area",
+  "name": "Wickson Natural Area - University of California, Berkeley",
+  "lat": 37.873534,
+  "lng": -122.261417
+ },
+ {
+  "slug": "witter-rugby-field",
+  "name": "Witter Rugby Field - University of California, Berkeley",
+  "lat": 37.871186,
+  "lng": -122.248722
+ },
+ {
+  "slug": "womens-faculty-club",
+  "name": "Women&#039;s Faculty Club - University of California, Berkeley",
+  "lat": 37.872148,
+  "lng": -122.25487
+ },
+ {
+  "slug": "woo-hon-fai-hall",
+  "name": "Woo Hon Fai Hall - University of California, Berkeley",
+  "lat": 37.86871000000001,
+  "lng": -122.255667
+ },
+ {
+  "slug": "zellerbach-hall",
+  "name": "Zellerbach Hall - University of California, Berkeley",
+  "lat": 37.869048,
+  "lng": -122.261226
+ }
+]
