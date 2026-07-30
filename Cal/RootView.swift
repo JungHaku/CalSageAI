@@ -80,12 +80,13 @@ struct RootView: View {
                     case .checkIn: CheckInView(kind: .full)
                     case .practices: PracticesLibraryView()
                     case .progress: AnalyticsView()
+                    case .study: StudyTimerView()
                     case .history: HistoryView()
                     case .settings: SettingsView()
                     }
                 }
-        case .navigate: PhasePlaceholder(feature: "Campus map and Navigate", phase: 4)
-        case .planner:  PhasePlaceholder(feature: "Today's schedule", phase: 4)
+        case .navigate: NavigateView()
+        case .planner:  PlannerView()
         case .chat:     PhasePlaceholder(feature: "Chat with Cal", phase: 3)
         }
     }

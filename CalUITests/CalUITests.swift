@@ -132,6 +132,65 @@ final class CalUITests: XCTestCase {
         )
     }
 
+    // MARK: Campus (MVP-5)
+
+    func testNavigateListsCampusPlacesAndFilters() {
+        let app = launch()
+        app.tabBars.buttons["Navigate"].tap()
+
+        // Search rather than scroll: a List is lazy, so a row 20 items down
+        // doesn't exist in the hierarchy yet and asserting on it would be
+        // testing the scroll position, not the data.
+        let field = app.searchFields.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 15))
+        field.tap()
+        field.typeText("Doe")
+
+        XCTAssertTrue(
+            app.buttons["place-doe-memorial-library"].waitForExistence(timeout: 10),
+            "search should find the seeded campus places"
+        )
+    }
+
+    func testStudyTimerRunsAndCanBeEnded() {
+        let app = launch()
+        app.tabBars.buttons["Home"].tap()
+        element(app, "dest-study").tap()
+
+        XCTAssertTrue(element(app, "length-picker").waitForExistence(timeout: 10))
+        app.buttons["50 min"].tap()
+        app.buttons["start-study"].tap()
+
+        let timer = element(app, "study-timer")
+        XCTAssertTrue(timer.waitForExistence(timeout: 10))
+        let shown = (timer.value as? String) ?? timer.label
+        XCTAssertTrue(
+            shown.hasPrefix("49:") || shown.hasPrefix("50:"),
+            "expected a 50-minute countdown, got: \(shown)"
+        )
+
+        app.buttons["end-study"].tap()
+        XCTAssertTrue(app.buttons["start-study"].waitForExistence(timeout: 10))
+    }
+
+    /// The prompt must never fire in a test — and the connect screen has to say
+    /// what iOS will ask for, since Apple offers no read-only calendar tier.
+    func testPlannerAsksBeforeReadingTheCalendar() {
+        let app = launch()
+        app.tabBars.buttons["Planner"].tap()
+
+        let connect = app.buttons["connect-calendar"]
+        XCTAssertTrue(connect.waitForExistence(timeout: 10))
+        connect.tap()
+
+        // The mock grants without a system alert; an empty calendar is the
+        // honest result, not an error.
+        XCTAssertTrue(
+            element(app, "planner-empty").waitForExistence(timeout: 10),
+            "granting should show today's (empty) schedule"
+        )
+    }
+
     // MARK: Analytics (MVP-4)
 
     func testProgressShowsTheHeadlineDeltaAndCharts() {

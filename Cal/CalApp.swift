@@ -36,6 +36,9 @@ final class AppContainer {
     /// Local notification scheduling. Mocked under test so a system permission
     /// alert can never block a UI-test run.
     let reminders: any ReminderScheduling
+    /// The student's own iOS calendars. Mocked under test — a system permission
+    /// alert would block the run.
+    let calendars: any CalendarAccess
     /// True when launched by XCUITest with seeded state (§11.4).
     let isUITesting: Bool
     /// True when nothing written this session survives relaunch — either a UI-test
@@ -52,6 +55,7 @@ final class AppContainer {
         profiles: any ProfileStoring,
         practiceSessions: any PracticeSessionStoring,
         reminders: any ReminderScheduling,
+        calendars: any CalendarAccess,
         isUITesting: Bool = false,
         storeIsEphemeral: Bool = true
     ) {
@@ -64,6 +68,7 @@ final class AppContainer {
         self.profiles = profiles
         self.practiceSessions = practiceSessions
         self.reminders = reminders
+        self.calendars = calendars
         self.isUITesting = isUITesting
         self.storeIsEphemeral = storeIsEphemeral
     }
@@ -139,6 +144,7 @@ final class AppContainer {
             profiles: profiles,
             practiceSessions: practiceSessions,
             reminders: isUITesting ? MockReminderScheduler() : NotificationReminderScheduler(),
+            calendars: isUITesting ? MockCalendarAccess() : EventKitCalendarAccess(),
             isUITesting: isUITesting,
             storeIsEphemeral: ephemeral
         )

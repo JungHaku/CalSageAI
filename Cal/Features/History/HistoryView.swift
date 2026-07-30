@@ -61,10 +61,12 @@ private struct HistoryRow: View {
             Spacer()
 
             if let after = checkIn.averageAfter {
+                // Neutral ink, deliberately. Tinting a past low day red is the
+                // exact manipulation shown to raise rumination and lower
+                // self-compassion in this age group (ARCHITECTURE.md §11.1).
                 Text(after, format: .number.precision(.fractionLength(1)))
                     .font(.title3.weight(.semibold))
                     .monospacedDigit()
-                    .foregroundStyle(CoherenceScale.tint(for: Score(clamping: Int(after.rounded()))))
             }
         }
         .padding(.vertical, 2)
@@ -98,14 +100,20 @@ struct CheckInDetailView: View {
                         Spacer()
                         Text("\(score.before.value)")
                             .monospacedDigit()
-                            .foregroundStyle(CoherenceScale.tint(for: score.before))
+                            .foregroundStyle(.secondary)
                         if let after = score.after {
                             Image(systemName: "arrow.right")
                                 .font(.caption2)
                                 .foregroundStyle(.tertiary)
+                            // Colour marks improvement, never lowness — and it's
+                            // paired with the arrow and the numbers, so it never
+                            // carries meaning alone.
                             Text("\(after.value)")
                                 .monospacedDigit()
-                                .foregroundStyle(CoherenceScale.tint(for: after))
+                                .foregroundStyle(
+                                    after.value > score.before.value
+                                        ? ChartPalette.improvement : .primary
+                                )
                         }
                     }
                     .accessibilityElement(children: .combine)

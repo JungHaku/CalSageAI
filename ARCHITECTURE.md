@@ -87,7 +87,7 @@ notice in week one.
 
 Phases 0 and 1 are built and committed: the renamed project, five local Swift
 packages, the check-in state machine, the breathwork player, SwiftData
-persistence, **272 passing tests**, and the 231-place campus dataset. The
+persistence, **286 passing tests**, and the 231-place campus dataset. The
 restructure below throws none of it away — §2 explains why it didn't have to.
 
 ---
@@ -188,7 +188,7 @@ re-deriving the same design later from memory.
 | Audio | AVFoundation | Background audio for breathwork |
 | Payments | StoreKit 2, device-local entitlement | §12 |
 | Maps | MapKit + the 231-place seed | |
-| Calendar | EventKit | No OAuth, no Google verification |
+| Calendar | EventKit | No OAuth, no Google verification — but note Apple has **no read-only calendar tier**, so a display-only feature still prompts for read *and* write |
 | Crash reporting | Firebase Crashlytics | Free with no cap; Sentry's free tier is 5,000 errors/month, which one crash loop eats |
 | CI | Xcode Cloud | 25 compute hours/month already included with the $99/yr membership |
 | **Backend** | **none** | Phase B |
@@ -504,14 +504,14 @@ caching. Full comparison, caching traps, and vendor terms in
 
 ## 11. Testing
 
-Six loops. Current state: **272 tests passing** — 230 across packages, 42 app + UI.
+Six loops. Current state: **286 tests passing** — 241 across packages, 45 app + UI.
 
 | Loop | Speed | What | Status |
 |---|---|---|---|
 | 1. Previews | instant | Every component per state, dark, XXXL | partial |
-| 2. `swift test` on packages | ~2s | All logic, no simulator | **230 tests** |
+| 2. `swift test` on packages | ~2s | All logic, no simulator | **241 tests** |
 | 3. Snapshot | ~1 min | `getsentry/SnapshotPreviews` turns each `#Preview` into a test | to build |
-| 4. XCUITest | minutes | 16 seeded flows via launch arguments | **16 flows** |
+| 4. XCUITest | minutes | 19 seeded flows via launch arguments | **19 flows** |
 | 5. TestFlight | days | Dr. Mia feels the pacing on a real phone | pending account |
 | 6. Backend / RLS | — | 9 pgTAP catalog invariants, written | Phase B |
 
@@ -547,6 +547,14 @@ Seeded launch states keep UI tests deterministic: `-CalScenario day30Streak`,
   hierarchy dump showed the tap was landing on the label. **Unit-test the view
   model first** — that immediately proved the logic was right and the fault was in
   the test.
+- **`.accessibilityElement(children: .combine)` also swallows its children's
+  identifiers** — the same failure as putting an identifier on a container, from
+  the other direction. Put the identifier on the *merged* element. This has now
+  cost time twice.
+- **Don't measure elapsed time with the injected `DateProvider`.** It exists for
+  calendar-day reasoning (streaks, `local_date`) and is deliberately frozen under
+  test, so a stopwatch built on it finishes the instant the first tick lands. Use
+  the real clock for durations, as the breathwork player does.
 - **`for x in try await someCall() { … }` segfaults** this toolchain — the whole
   test process dies with signal 11 and *no* test reports a result, which looks
   like a crash in whatever the loop body touches. Bind the result to a `let`
@@ -588,9 +596,19 @@ are enforced in `CalKit` where they can be tested:
 - **Each chart exposes one summarised accessibility element.** Apple's guidance is
   to keep tick labels away from assistive tech; a spoken summary plus the table
   view is the non-visual path.
+- **No red for a low day on any review surface.** A within-subjects study of
+  personal-data visualisations (n=18, ages 19–26 — this exact population) found
+  that negative framing, manipulated purely by highlighting "bad" days in red,
+  significantly *increased rumination* and *decreased self-compassion*. History
+  rows and score tables therefore use neutral ink, and colour marks only
+  improvement. The live check-in slider keeps its band tint: that is immediate
+  feedback on a value being chosen now, not a retrospective verdict on a bad day.
 - **The screen says "these are your own ratings, not a clinical measure."** This
   is single-arm self-report with no control, so the honest claim is that the
-  numbers moved — not that the practice moved them.
+  numbers moved — not that the practice moved them. The ECoWeB RCT sharpens this:
+  its plain self-monitoring arm, used as the *control*, matched two active
+  interventions on wellbeing at 3 and 12 months. Any before→after movement Cal
+  observes is therefore not attributable to the breathwork on current evidence.
 
 ---
 
@@ -716,8 +734,11 @@ area as a dumbbell, with daily/weekly/monthly bucketing. `CoherenceTrend` and
 `CategorySummary` in `CalKit` do the aggregation, so the honesty rules below are
 unit-tested rather than trusted to the view. See §11.1 for the charting rules.
 
-**MVP-5 — campus.** Map + 231 places, resource directory, study timer, EventKit
-planner.
+**MVP-5 — campus. ✓ Built.** Navigate (map + searchable place list + category
+filter), Study Mode (25/50/90 with Dr. Mia's 30-second reset), and the Planner
+reading the student's existing iOS calendars. The curated resource directory is
+**not** built — see §17, it needs verified phone numbers and the same
+dial-it-first rule as the crisis numbers.
 
 **MVP-6 — profile, export, delete, settings.**
 
@@ -767,14 +788,24 @@ Product:
     rather than a design choice, it's a one-line change.
 12. **Does she accept content changes requiring an app release** during the MVP
     (§6)? It's the main practical cost of skipping the backend.
-13. **The daily motivation pool is five lines**, so it cycles every five days —
+13. **The resource directory needs verified contact details.** `SPEC-free.md` §4
+    lists fourteen categories — housing, financial aid, counselling, disability
+    services and so on. It is deliberately not built: shipping phone numbers
+    nobody has dialled is the mistake §9.3 already caught once. Each entry needs a
+    number, a URL, and a human who checked them.
+14. **Campus place categories are keyword-derived, not curated.** Only ~41% of the
+    231 places classify from their name; the rest fall through to "Other". The
+    filter works for libraries, athletics and parking and is close to useless for
+    dining and health, so it should not yet be presented as a way to find food or
+    a clinic.
+15. **The daily motivation pool is five lines**, so it cycles every five days —
     short enough that a student will notice within a fortnight. Twenty to thirty
     would make it feel written rather than looped. Her existing five are in the
     app verbatim.
-14. **Free/premium boundary** — confirm the split, particularly whether free users
+16. **Free/premium boundary** — confirm the split, particularly whether free users
     get any coach chat once it exists.
-15. **Sacred Care Fund** — how it's represented in-app.
-16. **Launch timing.** Fall semester start is the obvious moment for a Berkeley
+17. **Sacred Care Fund** — how it's represented in-app.
+18. **Launch timing.** Fall semester start is the obvious moment for a Berkeley
     student app.
 
 *Resolved: the 0–10 scale starts unset rather than pre-filled (§7) — my call, as you

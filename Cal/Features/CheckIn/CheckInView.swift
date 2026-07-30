@@ -235,13 +235,18 @@ private struct ScoreRow: View {
             Text(score.category.displayName)
                 .font(.subheadline)
             Spacer()
+            // Neutral for the starting score; colour only marks improvement.
+            // Tinting a low score red on a review screen is the manipulation
+            // shown to raise rumination (§11.1).
             Text("\(score.before.value)")
-                .foregroundStyle(CoherenceScale.tint(for: score.before))
+                .foregroundStyle(.secondary)
                 .monospacedDigit()
             if let after = score.after {
                 Image(systemName: "arrow.right").font(.caption2).foregroundStyle(.tertiary)
                 Text("\(after.value)")
-                    .foregroundStyle(CoherenceScale.tint(for: after))
+                    .foregroundStyle(
+                        after.value > score.before.value ? ChartPalette.improvement : .primary
+                    )
                     .monospacedDigit()
             }
         }

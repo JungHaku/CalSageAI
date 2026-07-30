@@ -1,11 +1,56 @@
 import Foundation
 
 /// A campus location. Mirrors the `campus_places` table (ARCHITECTURE.md §5.2).
+/// What kind of place this is.
+///
+/// ⚠️ **Keyword-derived, not curated.** The source is a list of building names, so
+/// only about 41% of the 231 places reveal their kind from the name; the rest fall
+/// through to `.building`. The filter is useful for libraries, athletics and
+/// parking and close to useless for dining and health — a curation pass is needed
+/// before this is presented as a way to find food or a clinic
+/// (ARCHITECTURE.md §17).
+public enum CampusPlaceCategory: String, Codable, Sendable, CaseIterable, Identifiable {
+    case library, athletics, dining, health, parking, residence, museum, outdoor, services, building
+
+    public var id: String { rawValue }
+
+    public var displayName: String {
+        switch self {
+        case .library: "Libraries"
+        case .athletics: "Athletics"
+        case .dining: "Dining"
+        case .health: "Health"
+        case .parking: "Parking"
+        case .residence: "Housing"
+        case .museum: "Arts"
+        case .outdoor: "Outdoors"
+        case .services: "Services"
+        case .building: "Other"
+        }
+    }
+
+    public var symbolName: String {
+        switch self {
+        case .library: "books.vertical.fill"
+        case .athletics: "figure.run"
+        case .dining: "fork.knife"
+        case .health: "cross.case.fill"
+        case .parking: "parkingsign"
+        case .residence: "house.fill"
+        case .museum: "theatermasks.fill"
+        case .outdoor: "leaf.fill"
+        case .services: "building.2.fill"
+        case .building: "mappin"
+        }
+    }
+}
+
 public struct CampusPlace: Hashable, Codable, Sendable, Identifiable {
     public let slug: String
     public let name: String
     public let latitude: Double
     public let longitude: Double
+    public var category: CampusPlaceCategory
     /// Alternate names students actually use ("Main Stacks", "the Doe"). Populated
     /// by hand as the dataset is curated — the raw seed has none.
     public var aliases: [String]
@@ -20,6 +65,7 @@ public struct CampusPlace: Hashable, Codable, Sendable, Identifiable {
         name: String,
         latitude: Double,
         longitude: Double,
+        category: CampusPlaceCategory = .building,
         aliases: [String] = [],
         verifiedAt: Date? = nil
     ) {
@@ -27,8 +73,19 @@ public struct CampusPlace: Hashable, Codable, Sendable, Identifiable {
         self.name = name
         self.latitude = latitude
         self.longitude = longitude
+        self.category = category
         self.aliases = aliases
         self.verifiedAt = verifiedAt
+    }
+
+    /// Case- and diacritic-insensitive match over the name and any aliases.
+    public func matches(_ query: String) -> Bool {
+        let needle = query.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
+        guard !needle.isEmpty else { return true }
+        let haystacks = [name] + aliases
+        return haystacks.contains {
+            $0.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil).contains(needle)
+        }
     }
 }
 
@@ -44,6 +101,7 @@ public enum CampusPlaceSeed {
         let name: String
         let lat: Double
         let lng: Double
+        let category: CampusPlaceCategory?
     }
 
     /// Every UCB location carries this suffix in the source page's titles.
@@ -68,7 +126,8 @@ public enum CampusPlaceSeed {
                     slug: $0.slug,
                     name: cleanName($0.name),
                     latitude: $0.lat,
-                    longitude: $0.lng
+                    longitude: $0.lng,
+                    category: $0.category ?? .building
                 )
             }
         )

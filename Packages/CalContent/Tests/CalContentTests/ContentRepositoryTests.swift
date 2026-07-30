@@ -11,7 +11,7 @@ struct ContentRepositoryTests {
     @Test("the bundled payload decodes")
     func decodes() async throws {
         let bundle = try await repo.bundle()
-        #expect(bundle.version == 2)
+        #expect(bundle.version == 3)
         #expect(!bundle.exercises.isEmpty)
         #expect(!bundle.questions.isEmpty)
         #expect(!bundle.motivations.isEmpty)
@@ -76,8 +76,8 @@ struct ContentRepositoryTests {
         for exercise in exercises {
             let timeline = try exercise.script.timeline()
             #expect(timeline.beats.count > 0, "\(exercise.slug) has no beats")
-            // A guided practice under 30s isn't a practice; over 10 minutes is a
-            // pacing mistake, not a design choice.
+            // Over ten minutes is a pacing mistake rather than a design choice.
+            // The floor is 30s because the study reset is deliberately that short.
             #expect(
                 (30.0...600.0).contains(timeline.totalDuration),
                 "\(exercise.slug) runs \(timeline.totalDuration)s"
@@ -123,11 +123,34 @@ struct ContentRepositoryTests {
         )
     }
 
-    @Test("tier filtering works, and the placeholder is the only free exercise")
+    @Test("tier filtering separates the five practices from the free utilities")
     func tierFilter() async throws {
-        let free = try await repo.exercises(tier: .free)
-        #expect(free.map(\.slug) == ["seed-placeholder"])
+        let free = try await repo.exercises(tier: .free).map(\.slug)
+        #expect(Set(free) == ["seed-placeholder", "study-reset"])
         #expect(try await repo.exercises(tier: .premium).count == 5)
+    }
+
+    /// Dr. Mia's spec makes the reset mandatory — "every session ends with" it —
+    /// so it ships as authored content in her words rather than as UI copy.
+    @Test("the study reset is her five cues, 30 seconds, plus the closing line")
+    func studyReset() async throws {
+        let reset = try #require(try await repo.exercise(slug: "study-reset"))
+        let timeline = try reset.script.timeline()
+        #expect(timeline.beats.map(\.text) == [
+            "Breath", "Stretch", "Relax shoulders", "Jaw", "Eyes", "Back to work.",
+        ])
+        // Five cues at six seconds is the 30 seconds she specified; the closing
+        // line runs past it.
+        #expect(timeline.beats.prefix(5).reduce(0) { $0 + $1.duration } == 30)
+        #expect(timeline.totalDuration == 34)
+    }
+
+    @Test("the browsable library is the five premium practices, not the utilities")
+    func libraryIsPremiumOnly() async throws {
+        let premium = try await repo.exercises(tier: .premium).map(\.slug)
+        #expect(!premium.contains("study-reset"), "the reset is a tool, not a library session")
+        #expect(!premium.contains("seed-placeholder"))
+        #expect(premium.count == 5)
     }
 
     @Test("every practice carries Dr. Mia's authored purpose line")

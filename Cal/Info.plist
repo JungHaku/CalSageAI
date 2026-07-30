@@ -26,5 +26,22 @@
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
+
+	<!--
+	  Calendar (Planner tab).
+
+	  This MUST be NSCalendarsFullAccessUsageDescription (iOS 17+), not the older
+	  NSCalendarsUsageDescription. Apple: on iOS 17 or later, an app that includes
+	  only the old key has any access request AUTOMATICALLY DENIED — no prompt, no
+	  error, no crash. It simply never works, which is very hard to diagnose.
+
+	  Full access is requested because Apple provides no read-only calendar tier:
+	  "To read events or reminders from the event store, your app needs full
+	  access." Cal only ever reads. The write-only key is deliberately absent —
+	  requesting a permission the app doesn't use invites 5.1.1(iii) data
+	  minimisation questions at review.
+	-->
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Cal shows today's classes and deadlines from the calendars already on your phone. It only reads them and never adds, edits, or deletes anything.</string>
 </dict>
 </plist>

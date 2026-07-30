@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "questions": [
     {
       "category": "overall",
@@ -224,6 +224,25 @@
           { "kind": "exhale", "text": "", "seconds": 7 },
           { "kind": "cue", "text": "Then choose peace over struggle.", "seconds": 7 },
           { "kind": "cue", "text": "Allow yourself to return to the quiet strength already within you.", "seconds": 10 }
+        ]
+      }
+    },
+
+    {
+      "slug": "study-reset",
+      "title": "30-Second Reset",
+      "purpose": "Close a study block and come back to your body before the next one.",
+      "category": null,
+      "tier": "free",
+      "version": 1,
+      "script": {
+        "steps": [
+          { "kind": "cue", "text": "Breath", "seconds": 6 },
+          { "kind": "cue", "text": "Stretch", "seconds": 6 },
+          { "kind": "cue", "text": "Relax shoulders", "seconds": 6 },
+          { "kind": "cue", "text": "Jaw", "seconds": 6 },
+          { "kind": "cue", "text": "Eyes", "seconds": 6 },
+          { "kind": "cue", "text": "Back to work.", "seconds": 4 }
         ]
       }
     },

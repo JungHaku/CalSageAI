@@ -54,12 +54,10 @@ struct PracticesLibraryView: View {
         do {
             // Bound to a local before iterating: `for x in try await <call>`
             // segfaults this toolchain (see ARCHITECTURE.md §11).
-            let all = try await container.content.exercises(tier: nil)
-            // The placeholder is scaffolding, not a practice — it shouldn't appear
-            // in a library a student browses.
-            exercises = all
-                .filter { $0.slug != Exercise.placeholder.slug }
-                .sorted { $0.title < $1.title }
+            // Premium only: the placeholder is scaffolding and the study reset is
+            // a tool inside Study Mode — neither is a session a student browses to.
+            let all = try await container.content.exercises(tier: .premium)
+            exercises = all.sorted { $0.title < $1.title }
 
             var missing: [CoherenceCategory] = []
             for category in CoherenceCategory.fullCheckIn {

@@ -163,6 +163,13 @@ struct HomeView: View {
                 )
             }
             Divider()
+            NavigationLink(value: HomeRoute.study) {
+                DestinationRow(
+                    title: "Study", subtitle: "Focus block with a reset",
+                    icon: "timer", identifier: "dest-study"
+                )
+            }
+            Divider()
             NavigationLink(value: HomeRoute.settings) {
                 DestinationRow(
                     title: "Settings", subtitle: "Reminder and your data",
@@ -185,7 +192,7 @@ struct HomeView: View {
 }
 
 enum HomeRoute: Hashable {
-    case checkIn, practices, history, progress, settings
+    case checkIn, practices, history, progress, study, settings
 }
 
 private struct MotivationCard: View {
