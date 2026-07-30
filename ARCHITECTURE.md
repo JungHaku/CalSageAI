@@ -87,7 +87,7 @@ notice in week one.
 
 Phases 0 and 1 are built and committed: the renamed project, five local Swift
 packages, the check-in state machine, the breathwork player, SwiftData
-persistence, **169 passing tests**, and the 231-place campus dataset. The
+persistence, **191 passing tests**, and the 231-place campus dataset. The
 restructure below throws none of it away — §2 explains why it didn't have to.
 
 ---
@@ -451,14 +451,14 @@ caching. Full comparison, caching traps, and vendor terms in
 
 ## 11. Testing
 
-Six loops. Current state: **169 tests passing** — 143 across packages, 26 app + UI.
+Six loops. Current state: **191 tests passing** — 163 across packages, 28 app + UI.
 
 | Loop | Speed | What | Status |
 |---|---|---|---|
 | 1. Previews | instant | Every component per state, dark, XXXL | partial |
-| 2. `swift test` on packages | ~2s | All logic, no simulator | **143 tests** |
+| 2. `swift test` on packages | ~2s | All logic, no simulator | **163 tests** |
 | 3. Snapshot | ~1 min | `getsentry/SnapshotPreviews` turns each `#Preview` into a test | to build |
-| 4. XCUITest | minutes | 6 seeded flows via launch arguments | **6 flows** |
+| 4. XCUITest | minutes | 8 seeded flows via launch arguments | **8 flows** |
 | 5. TestFlight | days | Dr. Mia feels the pacing on a real phone | pending account |
 | 6. Backend / RLS | — | 9 pgTAP catalog invariants, written | Phase B |
 
@@ -486,6 +486,11 @@ Seeded launch states keep UI tests deterministic: `-CalScenario day30Streak`,
 - **Tests that assert on a persistent store break the moment persistence lands.**
   Assert on the configuration (*is this store ephemeral?*), not on residual disk
   state.
+- **`for x in try await someCall() { … }` segfaults** this toolchain — the whole
+  test process dies with signal 11 and *no* test reports a result, which looks
+  like a crash in whatever the loop body touches. Bind the result to a `let`
+  first. Two MVP-2 tests hit this and cost an hour chasing an innocent
+  `timeline()`; the tell is that every test prints "started" and none finishes.
 
 ---
 
@@ -592,8 +597,13 @@ Nothing in steps 1–8 requires touching `CalKit`, `CalDesign`, or any view.
 `LocalProfile` with its own SwiftData store, the check-in copy moved into bundled
 content, Dr. Mia's five practices as playable scripts, and the unset scale from §7.
 
-**MVP-2 — practices.** Dr. Mia's five as structured scripts with proposed timings,
-the per-category mapping, placeholder handling, and an exercise library browser.
+**MVP-2 — practices. ✓ Built.** Browsable library on Home with her five practices,
+each showing its authored *Purpose* line and runtime, and an honest footer naming
+the categories still awaiting copy. Practice detail → standalone playback.
+`PracticeSession` logging records every run — including abandoned ones, with the
+progress reached, because that is the signal that says whether a practice is
+mistimed. Regulation runs carry `checkInID`, which is what will let the weekly
+review answer "most effective regulation exercises".
 
 **MVP-3 — retention loop.** Home, streak, daily motivation, morning reminder
 (a *local* notification — no push, no entitlement), history list.

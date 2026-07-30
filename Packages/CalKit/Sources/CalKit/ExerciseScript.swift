@@ -188,6 +188,10 @@ extension ExerciseScript {
 public struct Exercise: Sendable, Equatable, Identifiable, Codable {
     public let slug: String
     public let title: String
+    /// Dr. Mia's one-line statement of what the practice is for, verbatim from
+    /// `SPEC-practices.md` ("Expand awareness beyond the self…"). Optional so a
+    /// payload without it still decodes.
+    public let purpose: String?
     public let category: CoherenceCategory?
     public let tier: ContentTier
     public let script: ExerciseScript
@@ -199,6 +203,7 @@ public struct Exercise: Sendable, Equatable, Identifiable, Codable {
     public init(
         slug: String,
         title: String,
+        purpose: String? = nil,
         category: CoherenceCategory?,
         tier: ContentTier,
         script: ExerciseScript,
@@ -207,11 +212,17 @@ public struct Exercise: Sendable, Equatable, Identifiable, Codable {
     ) {
         self.slug = slug
         self.title = title
+        self.purpose = purpose
         self.category = category
         self.tier = tier
         self.script = script
         self.audioPath = audioPath
         self.version = version
+    }
+
+    /// Total runtime, or `nil` when the script is malformed.
+    public var duration: TimeInterval? {
+        try? script.timeline().totalDuration
     }
 }
 

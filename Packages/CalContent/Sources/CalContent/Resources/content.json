@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "questions": [
     {
       "category": "overall",
@@ -81,6 +81,7 @@
     {
       "slug": "microcosm-macrocosm-breath",
       "title": "Microcosm → Macrocosm Breath",
+      "purpose": "Expand awareness beyond the self and cultivate a sense of connection.",
       "category": "connection",
       "tier": "premium",
       "version": 1,
@@ -109,6 +110,7 @@
     {
       "slug": "golden-spark-visualization",
       "title": "Golden Spark Visualization",
+      "purpose": "Shift attention from stress toward inner vitality.",
       "category": "emotional_flow",
       "tier": "premium",
       "version": 1,
@@ -139,6 +141,7 @@
     {
       "slug": "presence-of-light",
       "title": "Presence of Light",
+      "purpose": "Cultivate presence and inner stillness.",
       "category": "presence",
       "tier": "premium",
       "version": 1,
@@ -163,6 +166,7 @@
     {
       "slug": "solar-plexus-light",
       "title": "Solar Plexus Light",
+      "purpose": "Strengthen feelings of agency, confidence, and embodied awareness.",
       "category": "energy",
       "tier": "premium",
       "version": 1,
@@ -198,6 +202,7 @@
     {
       "slug": "sovereignty-reflection",
       "title": "Sovereignty Reflection",
+      "purpose": "Reduce unnecessary struggle and return to inner steadiness.",
       "category": "choice",
       "tier": "premium",
       "version": 1,
@@ -226,6 +231,7 @@
     {
       "slug": "seed-placeholder",
       "title": "One Minute Together (placeholder)",
+      "purpose": "Placeholder pending Dr. Mia's authored copy.",
       "category": "overall",
       "tier": "free",
       "version": 1,

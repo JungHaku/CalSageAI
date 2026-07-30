@@ -26,6 +26,7 @@ struct CheckInView: View {
                 kind: kind,
                 store: container.store,
                 content: container.content,
+                sessions: container.practiceSessions,
                 dates: container.dates
             )
             model = created
@@ -64,14 +65,15 @@ struct CheckInView: View {
                     ExercisePlayerView(
                         exercise: exercise,
                         onFinished: { Task { await model.completeExercise() } },
-                        onSkip: { Task { await model.skipExercise() } }
+                        onSkip: { progress in Task { await model.skipExercise(atProgress: progress) } }
                     )
                 } else {
                     // Belt and braces: `currentExercise` falls back to the bundled
                     // placeholder, so this should be unreachable. If it ever isn't,
                     // the user proceeds instead of getting stuck.
                     RegulationUnavailable(summary: question.regulationSummary) {
-                        Task { await model.skipExercise() }
+                        // Nothing played, so the session records zero progress.
+                        Task { await model.skipExercise(atProgress: 0) }
                     }
                 }
 

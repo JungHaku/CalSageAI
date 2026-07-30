@@ -20,16 +20,21 @@ final class CheckInViewModel {
 
     private let store: any CoherenceStoring
     private let content: any ContentRepository
+    private let sessions: any PracticeSessionStoring
     private let dates: any DateProvider
+    /// The regulation run currently in progress, if any.
+    private var activeSession: PracticeSession?
 
     init(
         kind: CheckInKind,
         store: any CoherenceStoring,
         content: any ContentRepository,
+        sessions: any PracticeSessionStoring,
         dates: any DateProvider
     ) {
         self.store = store
         self.content = content
+        self.sessions = sessions
         self.dates = dates
         self.flow = CheckInFlow(
             kind: kind,
@@ -82,12 +87,14 @@ final class CheckInViewModel {
     }
 
     func completeExercise() async {
+        await endSession { $0.finish(at: dates.now) }
         flow.completeRegulation()
         resetDraft()
         currentExercise = nil
     }
 
-    func skipExercise() async {
+    func skipExercise(atProgress progress: Double) async {
+        await endSession { $0.abandon(atProgress: progress) }
         flow.skipRegulation(now: dates.now)
         resetDraft()
         currentExercise = nil
@@ -112,7 +119,33 @@ final class CheckInViewModel {
         }
         // Falls back to the bundled placeholder so a low score always has
         // somewhere to go, even for a category Dr. Mia hasn't authored yet.
-        currentExercise = (try? await content.exercise(slug: slug)) ?? Exercise.placeholder
+        let resolved = (try? await content.exercise(slug: slug)) ?? Exercise.placeholder
+        currentExercise = resolved
+        await beginSession(for: resolved)
+    }
+
+    // MARK: Practice sessions
+    //
+    // Recorded with `checkInID` set, which is what lets the weekly review
+    // eventually answer "most effective regulation exercises" — a regulation run
+    // has to be linkable to the check-in whose delta it produced.
+
+    private func beginSession(for exercise: Exercise) async {
+        let session = PracticeSession(
+            exerciseSlug: exercise.slug,
+            localDate: flow.checkIn.localDate,
+            startedAt: dates.now,
+            checkInID: flow.checkIn.id
+        )
+        activeSession = session
+        try? await sessions.save(session)
+    }
+
+    private func endSession(_ mutate: (inout PracticeSession) -> Void) async {
+        guard var session = activeSession else { return }
+        mutate(&session)
+        activeSession = nil
+        try? await sessions.save(session)
     }
 
     /// Saves after every step rather than once at the end, so a backgrounded or

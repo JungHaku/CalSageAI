@@ -31,6 +31,8 @@ final class AppContainer {
     /// Inert in the MVP, but real enough to report what exists only on this phone.
     let sync: any SyncEngine
     let profiles: any ProfileStoring
+    /// Guided-practice runs, including abandoned ones (§ PracticeSession).
+    let practiceSessions: any PracticeSessionStoring
     /// True when launched by XCUITest with seeded state (§11.4).
     let isUITesting: Bool
     /// True when nothing written this session survives relaunch — either a UI-test
@@ -45,6 +47,7 @@ final class AppContainer {
         identity: any IdentityProviding,
         sync: any SyncEngine,
         profiles: any ProfileStoring,
+        practiceSessions: any PracticeSessionStoring,
         isUITesting: Bool = false,
         storeIsEphemeral: Bool = true
     ) {
@@ -55,6 +58,7 @@ final class AppContainer {
         self.identity = identity
         self.sync = sync
         self.profiles = profiles
+        self.practiceSessions = practiceSessions
         self.isUITesting = isUITesting
         self.storeIsEphemeral = storeIsEphemeral
     }
@@ -94,6 +98,7 @@ final class AppContainer {
         // round here — but it must be visible, hence `storeIsEphemeral`.
         var store: any CoherenceStoring = InMemoryCoherenceStore(seeded)
         var profiles: any ProfileStoring = InMemoryProfileStore()
+        var practiceSessions: any PracticeSessionStoring = InMemoryPracticeSessionStore()
         var ephemeral = true
         if !isUITesting {
             if let container = try? SwiftDataCoherenceStore.container() {
@@ -101,6 +106,7 @@ final class AppContainer {
                 // migration story (§5).
                 store = SwiftDataCoherenceStore(modelContainer: container)
                 profiles = SwiftDataProfileStore(modelContainer: container)
+                practiceSessions = SwiftDataPracticeSessionStore(modelContainer: container)
                 ephemeral = false
             }
         }
@@ -126,6 +132,7 @@ final class AppContainer {
             identity: LocalIdentity(profiles: profiles),
             sync: sync,
             profiles: profiles,
+            practiceSessions: practiceSessions,
             isUITesting: isUITesting,
             storeIsEphemeral: ephemeral
         )

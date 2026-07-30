@@ -52,6 +52,54 @@ final class CalUITests: XCTestCase {
         }
     }
 
+    // MARK: The practice library (MVP-2)
+
+    func testPracticeLibraryListsDrMiasPractices() {
+        let app = launch()
+        app.tabBars.buttons["Home"].tap()
+
+        for slug in [
+            "microcosm-macrocosm-breath",
+            "golden-spark-visualization",
+            "presence-of-light",
+            "solar-plexus-light",
+            "sovereignty-reflection",
+        ] {
+            XCTAssertTrue(
+                app.buttons["practice-\(slug)"].waitForExistence(timeout: 10),
+                "library is missing \(slug)"
+            )
+        }
+
+        // The placeholder is scaffolding, not a practice — it must not be browsable.
+        XCTAssertFalse(app.buttons["practice-seed-placeholder"].exists)
+    }
+
+    func testPracticeDetailShowsHerPurposeAndCanBegin() {
+        let app = launch()
+        app.tabBars.buttons["Home"].tap()
+
+        let row = app.buttons["practice-presence-of-light"]
+        XCTAssertTrue(row.waitForExistence(timeout: 10))
+        row.tap()
+
+        let purpose = app.staticTexts["practice-purpose"]
+        XCTAssertTrue(purpose.waitForExistence(timeout: 10))
+        XCTAssertEqual(purpose.label, "Cultivate presence and inner stillness.")
+
+        app.buttons["begin-practice"].tap()
+
+        // The player opens full screen; declining returns to the detail screen.
+        let skip = app.buttons["skip-exercise"]
+        XCTAssertTrue(skip.waitForExistence(timeout: 10), "Begin should start playback")
+        skip.tap()
+
+        XCTAssertTrue(
+            app.buttons["begin-practice"].waitForExistence(timeout: 10),
+            "declining should return to the practice detail"
+        )
+    }
+
     // MARK: The check-in flow (Phase 1)
 
     func testCheckInOpensOnTheFirstOfDrMiasTenQuestions() {

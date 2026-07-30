@@ -11,7 +11,7 @@ struct ContentRepositoryTests {
     @Test("the bundled payload decodes")
     func decodes() async throws {
         let bundle = try await repo.bundle()
-        #expect(bundle.version == 1)
+        #expect(bundle.version == 2)
         #expect(!bundle.exercises.isEmpty)
         #expect(!bundle.questions.isEmpty)
         #expect(!bundle.motivations.isEmpty)
@@ -70,7 +70,10 @@ struct ContentRepositoryTests {
 
     @Test("every exercise produces a playable timeline of a sane length")
     func allExercisesArePlayable() async throws {
-        for exercise in try await repo.exercises(tier: nil) {
+        // Bound to a local first: iterating directly over `try await <call>`
+        // segfaults this toolchain. Clearer this way regardless.
+        let exercises = try await repo.exercises(tier: nil)
+        for exercise in exercises {
             let timeline = try exercise.script.timeline()
             #expect(timeline.beats.count > 0, "\(exercise.slug) has no beats")
             // A guided practice under 30s isn't a practice; over 10 minutes is a
@@ -84,8 +87,10 @@ struct ContentRepositoryTests {
 
     @Test("no breath beat is uncomfortably long — pacing sanity")
     func breathBeatsAreComfortable() async throws {
-        for exercise in try await repo.exercises(tier: nil) {
-            for beat in try exercise.script.timeline().beats where beat.phase.isBreath {
+        let exercises = try await repo.exercises(tier: nil)
+        for exercise in exercises {
+            let beats = try exercise.script.timeline().beats
+            for beat in beats where beat.phase.isBreath {
                 #expect(
                     beat.duration <= 10,
                     "\(exercise.slug): a \(beat.duration)s \(beat.phase.rawValue) is not comfortable"
@@ -105,7 +110,7 @@ struct ContentRepositoryTests {
     /// Six categories still have no authored regulation exercise (§17 question 6).
     /// This test documents which, so when Dr. Mia supplies one the gap closes
     /// visibly instead of silently.
-    @Test("categories still awaiting a practice are exactly the six we expect")
+    @Test("categories still awaiting a practice are exactly the five we expect")
     func knownContentGaps() async throws {
         var missing: [CoherenceCategory] = []
         for category in CoherenceCategory.allCases
@@ -123,6 +128,27 @@ struct ContentRepositoryTests {
         let free = try await repo.exercises(tier: .free)
         #expect(free.map(\.slug) == ["seed-placeholder"])
         #expect(try await repo.exercises(tier: .premium).count == 5)
+    }
+
+    @Test("every practice carries Dr. Mia's authored purpose line")
+    func purposesPresent() async throws {
+        let exercises = try await repo.exercises(tier: .premium)
+        for exercise in exercises {
+            let purpose = try #require(exercise.purpose, "no purpose for \(exercise.slug)")
+            #expect(!purpose.isEmpty)
+        }
+        #expect(
+            try await repo.exercise(slug: "presence-of-light")?.purpose
+                == "Cultivate presence and inner stillness."
+        )
+    }
+
+    @Test("duration is exposed for list rows without re-deriving the timeline")
+    func durationsExposed() async throws {
+        let exercises = try await repo.exercises(tier: nil)
+        for exercise in exercises {
+            #expect(exercise.duration != nil, "\(exercise.slug) has no duration")
+        }
     }
 
     // MARK: Motivations

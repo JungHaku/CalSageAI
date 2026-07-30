@@ -102,6 +102,7 @@ extension SwiftDataCoherenceStore {
         StoredCheckIn.self,
         StoredCategoryScore.self,
         StoredProfile.self,
+        StoredPracticeSession.self,
     ])
 
     /// On-disk container for the app.

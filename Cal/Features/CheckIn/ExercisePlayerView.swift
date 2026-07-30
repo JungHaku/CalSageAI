@@ -93,9 +93,15 @@ struct ExercisePlayerView: View {
     @State private var model: ExercisePlayerModel
 
     let onFinished: () -> Void
-    let onSkip: () -> Void
+    /// Carries the progress reached, so an abandoned run is recorded with how far
+    /// it got — that's the signal that says whether a practice is mistimed.
+    let onSkip: (Double) -> Void
 
-    init(exercise: Exercise, onFinished: @escaping () -> Void, onSkip: @escaping () -> Void) {
+    init(
+        exercise: Exercise,
+        onFinished: @escaping () -> Void,
+        onSkip: @escaping (Double) -> Void
+    ) {
         self._model = State(initialValue: ExercisePlayerModel(exercise: exercise))
         self.onFinished = onFinished
         self.onSkip = onSkip
@@ -145,7 +151,7 @@ struct ExercisePlayerView: View {
                 .tint(.accentColor)
                 .accessibilityLabel("Exercise progress")
 
-            Button("Not right now", action: onSkip)
+            Button("Not right now") { onSkip(model.progress) }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
                 .accessibilityIdentifier("skip-exercise")
@@ -197,7 +203,7 @@ struct ExercisePlayerView: View {
 }
 
 #Preview("breathwork") {
-    ExercisePlayerView(exercise: .placeholder, onFinished: {}, onSkip: {})
+    ExercisePlayerView(exercise: .placeholder, onFinished: {}, onSkip: { _ in })
 }
 
 // No Reduce Motion preview: `accessibilityReduceMotion` is a read-only environment

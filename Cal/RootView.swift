@@ -73,7 +73,9 @@ struct RootView: View {
         // question, and entitlements are Phase 5 — until then everyone sees the
         // full framework, which is the part worth getting right.
         case .checkIn: CheckInView(kind: .full)
-        case .home:     PhasePlaceholder(feature: "Home, streaks, and daily motivation", phase: 2)
+        // Home currently hosts the practice library. Streaks, daily motivation,
+        // and analytics stack above it in MVP-3/MVP-4.
+        case .home:     PracticesLibraryView()
         case .navigate: PhasePlaceholder(feature: "Campus map and Navigate", phase: 4)
         case .planner:  PhasePlaceholder(feature: "Today's schedule", phase: 4)
         case .chat:     PhasePlaceholder(feature: "Chat with Cal", phase: 3)
