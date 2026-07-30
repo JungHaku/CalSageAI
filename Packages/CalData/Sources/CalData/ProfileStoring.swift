@@ -26,6 +26,9 @@ public final class StoredProfile {
     public var favoriteSpotSlugs: [String] = []
     public var timeZoneIdentifier: String = "America/Los_Angeles"
     public var onboardedAt: Date?
+    public var reminderEnabled: Bool = false
+    public var reminderHour: Int = ReminderSchedule.defaultHour
+    public var reminderMinute: Int = ReminderSchedule.defaultMinute
     public var createdAt: Date = Date(timeIntervalSince1970: 0)
 
     // Same sync bookkeeping as StoredCheckIn (§2). The profile is the row that
@@ -43,6 +46,7 @@ public final class StoredProfile {
         favoriteSpotSlugs: [String],
         timeZoneIdentifier: String,
         onboardedAt: Date?,
+        reminder: ReminderSchedule,
         createdAt: Date,
         updatedAt: Date,
         isDirty: Bool
@@ -56,6 +60,9 @@ public final class StoredProfile {
         self.favoriteSpotSlugs = favoriteSpotSlugs
         self.timeZoneIdentifier = timeZoneIdentifier
         self.onboardedAt = onboardedAt
+        self.reminderEnabled = reminder.isEnabled
+        self.reminderHour = reminder.hour
+        self.reminderMinute = reminder.minute
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.isDirty = isDirty
@@ -72,6 +79,9 @@ public final class StoredProfile {
             favoriteSpotSlugs: favoriteSpotSlugs,
             timeZoneIdentifier: timeZoneIdentifier,
             onboardedAt: onboardedAt,
+            reminder: ReminderSchedule(
+                isEnabled: reminderEnabled, hour: reminderHour, minute: reminderMinute
+            ),
             createdAt: createdAt
         )
     }
@@ -101,6 +111,9 @@ public actor SwiftDataProfileStore: ProfileStoring {
             existing.favoriteSpotSlugs = profile.favoriteSpotSlugs
             existing.timeZoneIdentifier = profile.timeZoneIdentifier
             existing.onboardedAt = profile.onboardedAt
+            existing.reminderEnabled = profile.reminder.isEnabled
+            existing.reminderHour = profile.reminder.hour
+            existing.reminderMinute = profile.reminder.minute
             existing.updatedAt = Date()
             existing.isDirty = true
         } else {
@@ -115,6 +128,7 @@ public actor SwiftDataProfileStore: ProfileStoring {
                     favoriteSpotSlugs: profile.favoriteSpotSlugs,
                     timeZoneIdentifier: profile.timeZoneIdentifier,
                     onboardedAt: profile.onboardedAt,
+                    reminder: profile.reminder,
                     createdAt: profile.createdAt,
                     updatedAt: Date(),
                     isDirty: true

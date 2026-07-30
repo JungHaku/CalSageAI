@@ -24,6 +24,13 @@ final class CalUITests: XCTestCase {
 
     private let tabTitles = ["Home", "Check-In", "Navigate", "Planner", "Chat with Cal"]
 
+    /// SwiftUI decides whether a combined accessibility element surfaces as an
+    /// `otherElement`, a `staticText`, or a `button`, and it isn't stable across
+    /// layouts. Matching on identifier across any type avoids betting on it.
+    private func element(_ app: XCUIApplication, _ identifier: String) -> XCUIElement {
+        app.descendants(matching: .any).matching(identifier: identifier).firstMatch
+    }
+
     func testAllFiveTabsFromTheSpecArePresent() {
         let app = launch()
         for title in tabTitles {
@@ -52,11 +59,85 @@ final class CalUITests: XCTestCase {
         }
     }
 
+    // MARK: Home and the retention loop (MVP-3)
+
+    func testHomeOffersACheckInAndTheDailyMotivation() {
+        let app = launch()
+        app.tabBars.buttons["Home"].tap()
+
+        XCTAssertTrue(app.buttons["start-checkin"].waitForExistence(timeout: 10))
+        XCTAssertTrue(element(app, "daily-motivation").exists, "home should show a daily message")
+        // Empty history → no progress card claiming statistics we don't have.
+        XCTAssertFalse(element(app, "stat-consistency").exists)
+    }
+
+    func testHomeLeadsWithConsistencyNotTheStreak() {
+        let app = launch(scenario: "day30Streak")
+        app.tabBars.buttons["Home"].tap()
+
+        let consistency = element(app, "stat-consistency")
+        XCTAssertTrue(consistency.waitForExistence(timeout: 10))
+        XCTAssertTrue(consistency.label.contains("30"), "expected days-practised, got: \(consistency.label)")
+
+        // The streak is shown in WEEKS, not days — 30 daily check-ins is 5 weeks.
+        // A daily counter would mark most students as failing every week.
+        let streak = element(app, "stat-streak")
+        XCTAssertTrue(streak.exists)
+        XCTAssertTrue(
+            streak.label.contains("Weeks") && streak.label.contains("5"),
+            "expected a weekly streak of 5, got: \(streak.label)"
+        )
+
+        // A seeded 30-day history has already checked in today, so the CTA is gone.
+        XCTAssertTrue(element(app, "checked-in-today").exists)
+    }
+
+    func testHistoryListsPastCheckIns() {
+        let app = launch(scenario: "day30Streak")
+        app.tabBars.buttons["Home"].tap()
+
+        element(app, "dest-history").tap()
+        XCTAssertTrue(
+            app.buttons["history-2026-07-29"].waitForExistence(timeout: 10),
+            "history should list seeded days"
+        )
+    }
+
+    /// The reminder toggle must never reach the real notification centre in a test
+    /// — a system permission alert would block the run with no useful failure.
+    func testReminderToggleSchedulesWithoutASystemPrompt() {
+        let app = launch()
+        app.tabBars.buttons["Home"].tap()
+        element(app, "dest-settings").tap()
+
+        let toggle = app.switches["reminder-toggle"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 10))
+        XCTAssertEqual(toggle.value as? String, "0", "the reminder is off until asked for")
+
+        // A Form row exposes TWO switches: the full-width row, which carries the
+        // identifier, and the actual control inside it. Tapping the row hits the
+        // label and does nothing — the control has to be tapped directly.
+        let control = toggle.switches.firstMatch
+        (control.exists ? control : toggle).tap()
+
+        // Enabling runs through authorization and a store write, so the value
+        // changes asynchronously — asserting immediately races the Task.
+        wait(
+            for: [expectation(for: NSPredicate(format: "value == '1'"), evaluatedWith: toggle)],
+            timeout: 10
+        )
+        XCTAssertTrue(
+            element(app, "reminder-time").waitForExistence(timeout: 5),
+            "enabling should reveal the time picker"
+        )
+    }
+
     // MARK: The practice library (MVP-2)
 
     func testPracticeLibraryListsDrMiasPractices() {
         let app = launch()
         app.tabBars.buttons["Home"].tap()
+        element(app, "dest-practices").tap()
 
         for slug in [
             "microcosm-macrocosm-breath",
@@ -78,12 +159,13 @@ final class CalUITests: XCTestCase {
     func testPracticeDetailShowsHerPurposeAndCanBegin() {
         let app = launch()
         app.tabBars.buttons["Home"].tap()
+        element(app, "dest-practices").tap()
 
         let row = app.buttons["practice-presence-of-light"]
         XCTAssertTrue(row.waitForExistence(timeout: 10))
         row.tap()
 
-        let purpose = app.staticTexts["practice-purpose"]
+        let purpose = element(app, "practice-purpose")
         XCTAssertTrue(purpose.waitForExistence(timeout: 10))
         XCTAssertEqual(purpose.label, "Cultivate presence and inner stillness.")
 

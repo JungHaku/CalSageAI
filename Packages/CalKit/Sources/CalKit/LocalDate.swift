@@ -68,6 +68,33 @@ public struct LocalDate: Hashable, Comparable, Codable, Sendable, CustomStringCo
         return calendar.dateComponents([.day], from: a, to: b).day ?? 0
     }
 
+    /// A monotonic day counter from a fixed epoch, incrementing by exactly one per
+    /// calendar day.
+    ///
+    /// Used for anything that rotates daily. Encoding a date as
+    /// `year * 372 + month * 31 + day` is the tempting shortcut and it's wrong:
+    /// it jumps by four across a month boundary, which makes a rotation skip and
+    /// can repeat an item two days apart.
+    public func dayNumber(in calendar: Calendar) -> Int {
+        days(since: Self.epoch, in: calendar)
+    }
+
+    static let epoch = LocalDate(year: 2000, month: 1, day: 1)
+
+    /// The first day of this date's week, per the calendar's `firstWeekday`.
+    ///
+    /// Used for weekly streaks (see `StreakCalculator.currentWeeklyStreak`).
+    /// Locale-dependent on purpose — a week starting Sunday in the US and Monday
+    /// in most of Europe is what the user's own calendar says.
+    public func weekStart(in calendar: Calendar) -> LocalDate {
+        guard let anchor = noon(in: calendar),
+              let interval = calendar.dateInterval(of: .weekOfYear, for: anchor)
+        else { return self }
+        // Noon inside the interval, so a DST-shifted week boundary can't land the
+        // result on the previous day.
+        return LocalDate(interval.start.addingTimeInterval(12 * 3600), in: calendar)
+    }
+
     // MARK: Comparable
 
     public static func < (lhs: LocalDate, rhs: LocalDate) -> Bool {

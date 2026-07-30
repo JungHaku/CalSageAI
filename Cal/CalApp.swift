@@ -33,6 +33,9 @@ final class AppContainer {
     let profiles: any ProfileStoring
     /// Guided-practice runs, including abandoned ones (§ PracticeSession).
     let practiceSessions: any PracticeSessionStoring
+    /// Local notification scheduling. Mocked under test so a system permission
+    /// alert can never block a UI-test run.
+    let reminders: any ReminderScheduling
     /// True when launched by XCUITest with seeded state (§11.4).
     let isUITesting: Bool
     /// True when nothing written this session survives relaunch — either a UI-test
@@ -48,6 +51,7 @@ final class AppContainer {
         sync: any SyncEngine,
         profiles: any ProfileStoring,
         practiceSessions: any PracticeSessionStoring,
+        reminders: any ReminderScheduling,
         isUITesting: Bool = false,
         storeIsEphemeral: Bool = true
     ) {
@@ -59,6 +63,7 @@ final class AppContainer {
         self.sync = sync
         self.profiles = profiles
         self.practiceSessions = practiceSessions
+        self.reminders = reminders
         self.isUITesting = isUITesting
         self.storeIsEphemeral = storeIsEphemeral
     }
@@ -133,6 +138,7 @@ final class AppContainer {
             sync: sync,
             profiles: profiles,
             practiceSessions: practiceSessions,
+            reminders: isUITesting ? MockReminderScheduler() : NotificationReminderScheduler(),
             isUITesting: isUITesting,
             storeIsEphemeral: ephemeral
         )

@@ -87,7 +87,7 @@ notice in week one.
 
 Phases 0 and 1 are built and committed: the renamed project, five local Swift
 packages, the check-in state machine, the breathwork player, SwiftData
-persistence, **191 passing tests**, and the 231-place campus dataset. The
+persistence, **247 passing tests**, and the 231-place campus dataset. The
 restructure below throws none of it away — §2 explains why it didn't have to.
 
 ---
@@ -331,6 +331,38 @@ band into breathing, so a **5** gets "let's stay aware" and no exercise; the pre
 spec says "5 or below" regulates. A 5 therefore regulates on premium and not on
 free. Both are implemented, with a test pinning the difference (§17, question 11).
 
+### 7.1 Decision: a **weekly** streak, and consistency leads
+
+Researched rather than assumed, because a streak in a mental-health app for
+stressed students is a clinical choice:
+
+- A 2025 scoping review of gamification for college students associates
+  streak/point mechanics with **pressure and diminished meaning**.
+- The engagement→clinical-outcome link across mental-health apps is real but
+  **small — pooled r = 0.16** (Psychiatry Research, 2025), so the upside bought
+  with that pressure is slight.
+- Median meditation-app users practise about **three times a month**, so a daily
+  streak would mark most people as failing every single week.
+- Streak notification copy ("Don't break your streak!") is categorised as
+  *rough framing* — threat and urgency cues — which runs directly against the CBT
+  principle of creating distance from anxious thoughts.
+- Lally et al. (2010) is the defensible reframe: **missing one opportunity does
+  not materially affect habit formation.**
+
+So Cal counts **consecutive weeks with at least one check-in**, the pattern Nike
+Run Club uses. It survives an exam week, a flu, or a bad mental-health day without
+ever producing a loss event — no freeze inventory, no rescue dialog, nothing to
+buy. The daily streak is still computed (`CoherenceInsights.currentStreak`) but is
+deliberately not shown.
+
+Home leads with **days practised** ("18 of the last 30") and the **mean
+before→after delta**, and shows weeks-in-a-row third. Consistency survives a
+missed Tuesday; a daily streak resets to zero and takes the credit with it.
+
+*(The EU DSA Article 28 guidance naming streaks as off-by-default is scoped to
+minors on UGC feeds and does not bind this app — but it is the argument that will
+land with a clinician.)*
+
 ### Decision: the scale starts unset
 
 *You asked me to call this one.*
@@ -388,6 +420,27 @@ rather than silently when she supplies one.
 ## 9. Safety
 
 Unchanged and fully in scope — **being local-only does not reduce this.**
+
+**Notification design**, also researched:
+
+- Permission is requested **at the moment the student enables the reminder**, not
+  on launch. Apple's own guidance says to ask at a contextually relevant moment,
+  and `requestAuthorization` prompts exactly once per install — spending that on a
+  cold launch wastes it.
+- **Provisional authorization is deliberately not used.** Provisional
+  notifications never appear on the lock screen, never play a sound, and never
+  show a banner — they land silently in Notification Center history. A morning
+  reminder whose entire job is to surface at 8am fails silently under it.
+- One notification a day, `.active` interruption level, **no badge**. The only
+  controlled trial on point found the highest-frequency arm had the *highest*
+  two-week abandonment.
+- The body is Dr. Mia's own question — *"How do you feel right here in the
+  moment?"* — not invented copy, and carries no streak count.
+- The schedule is **re-applied on every foreground**. Apple's docs do not settle
+  whether a repeating calendar trigger floats with local time or pins to the zone
+  it was scheduled in (an Apple engineer and a developer's reproduction disagree
+  on the forums), and DST behaviour is undocumented entirely. Re-applying is
+  idempotent, so it costs nothing to stop depending on the answer.
 
 - **Layer A — on-device pattern detection.** Built, and tested against a reviewed
   fixture set. Offline, instant, free. Tuned for recall, because the cost matrix is
@@ -451,14 +504,14 @@ caching. Full comparison, caching traps, and vendor terms in
 
 ## 11. Testing
 
-Six loops. Current state: **191 tests passing** — 163 across packages, 28 app + UI.
+Six loops. Current state: **247 tests passing** — 209 across packages, 38 app + UI.
 
 | Loop | Speed | What | Status |
 |---|---|---|---|
 | 1. Previews | instant | Every component per state, dark, XXXL | partial |
-| 2. `swift test` on packages | ~2s | All logic, no simulator | **163 tests** |
+| 2. `swift test` on packages | ~2s | All logic, no simulator | **209 tests** |
 | 3. Snapshot | ~1 min | `getsentry/SnapshotPreviews` turns each `#Preview` into a test | to build |
-| 4. XCUITest | minutes | 8 seeded flows via launch arguments | **8 flows** |
+| 4. XCUITest | minutes | 12 seeded flows via launch arguments | **12 flows** |
 | 5. TestFlight | days | Dr. Mia feels the pacing on a real phone | pending account |
 | 6. Backend / RLS | — | 9 pgTAP catalog invariants, written | Phase B |
 
@@ -486,6 +539,14 @@ Seeded launch states keep UI tests deterministic: `-CalScenario day30Streak`,
 - **Tests that assert on a persistent store break the moment persistence lands.**
   Assert on the configuration (*is this store ephemeral?*), not on residual disk
   state.
+- **A SwiftUI `Form` row exposes TWO switches** — the full-width row, which
+  carries your `accessibilityIdentifier`, and the actual control inside it.
+  `app.switches["my-id"].tap()` taps the row's centre, which is the label, and
+  does nothing. Tap `…switches.firstMatch` instead. This cost an afternoon: the
+  toggle looked broken, and three plausible app-side "fixes" were tried before a
+  hierarchy dump showed the tap was landing on the label. **Unit-test the view
+  model first** — that immediately proved the logic was right and the fault was in
+  the test.
 - **`for x in try await someCall() { … }` segfaults** this toolchain — the whole
   test process dies with signal 11 and *no* test reports a result, which looks
   like a crash in whatever the loop body touches. Bind the result to a `let`
@@ -605,8 +666,10 @@ progress reached, because that is the signal that says whether a practice is
 mistimed. Regulation runs carry `checkInID`, which is what will let the weekly
 review answer "most effective regulation exercises".
 
-**MVP-3 — retention loop.** Home, streak, daily motivation, morning reminder
-(a *local* notification — no push, no entitlement), history list.
+**MVP-3 — retention loop. ✓ Built.** Home with today's state, daily motivation,
+and a progress card; history list with per-check-in detail; settings with a daily
+local reminder; `CoherenceInsights` computing the whole surface in one pure pass.
+See §7.1 for the streak decision — it is a clinical one, not a product one.
 
 **MVP-4 — analytics.** Daily/weekly/monthly trends, per-category trends, and the
 mean before→after delta as the headline. Where the 60-day synthetic fixture pays
@@ -663,10 +726,14 @@ Product:
     rather than a design choice, it's a one-line change.
 12. **Does she accept content changes requiring an app release** during the MVP
     (§6)? It's the main practical cost of skipping the backend.
-13. **Free/premium boundary** — confirm the split, particularly whether free users
+13. **The daily motivation pool is five lines**, so it cycles every five days —
+    short enough that a student will notice within a fortnight. Twenty to thirty
+    would make it feel written rather than looped. Her existing five are in the
+    app verbatim.
+14. **Free/premium boundary** — confirm the split, particularly whether free users
     get any coach chat once it exists.
-14. **Sacred Care Fund** — how it's represented in-app.
-15. **Launch timing.** Fall semester start is the obvious moment for a Berkeley
+15. **Sacred Care Fund** — how it's represented in-app.
+16. **Launch timing.** Fall semester start is the obvious moment for a Berkeley
     student app.
 
 *Resolved: the 0–10 scale starts unset rather than pre-filled (§7) — my call, as you

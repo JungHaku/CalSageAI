@@ -17,6 +17,7 @@ public struct Profile: Sendable, Equatable, Identifiable, Codable {
     public var favoriteSpotSlugs: [String]
     public var timeZoneIdentifier: String
     public var onboardedAt: Date?
+    public var reminder: ReminderSchedule
     public let createdAt: Date
 
     public init(
@@ -29,6 +30,7 @@ public struct Profile: Sendable, Equatable, Identifiable, Codable {
         favoriteSpotSlugs: [String] = [],
         timeZoneIdentifier: String = "America/Los_Angeles",
         onboardedAt: Date? = nil,
+        reminder: ReminderSchedule = .default,
         createdAt: Date = Date()
     ) {
         self.id = id
@@ -40,6 +42,7 @@ public struct Profile: Sendable, Equatable, Identifiable, Codable {
         self.favoriteSpotSlugs = favoriteSpotSlugs
         self.timeZoneIdentifier = timeZoneIdentifier
         self.onboardedAt = onboardedAt
+        self.reminder = reminder
         self.createdAt = createdAt
     }
 
@@ -63,28 +66,57 @@ public struct Motivation: Sendable, Equatable, Identifiable, Codable, Hashable {
 }
 
 extension Motivation {
-    /// Deterministic pick for a given day.
+    /// The message for a given day.
     ///
-    /// Hashing the date rather than storing "today's pick" means the same message
-    /// shows all day, survives a relaunch, and needs no persistence — and previews
-    /// and snapshot tests of the home screen stay stable.
+    /// A **rotation**, not a hash. Deriving the pick from the date means the same
+    /// message shows all day, survives a relaunch, needs no storage, and keeps
+    /// previews and snapshot tests stable — but a hash would collide, and with a
+    /// pool this small a collision means the same line two days running. Stepping
+    /// through a deterministically shuffled order guarantees every message is used
+    /// once before any repeats.
     ///
-    /// `recentlyShown` lets the caller exclude the last few days so a small pool
-    /// doesn't visibly cycle. With the pool Dr. Mia has supplied so far (five
-    /// lines) it *will* still repeat weekly — see ARCHITECTURE.md §17.
+    /// The pool is shuffled rather than used in file order so the sequence doesn't
+    /// read as a list, and seeded so it's identical on every device.
+    ///
+    /// ⚠️ Dr. Mia has supplied five lines, so the cycle is five days long. That is
+    /// short enough to be noticeable — see ARCHITECTURE.md §17.
     public static func forDay(
         _ day: LocalDate,
         from pool: [Motivation],
-        excluding recentlyShown: [String] = []
+        calendar: Calendar
     ) -> Motivation? {
         guard !pool.isEmpty else { return nil }
-        let eligible = pool.filter { !recentlyShown.contains($0.id) }
-        let candidates = eligible.isEmpty ? pool : eligible
-
-        // Stable across processes and platforms — `hashValue` is not.
-        var seed = UInt64(day.year) &* 10_000 &+ UInt64(day.month) &* 100 &+ UInt64(day.day)
-        seed = seed &* 0x9E37_79B9_7F4A_7C15
-        seed ^= seed >> 29
-        return candidates[Int(seed % UInt64(candidates.count))]
+        let ordered = rotationOrder(pool)
+        let index = day.dayNumber(in: calendar) %% ordered.count
+        return ordered[index]
     }
+
+    /// Stable shuffle: sort by a seeded hash of the id, so the order is the same
+    /// everywhere and doesn't depend on how the content file happens to be written.
+    static func rotationOrder(_ pool: [Motivation]) -> [Motivation] {
+        pool
+            .map { (key: seededHash($0.id), motivation: $0) }
+            .sorted { ($0.key, $0.motivation.id) < ($1.key, $1.motivation.id) }
+            .map(\.motivation)
+    }
+
+    private static func seededHash(_ string: String) -> UInt64 {
+        // FNV-1a. `String.hashValue` is seeded per-process and would reshuffle the
+        // rotation on every launch.
+        var hash: UInt64 = 0xCBF2_9CE4_8422_2325
+        for byte in string.utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 0x0000_0100_0000_01B3
+        }
+        return hash
+    }
+}
+
+infix operator %%: MultiplicationPrecedence
+
+/// Modulo that is always non-negative, so dates before the epoch don't index
+/// backwards off the front of the array.
+func %% (lhs: Int, rhs: Int) -> Int {
+    let r = lhs % rhs
+    return r < 0 ? r + rhs : r
 }
