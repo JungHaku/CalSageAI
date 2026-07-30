@@ -1,9 +1,20 @@
 # Cal Coherence
 
 A coherence coach for UC Berkeley students, built with Breathe Health Center.
-Architecture and all design decisions: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
-**Phase 0 (foundation) is complete.** Phase 1 is the check-in flow — see §19.
+**The MVP runs entirely on the phone — no backend, no accounts, no API keys.**
+There is nothing to set up beyond Xcode.
+
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) — the MVP design, and how the backend drops
+  in later without a rewrite
+- [`docs/LAUNCH-REQUIREMENTS.md`](docs/LAUNCH-REQUIREMENTS.md) — what gates
+  shipping to real students: privacy law, App Store review, payments, AI vendor
+  terms
+- [`docs/`](docs/) — Dr. Mia's specs, verbatim
+
+**Built so far:** the check-in flow, the breathwork player, SwiftData persistence,
+the five-tab shell, offline Emergency Help, and 231 seeded campus locations.
+**140 tests passing.** Next up is MVP-1 — see ARCHITECTURE.md §16.
 
 ---
 
@@ -44,11 +55,6 @@ Build and test on a simulator:
 xcodebuild test -project Cal.xcodeproj -scheme Cal -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
 
-⚠️ `-only-testing` silently runs **zero** Swift Testing tests unless you double the
-trailing parentheses (`-only-testing:CalTests/AppContainerTests/defaults()()`) —
-xcodebuild strips the last pair. Silent success is worse than a failure, so prefer
-running the whole action.
-
 ### Seeded launch states
 
 UI tests and previews pin the app to a deterministic state instead of tapping
@@ -62,25 +68,33 @@ through screens to reach one:
 | `-CalUseMockCoach 1` | never reach a real model — no cost, no network |
 | `-CalFixedDate 2026-07-29` | freeze the clock so streak assertions are stable |
 
-## The database
+### Test-loop gotchas
 
-Requires the Supabase CLI, which is not yet installed here:
+Each of these has already cost real time here:
+
+- `-only-testing` silently runs **zero** Swift Testing tests unless you double the
+  trailing parentheses (`-only-testing:CalTests/AppContainerTests/defaults()()`) —
+  xcodebuild strips the last pair. Prefer running the whole action.
+- **Don't drive the simulator by hand while a test run is going.** It starves the
+  run: the same suite went from 124 seconds to 69 minutes and produced two bogus
+  timeout failures. `xcrun simctl shutdown all` first.
+- `.accessibilityIdentifier` on a SwiftUI **container overwrites every
+  descendant's**. Identify leaf elements. When a UI test can't find something
+  that's visibly on screen, print `app.debugDescription`.
+
+## The database — not needed for the MVP
+
+`supabase/` holds a complete schema, RLS policies, a seed, and 9 pgTAP catalog
+invariants. **None of it runs during MVP development.** It is kept because it's
+written, reviewed, and correct, and the local SwiftData models already mirror it
+column-for-column — it is the Phase B target (ARCHITECTURE.md §15).
+
+When that time comes:
 
 ```bash
 brew install supabase/tap/supabase
-```
-
-Then, from the repo root:
-
-```bash
 supabase start && supabase db reset && supabase test db
 ```
-
-`db reset` applies `supabase/migrations/` then `supabase/seed.sql`, which creates
-one deterministic test user with 60 days of check-ins — that's what makes the
-analytics screens real. `test db` runs the pgTAP suite in `supabase/tests/`, which
-sweeps the catalog for the RLS invariants in §11.6 (including that no view is
-missing `security_invoker`).
 
 `seed.sql` writes directly into `auth.users`. It is local-only and must never run
 against staging or production.
@@ -89,17 +103,18 @@ against staging or production.
 
 ## Before this can ship
 
-Tracked in full at §18.6 and §20. The blocking ones:
+Full list at ARCHITECTURE.md §17. The blocking ones:
 
 1. **Is Cal part of BHC's clinical care, or a separate consumer product?** Decides
-   whether the data is PHI, and therefore your Supabase tier and vendor
-   agreements. Needs Dr. Mia's counsel, in writing. (§18.1)
+   whether the data is PHI, and therefore the vendor agreements at Phase B. Needs
+   Dr. Mia's counsel, in writing.
 2. **Apple Developer *organization* account under BHC** — guideline 5.1.1(ix)
    requires healthcare apps to ship from the legal entity providing the service.
    D-U-N-S number pending.
 3. **The Berkeley crisis numbers are unverified and conflicting.** UC's own pages
-   disagree. `EmergencyContact.pendingVerification` renders them as visibly
-   unverified, and a test fails if anyone adds digits without promoting them
-   deliberately. Someone must dial both. (§9.3)
-4. **Rights to "Cal" and Berkeley marks**, or a rename. (§1)
+   disagree. They render as visibly unverified, and a test fails if anyone adds
+   digits without promoting them deliberately. Someone must dial both.
+4. **Rights to "Cal" and Berkeley marks**, or a rename.
 5. **Both spec emails arrived truncated** — see [`docs/`](docs/).
+6. **Pacing for Dr. Mia's five practices.** Her wording is fixed; the timings are
+   ours to propose and hers to approve.
