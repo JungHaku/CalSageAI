@@ -668,6 +668,12 @@ Two gotchas:
 - **Swift Testing does not replace XCTest.** UI tests (`XCUIApplication`), performance tests (`XCTMetric`), and tests catching Objective-C exceptions stay in XCTest permanently. Plan for two frameworks, not a migration.
 - **`xcodebuild -only-testing` silently runs zero tests for Swift Testing** unless you double the trailing parentheses (`Target/Suite/myTest()()`) — xcodebuild strips the last pair. Silent zero-test success is worse than a failure; assert a nonzero test count in CI.
 
+Three more learned the hard way in Phase 1, each of which cost real time:
+
+- **`.accessibilityIdentifier` on a SwiftUI container propagates to every descendant and overwrites theirs.** One on a wrapper view made the child button and cue text unqueryable — every element reported the parent's id. Identify leaf elements, not containers. And when a UI test can't find something that is visibly on screen, print `app.debugDescription` before theorising.
+- **A simulator you're driving by hand starves a concurrent test run.** The same suite went from 124 seconds to 69 minutes and produced two bogus "timed out synthesizing event" failures. Detach and `xcrun simctl shutdown all` before trusting a UI-test result.
+- **Tests that assert on a persistent store break the moment persistence lands.** "A fresh launch has no data" held only while every configuration was in-memory. Assert on the *configuration* — is this store ephemeral? — rather than on residual disk state.
+
 ### 11.3 Loop 3 — snapshot tests (~1 minute)
 
 The highest-leverage move available to a solo SwiftUI dev: **`getsentry/SnapshotPreviews`** auto-snapshots every `#Preview` you already wrote, so preview-writing becomes test-writing at zero marginal cost. Back it with `pointfreeco/swift-snapshot-testing` (v1.19.4, released 2026-07-28, actively maintained) for anything previews can't reach.
@@ -866,15 +872,15 @@ CalAI/
 │   ├── CalApp.swift             entry + AppContainer (DI, launch args)   ✓
 │   ├── RootView.swift           the five-tab shell                       ✓
 │   ├── EmergencyView.swift      offline, one tap from every tab          ✓
-│   ├── Features/                Home/ CheckIn/ Navigate/ … (Phases 1–5)
+│   ├── Features/CheckIn/        flow, breathwork player, haptics         ✓
 │   └── Resources/               Assets, .storekit, PrivacyInfo.xcprivacy
 ├── Packages/
-│   ├── CalKit/                  pure logic + fixtures, 54 tests          ✓
+│   ├── CalKit/                  pure logic + fixtures, 82 tests          ✓
 │   ├── CalDesign/               ScoreScale + tokens                      ✓
-│   ├── CalData/                 CoherenceStoring + in-memory store       ✓
+│   ├── CalData/                 SwiftData store + sync bookkeeping       ✓
 │   ├── CalAI/                   CoachClient contract + MockCoachClient   ✓
 │   └── CalContent/              bundled campus seed (231 places)         ✓
-├── CalTests/  CalUITests/       app wiring + 4 UI flows                  ✓
+├── CalTests/  CalUITests/       app wiring + 5 UI flows                  ✓
 ├── supabase/
 │   ├── migrations/              schema, view, RLS                        ✓
 │   ├── seed.sql                 test user, 60 days of check-ins          ✓
@@ -1008,7 +1014,9 @@ Each phase ends with something Dr. Mia can hold via TestFlight. For a product th
 
 **Phase 0 — foundation (week 1).** §3 fixes. Git. Supabase projects. Auth. Package skeleton. Xcode Cloud running `swift test`. Design primitives. Nothing user-visible; everything after is faster.
 
-**Phase 1 — the check-in (weeks 2–3).** The 10 categories plus the free single question. Score slider, band responses, ≤5 regulation trigger, before/after capture, one real breathwork exercise with timing and haptics. Full schema + RLS + RLS tests. Offline-first with sync. **This is the product.** Get it right before anything else exists.
+**Phase 1 — the check-in (weeks 2–3). ✓ Built.** The 10 categories plus the free single question. Score slider, band responses, the tier-specific regulation trigger, before/after capture, and a breathwork player with monotonic timing, a breathing ring, and phase-derived haptics. `CheckInFlow` in `CalKit` owns every transition and is fully unit-tested; the view renders `step` and nothing else. SwiftData persistence with soft deletes and `isDirty` bookkeeping for the outbox.
+
+*Still open in this phase:* the push/pull half of sync, which needs auth and a live Supabase project to be worth writing (the conflict rules in §7 are specified but not yet implemented), and Dr. Mia's real exercise scripts — the app ships one clearly-labelled placeholder so a low score always has somewhere to go.
 
 **Phase 2 — retention loop (week 4).** Home, streaks, daily motivation, basic analytics, full exercise library, morning check-in notification.
 
@@ -1038,8 +1046,9 @@ First three are blocking.
 8. **Crisis protocol.** Exactly what Cal says and does at each severity, and which Berkeley resources in what order. She should own this copy — and SB 243 requires publishing the protocol.
 9. **The two specs disagree on the regulation threshold, and I need to know which is intended.** Free Cal §1 routes the `0–4` band into guided breathing, so a **5** gets "let's stay aware" and no exercise. Cal+ says "if a score is **5 or below**, Cal immediately guides the user through a brief regulation exercise." So a 5 regulates on premium but not on free. Both are implemented faithfully rather than averaged (`RegulationPolicy` in `CalKit`, with a test pinning the divergence) — but if it's an oversight rather than a design choice, it's a one-line change.
 10. **Free/premium boundary** — confirm §1 matches her intent, particularly whether free users get any coach chat.
-11. **Sacred Care Fund** — how it's represented in-app, and what copy she wants. (§12)
-12. **Launch timing.** Fall semester start is the obvious moment for a Berkeley student app, and a real deadline worth scoping to.
+11. **Should the 0–10 scale start unset, or pre-set?** It currently opens at 5. For a clinical instrument a pre-set value anchors the answer, and 5 is *exactly* the premium regulation threshold — so a student who taps straight through gets offered an exercise every time. That errs toward offering help, which is the safer bias, but it also inflates the "regulated" counts she'll be reading in the analytics. The alternative is requiring a deliberate touch before Continue enables. Her call.
+12. **Sacred Care Fund** — how it's represented in-app, and what copy she wants. (§12)
+13. **Launch timing.** Fall semester start is the obvious moment for a Berkeley student app, and a real deadline worth scoping to.
 
 ---
 
