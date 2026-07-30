@@ -63,6 +63,21 @@ final class CalUITests: XCTestCase {
         XCTAssertEqual(prompt.label, "How safe does your body feel as a place to live right now?")
     }
 
+    /// The scale starts unset on purpose (ARCHITECTURE.md §7): a pre-filled 5 is
+    /// exactly the premium regulation threshold, so tapping straight through would
+    /// record everyone as low and inflate the before→after delta.
+    func testContinueIsDisabledUntilTheScaleIsTouched() {
+        let app = launch()
+        app.tabBars.buttons["Check-In"].tap()
+
+        let button = app.buttons["continue-button"]
+        XCTAssertTrue(button.waitForExistence(timeout: 10))
+        XCTAssertFalse(button.isEnabled, "Continue must not be tappable before the student answers")
+
+        app.sliders.firstMatch.adjust(toNormalizedSliderPosition: 0.8)
+        XCTAssertTrue(button.isEnabled, "answering should enable Continue")
+    }
+
     /// The spec's core loop: a low score routes into regulation **immediately**,
     /// before the next category, and the exercise is declinable.
     func testLowScoreRoutesIntoTheExerciseImmediately() {

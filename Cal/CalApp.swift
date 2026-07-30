@@ -1,4 +1,5 @@
 import CalAI
+import CalContent
 import CalData
 import CalKit
 import SwiftUI
@@ -23,6 +24,13 @@ final class AppContainer {
     let dates: any DateProvider
     let store: any CoherenceStoring
     let coach: any CoachClient
+    /// Authored content — bundled in the MVP, remote at Phase B (§2, §6).
+    let content: any ContentRepository
+    /// Who the data belongs to. No accounts in the MVP (§2).
+    let identity: any IdentityProviding
+    /// Inert in the MVP, but real enough to report what exists only on this phone.
+    let sync: any SyncEngine
+    let profiles: any ProfileStoring
     /// True when launched by XCUITest with seeded state (§11.4).
     let isUITesting: Bool
     /// True when nothing written this session survives relaunch — either a UI-test
@@ -33,12 +41,20 @@ final class AppContainer {
         dates: any DateProvider,
         store: any CoherenceStoring,
         coach: any CoachClient,
+        content: any ContentRepository,
+        identity: any IdentityProviding,
+        sync: any SyncEngine,
+        profiles: any ProfileStoring,
         isUITesting: Bool = false,
         storeIsEphemeral: Bool = true
     ) {
         self.dates = dates
         self.store = store
         self.coach = coach
+        self.content = content
+        self.identity = identity
+        self.sync = sync
+        self.profiles = profiles
         self.isUITesting = isUITesting
         self.storeIsEphemeral = storeIsEphemeral
     }
@@ -77,21 +93,39 @@ final class AppContainer {
         // crash. That trades durability for availability, which is the right way
         // round here — but it must be visible, hence `storeIsEphemeral`.
         var store: any CoherenceStoring = InMemoryCoherenceStore(seeded)
+        var profiles: any ProfileStoring = InMemoryProfileStore()
         var ephemeral = true
         if !isUITesting {
             if let container = try? SwiftDataCoherenceStore.container() {
+                // One container for both stores, so they share a schema and a
+                // migration story (§5).
                 store = SwiftDataCoherenceStore(modelContainer: container)
+                profiles = SwiftDataProfileStore(modelContainer: container)
                 ephemeral = false
             }
         }
 
-        // Likewise the real CoachClient is a Phase 3 deliverable (§19): it needs
-        // the Edge Function proxy to exist. Until then the mock is the only
-        // implementation, which is also why no API key appears anywhere here.
+        // The three Phase B seams (§2), wired inert. They exist now so callers are
+        // written against them from day one — retrofitting is what turns a swap
+        // into a rewrite.
+        let sync = NoOpSyncEngine { [store] in
+            // Only the SwiftData store tracks an outbox; the in-memory one has
+            // nothing to sync by definition.
+            guard let tracked = store as? SwiftDataCoherenceStore else { return 0 }
+            return try await tracked.pendingSyncCount()
+        }
+
+        // The real CoachClient needs the key-holder proxy to exist (§10), so the
+        // mock remains the only implementation — which is also why no API key
+        // appears anywhere in this binary.
         return AppContainer(
             dates: dates,
             store: store,
             coach: MockCoachClient(),
+            content: BundledContentRepository(),
+            identity: LocalIdentity(profiles: profiles),
+            sync: sync,
+            profiles: profiles,
             isUITesting: isUITesting,
             storeIsEphemeral: ephemeral
         )

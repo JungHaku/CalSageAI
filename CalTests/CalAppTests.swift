@@ -1,4 +1,5 @@
 import CalData
+import CalContent
 import CalKit
 import Foundation
 import Testing
@@ -102,6 +103,39 @@ struct AppContainerTests {
             arguments: ["-CalScenario", scenario.rawValue, "-CalFixedDate", "2026-07-29"]
         )
         #expect(container.isUITesting)
+    }
+}
+
+/// The Phase B seams (ARCHITECTURE.md §2), wired inert. These tests exist so the
+/// wiring can't quietly rot before there's a backend to exercise it.
+@Suite("Backend-ready seams")
+@MainActor
+struct SeamWiringTests {
+    @Test("the container exposes content, identity, and sync")
+    func seamsAreWired() async throws {
+        let container = AppContainer.live(arguments: ["-CalUseMockCoach", "1"])
+        #expect(try await container.content.bundle().version >= 1)
+        #expect(await container.identity.isAuthenticated == false)
+        #expect(try await container.sync.sync() == .notConfigured)
+    }
+
+    @Test("the identity is stable across calls — it becomes the server PK at Phase B")
+    func identityIsStable() async throws {
+        let container = AppContainer.live(arguments: ["-CalUseMockCoach", "1"])
+        let first = try await container.identity.currentProfileID()
+        let second = try await container.identity.currentProfileID()
+        #expect(first == second)
+        #expect(try await container.profiles.current()?.id == first)
+    }
+
+    @Test("authored content resolves through the repository, not just CalKit's seed")
+    func contentResolves() async throws {
+        let container = AppContainer.live(arguments: ["-CalUseMockCoach", "1"])
+        let question = try await container.content.question(for: .safety)
+        #expect(question.prompt == "How safe does your body feel as a place to live right now?")
+
+        let practice = try await container.content.exercise(for: .presence)
+        #expect(practice?.slug == "presence-of-light")
     }
 }
 

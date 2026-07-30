@@ -210,5 +210,33 @@ breath instruction and fires no haptic), so they play correctly without a
 breathing ring driving them. Practices 1 and 4 are breath-paced and use the ring.
 
 **Categories still without a practice:** `safety`, `breath`, `body_awareness`,
-`inner_knowing`, `authentic_expression`, and the free tier's `overall`. Those are
-the outstanding per-category regulation exercises.
+`inner_knowing`, and `authentic_expression`. The free tier's `overall` has only the
+labelled placeholder. Those are the outstanding per-category regulation exercises.
+
+**Status:** all five are implemented as playable scripts in
+`Packages/CalContent/Sources/CalContent/Resources/content.json`.
+
+**Only her wording is used.** Long instructional lines became spoken `cue` steps;
+unworded breath beats carry the pacing. Nothing was reworded, shortened, or added.
+Where a line reads as an instruction *about* breathing rather than a breath
+instruction itself ("As you inhale, imagine your nervous system as a tiny
+universe…"), it is a cue followed by an actual breath beat — a literal ten-second
+inhale is not comfortable, and that mismatch is why pacing needs her eye.
+
+### Proposed timings — for Dr. Mia to approve
+
+| Practice | Runtime | Beats | Longest breath |
+|---|---|---|---|
+| Microcosm → Macrocosm Breath | 1:58 | 21 | 7s |
+| Golden Spark Visualization | 1:56 | 21 | 6s |
+| Presence of Light | 1:22 | 12 | — (no paced breath) |
+| Solar Plexus Light | 2:02 | 23 | 7s |
+| Sovereignty Reflection | 1:45 | 16 | 7s |
+
+Sovereignty Reflection holds a **12-second silence** after "Wait quietly for
+whatever arises" — the longest pause in any practice, and the one most likely to
+need tuning either way.
+
+A test asserts no breath beat exceeds 10 seconds and every practice runs between
+30 seconds and 10 minutes, so a future timing edit can't quietly become
+uncomfortable.

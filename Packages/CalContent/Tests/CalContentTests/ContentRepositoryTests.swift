@@ -1,0 +1,167 @@
+import CalKit
+import Foundation
+import Testing
+
+@testable import CalContent
+
+@Suite("BundledContentRepository")
+struct ContentRepositoryTests {
+    let repo = BundledContentRepository()
+
+    @Test("the bundled payload decodes")
+    func decodes() async throws {
+        let bundle = try await repo.bundle()
+        #expect(bundle.version == 1)
+        #expect(!bundle.exercises.isEmpty)
+        #expect(!bundle.questions.isEmpty)
+        #expect(!bundle.motivations.isEmpty)
+    }
+
+    // The check-in asks for a question on every step, so a repeated decode of a
+    // few hundred KB would be silly. This also guards the actor's cache.
+    @Test("repeated reads return the identical payload")
+    func caches() async throws {
+        #expect(try await repo.bundle() == (try await repo.bundle()))
+    }
+
+    // MARK: Questions
+
+    @Test("every category has authored copy — the check-in can never render blank")
+    func questionsAreComplete() async throws {
+        let questions = try await repo.questions()
+        for category in CoherenceCategory.allCases {
+            let q = try #require(questions[category], "no question for \(category.rawValue)")
+            #expect(!q.prompt.isEmpty)
+            #expect(!q.rePrompt.isEmpty)
+        }
+    }
+
+    /// The bundled JSON is the source; `CalKit`'s compiled-in seed is the
+    /// last-resort fallback. Two copies of the same clinical text can drift, so
+    /// this pins them together — exactly as the exercise seed is pinned.
+    @Test("bundled question copy matches CalKit's fallback seed verbatim")
+    func questionsMatchCalKitSeed() async throws {
+        let bundled = try await repo.questions()
+        for category in CoherenceCategory.allCases {
+            let seed = CoherenceQuestion.seeded(category)
+            let json = try #require(bundled[category])
+            #expect(json.prompt == seed.prompt, "prompt drift on \(category.rawValue)")
+            #expect(json.rePrompt == seed.rePrompt, "re-prompt drift on \(category.rawValue)")
+            #expect(json.regulationSummary == seed.regulationSummary, "summary drift on \(category.rawValue)")
+        }
+    }
+
+    // MARK: Exercises
+
+    @Test("Dr. Mia's five practices are present, plus the labelled placeholder")
+    func practicesPresent() async throws {
+        let slugs = Set(try await repo.exercises(tier: nil).map(\.slug))
+        for expected in [
+            "microcosm-macrocosm-breath",
+            "golden-spark-visualization",
+            "presence-of-light",
+            "solar-plexus-light",
+            "sovereignty-reflection",
+        ] {
+            #expect(slugs.contains(expected), "missing practice: \(expected)")
+        }
+        #expect(slugs.contains("seed-placeholder"))
+    }
+
+    @Test("every exercise produces a playable timeline of a sane length")
+    func allExercisesArePlayable() async throws {
+        for exercise in try await repo.exercises(tier: nil) {
+            let timeline = try exercise.script.timeline()
+            #expect(timeline.beats.count > 0, "\(exercise.slug) has no beats")
+            // A guided practice under 30s isn't a practice; over 10 minutes is a
+            // pacing mistake, not a design choice.
+            #expect(
+                (30.0...600.0).contains(timeline.totalDuration),
+                "\(exercise.slug) runs \(timeline.totalDuration)s"
+            )
+        }
+    }
+
+    @Test("no breath beat is uncomfortably long — pacing sanity")
+    func breathBeatsAreComfortable() async throws {
+        for exercise in try await repo.exercises(tier: nil) {
+            for beat in try exercise.script.timeline().beats where beat.phase.isBreath {
+                #expect(
+                    beat.duration <= 10,
+                    "\(exercise.slug): a \(beat.duration)s \(beat.phase.rawValue) is not comfortable"
+                )
+            }
+        }
+    }
+
+    @Test("lookup by slug and by category both work")
+    func lookups() async throws {
+        #expect(try await repo.exercise(slug: "presence-of-light")?.title == "Presence of Light")
+        #expect(try await repo.exercise(slug: "nope") == nil)
+        #expect(try await repo.exercise(for: .presence)?.slug == "presence-of-light")
+        #expect(try await repo.exercise(for: .connection)?.slug == "microcosm-macrocosm-breath")
+    }
+
+    /// Six categories still have no authored regulation exercise (§17 question 6).
+    /// This test documents which, so when Dr. Mia supplies one the gap closes
+    /// visibly instead of silently.
+    @Test("categories still awaiting a practice are exactly the six we expect")
+    func knownContentGaps() async throws {
+        var missing: [CoherenceCategory] = []
+        for category in CoherenceCategory.allCases
+        where try await repo.exercise(for: category) == nil {
+            missing.append(category)
+        }
+        #expect(
+            Set(missing) == Set([.safety, .breath, .bodyAwareness, .innerKnowing, .authenticExpression]),
+            "content gaps changed: \(missing.map(\.rawValue).sorted())"
+        )
+    }
+
+    @Test("tier filtering works, and the placeholder is the only free exercise")
+    func tierFilter() async throws {
+        let free = try await repo.exercises(tier: .free)
+        #expect(free.map(\.slug) == ["seed-placeholder"])
+        #expect(try await repo.exercises(tier: .premium).count == 5)
+    }
+
+    // MARK: Motivations
+
+    @Test("the motivation pool is Dr. Mia's five, verbatim")
+    func motivationsMatchSpec() async throws {
+        let bodies = try await repo.motivations().map(\.body)
+        #expect(bodies.contains("You've survived 100% of your hardest days."))
+        #expect(bodies.contains("Take one slow breath."))
+        #expect(bodies.contains("Shoulders down."))
+        #expect(bodies.contains("Drink some water."))
+        #expect(bodies.contains("Go outside for five minutes."))
+    }
+
+    @Test("motivation ids are unique — they're used to suppress recent repeats")
+    func motivationIDsUnique() async throws {
+        let ids = try await repo.motivations().map(\.id)
+        #expect(Set(ids).count == ids.count)
+    }
+}
+
+@Suite("StaticContentRepository")
+struct StaticContentRepositoryTests {
+    @Test("an empty bundle still yields a question, via CalKit's fallback seed")
+    func emptyBundleFallsBack() async throws {
+        let repo = StaticContentRepository(.empty)
+        let question = try await repo.question(for: .breath)
+        #expect(question.prompt == CoherenceQuestion.seeded(.breath).prompt)
+        #expect(!question.prompt.isEmpty)
+    }
+
+    @Test("a static bundle overrides the seed, which is how remote content will win")
+    func overridesSeed() async throws {
+        let override = CoherenceQuestion(
+            category: .breath, prompt: "Reworded", rePrompt: "And now?", regulationSummary: "…"
+        )
+        let repo = StaticContentRepository(
+            ContentBundle(version: 2, questions: [override], motivations: [], exercises: [])
+        )
+        #expect(try await repo.question(for: .breath).prompt == "Reworded")
+    }
+}

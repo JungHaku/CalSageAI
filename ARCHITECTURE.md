@@ -87,7 +87,7 @@ notice in week one.
 
 Phases 0 and 1 are built and committed: the renamed project, five local Swift
 packages, the check-in state machine, the breathwork player, SwiftData
-persistence, **140 passing tests**, and the 231-place campus dataset. The
+persistence, **169 passing tests**, and the 231-place campus dataset. The
 restructure below throws none of it away — §2 explains why it didn't have to.
 
 ---
@@ -107,14 +107,14 @@ protocols**, not as a rewrite.
 | Seam | MVP implementation | Phase B implementation | UI changes? |
 |---|---|---|---|
 | `CoherenceStoring` | `SwiftDataCoherenceStore` | *same store* + `SyncEngine` pushing to Postgres | **No** |
-| `ContentRepository` *(to build)* | `BundledContentRepository` — JSON in `CalContent` | `RemoteContentRepository`, bundled fallback | **No** |
+| `ContentRepository` ✓ | `BundledContentRepository` — JSON in `CalContent` | `RemoteContentRepository`, bundled fallback | **No** |
 | `CoachClient` | unused / `MockCoachClient` | `LiveCoachClient` → proxy | **No** |
-| `IdentityProviding` *(to build)* | `LocalIdentity` — device UUID | `SupabaseIdentity` — `auth.uid()` | **No** |
-| `SyncEngine` *(to build)* | `NoOpSyncEngine` | `SupabaseSyncEngine` | **No** |
+| `IdentityProviding` ✓ | `LocalIdentity` — device UUID | `SupabaseIdentity` — `auth.uid()` | **No** |
+| `SyncEngine` ✓ | `NoOpSyncEngine` | `SupabaseSyncEngine` | **No** |
 
-Two already exist and ship in Phase 1. Three are small additions the MVP should
-build **now, inert** — retrofitting them later is exactly what turns a swap into a
-rewrite.
+All five now exist. The three added in MVP-1 are deliberately **inert** — they do
+nothing yet, but callers are written against them from day one, and retrofitting
+them later is exactly what turns a swap into a rewrite.
 
 ### Four invariants that make the swap safe
 
@@ -138,8 +138,8 @@ engine arrives its outbox is simply *"everything still dirty"* — which on a de
 that has never synced is the entire history. Nothing has to be reconstructed.
 *Already true.*
 
-**4. Local data must be claimable by a future account.** The one that isn't built
-yet, and the one that matters most. A student who uses the app for two months
+**4. Local data must be claimable by a future account.** The one that matters
+most, and now half-built: `LocalIdentity` mints and persists the profile id. A student who uses the app for two months
 before accounts exist must not lose that history when they sign in.
 
 ### The claim migration
@@ -335,9 +335,8 @@ free. Both are implemented, with a test pinning the difference (§17, question 1
 
 *You asked me to call this one.*
 
-**Decided: the slider will show no value, and Continue will stay disabled, until
-the student deliberately picks a number.** *(Not yet implemented — the code still
-defaults to 5. This lands in MVP-1.)*
+**Built: the slider shows "Choose a number" and Continue stays disabled until the
+student deliberately picks one.**
 
 Anchoring a self-report scale at a pre-filled value biases the answer — and 5 is
 *exactly* the premium regulation threshold, so a pre-set 5 means anyone tapping
@@ -377,10 +376,12 @@ seconds to every line and every silence. Pacing a breath practice is a clinical
 decision — too fast is stressful, too slow gets abandoned — so we propose timings
 and she approves them before launch (§17, question 5).
 
-Still needed: regulation exercises for `safety`, `breath`, `body_awareness`,
-`inner_knowing`, `authentic_expression`, and the free tier's `overall`. Until they
-arrive those categories route to a clearly-labelled placeholder, so a low score
-always has somewhere to go.
+**Five categories still have no practice at all** — `safety`, `breath`,
+`body_awareness`, `inner_knowing`, and `authentic_expression`. The free tier's
+`overall` has only the labelled placeholder, so it needs real copy too. Until they
+arrive those categories route to the placeholder, so a low score always has
+somewhere to go. A test asserts the gap is exactly this set, so it closes visibly
+rather than silently when she supplies one.
 
 ---
 
@@ -450,14 +451,14 @@ caching. Full comparison, caching traps, and vendor terms in
 
 ## 11. Testing
 
-Six loops. Current state: **140 tests passing** — 118 across packages, 22 app + UI.
+Six loops. Current state: **169 tests passing** — 143 across packages, 26 app + UI.
 
 | Loop | Speed | What | Status |
 |---|---|---|---|
 | 1. Previews | instant | Every component per state, dark, XXXL | partial |
-| 2. `swift test` on packages | ~2s | All logic, no simulator | **118 tests** |
+| 2. `swift test` on packages | ~2s | All logic, no simulator | **143 tests** |
 | 3. Snapshot | ~1 min | `getsentry/SnapshotPreviews` turns each `#Preview` into a test | to build |
-| 4. XCUITest | minutes | 5 seeded flows via launch arguments | **5 flows** |
+| 4. XCUITest | minutes | 6 seeded flows via launch arguments | **6 flows** |
 | 5. TestFlight | days | Dr. Mia feels the pacing on a real phone | pending account |
 | 6. Backend / RLS | — | 9 pgTAP catalog invariants, written | Phase B |
 
@@ -586,10 +587,10 @@ Nothing in steps 1–8 requires touching `CalKit`, `CalDesign`, or any view.
 
 ## 16. Build order
 
-**MVP-1 — seams and profile (next).** `ContentRepository`, `IdentityProviding`,
-`NoOpSyncEngine`, `LocalProfile`. Small, boring, and the thing that makes Phase B
-cheap. Move the check-in copy out of `CalKit`'s seed into bundled content. Also
-implement the unset scale decision from §7, which is decided but not yet built.
+**MVP-1 — seams and profile. ✓ Built.** `ContentRepository` (bundled, versioned),
+`IdentityProviding` + `LocalIdentity`, `SyncEngine` + `NoOpSyncEngine`,
+`LocalProfile` with its own SwiftData store, the check-in copy moved into bundled
+content, Dr. Mia's five practices as playable scripts, and the unset scale from §7.
 
 **MVP-2 — practices.** Dr. Mia's five as structured scripts with proposed timings,
 the per-category mapping, placeholder handling, and an exercise library browser.
@@ -633,8 +634,8 @@ Content, needed to finish the MVP:
 5. **Pacing for the five practices** (§8). We propose timings; she approves. The
    wording is fixed and preserved verbatim.
 6. **The ten per-category regulation exercises.** The spec gives each a phrase
-   ("Cal guides a grounding exercise"); each needs authored copy. Six categories
-   currently have none.
+   ("Cal guides a grounding exercise"); each needs authored copy. Five categories
+   currently have none, and the free tier's `overall` has only a placeholder.
 7. **Will she record audio in her own voice?** Strongly recommended — the biggest
    differentiator against every other wellness app, and the part no model can
    replace.

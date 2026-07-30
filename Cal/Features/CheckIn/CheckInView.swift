@@ -1,3 +1,4 @@
+import CalContent
 import CalData
 import CalDesign
 import CalKit
@@ -19,10 +20,16 @@ struct CheckInView: View {
                 ProgressView()
             }
         }
-        .onAppear {
-            if model == nil {
-                model = CheckInViewModel(kind: kind, store: container.store, dates: container.dates)
-            }
+        .task {
+            guard model == nil else { return }
+            let created = CheckInViewModel(
+                kind: kind,
+                store: container.store,
+                content: container.content,
+                dates: container.dates
+            )
+            model = created
+            await created.loadContent()
         }
     }
 
@@ -38,11 +45,11 @@ struct CheckInView: View {
                 RatingStep(
                     prompt: question.prompt,
                     score: Binding(get: { model.draftScore }, set: { model.draftScore = $0 }),
-                    band: CoherenceBand(model.draftScore),
                     // Only the free quick check-in shows the band response inline;
-                    // on the ten-question flow it would fire ten times and turn
-                    // into noise.
+                    // on the ten-question flow it would fire ten times and become
+                    // noise. It also only appears once a score exists.
                     showsBandResponse: kind == .quick,
+                    canSubmit: model.canSubmit,
                     actionTitle: "Continue"
                 ) {
                     Task { await model.submitRating() }
@@ -72,8 +79,8 @@ struct CheckInView: View {
                 RatingStep(
                     prompt: question.rePrompt,
                     score: Binding(get: { model.draftScore }, set: { model.draftScore = $0 }),
-                    band: CoherenceBand(model.draftScore),
                     showsBandResponse: false,
+                    canSubmit: model.canSubmit,
                     actionTitle: "Save"
                 ) {
                     Task { await model.submitReRating() }
@@ -118,9 +125,9 @@ struct CheckInView: View {
 
 private struct RatingStep: View {
     let prompt: String
-    @Binding var score: Score
-    let band: CoherenceBand
+    @Binding var score: Score?
     let showsBandResponse: Bool
+    let canSubmit: Bool
     let actionTitle: String
     let action: () -> Void
 
@@ -133,8 +140,8 @@ private struct RatingStep: View {
 
                 ScoreScale(score: $score)
 
-                if showsBandResponse {
-                    Text(band.quickCheckInResponse)
+                if showsBandResponse, let score {
+                    Text(CoherenceBand(score).quickCheckInResponse)
                         .font(.body)
                         .foregroundStyle(.secondary)
                         .accessibilityIdentifier("band-response")
@@ -144,6 +151,7 @@ private struct RatingStep: View {
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
                     .frame(maxWidth: .infinity)
+                    .disabled(!canSubmit)
                     .accessibilityIdentifier("continue-button")
             }
             .padding()

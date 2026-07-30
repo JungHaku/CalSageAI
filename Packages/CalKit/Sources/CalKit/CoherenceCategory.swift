@@ -35,7 +35,7 @@ public enum CoherenceCategory: String, CaseIterable, Codable, Sendable, Identifi
 /// it without an App Store release; what's below is the bundled seed that ships
 /// in the binary so a fresh install works before its first sync and in airplane
 /// mode (§7). When the server has a newer version, the server wins.
-public struct CoherenceQuestion: Hashable, Sendable {
+public struct CoherenceQuestion: Hashable, Sendable, Codable {
     public let category: CoherenceCategory
     /// Asked at the start of the check-in.
     public let prompt: String

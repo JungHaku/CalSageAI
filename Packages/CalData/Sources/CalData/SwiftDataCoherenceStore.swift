@@ -96,7 +96,13 @@ public actor SwiftDataCoherenceStore: CoherenceStoring {
 }
 
 extension SwiftDataCoherenceStore {
-    public static let schema = Schema([StoredCheckIn.self, StoredCategoryScore.self])
+    /// One schema for the whole app, so the check-in store and the profile store
+    /// share a container and a migration story.
+    public static let schema = Schema([
+        StoredCheckIn.self,
+        StoredCategoryScore.self,
+        StoredProfile.self,
+    ])
 
     /// On-disk container for the app.
     public static func container() throws -> ModelContainer {

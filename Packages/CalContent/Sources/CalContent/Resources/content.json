@@ -1,0 +1,244 @@
+{
+  "version": 1,
+  "questions": [
+    {
+      "category": "overall",
+      "prompt": "How do you feel right here in the moment?",
+      "rePrompt": "How do you feel now?",
+      "regulationSummary": "Guided breathing."
+    },
+    {
+      "category": "safety",
+      "prompt": "How safe does your body feel as a place to live right now?",
+      "rePrompt": "How safe does your body feel now?",
+      "regulationSummary": "A grounding exercise and slow breathing."
+    },
+    {
+      "category": "breath",
+      "prompt": "How freely is your breath moving into your heart and belly right now?",
+      "rePrompt": "How does your breath feel now?",
+      "regulationSummary": "Embodied Vital Breathwork™."
+    },
+    {
+      "category": "presence",
+      "prompt": "How present do you feel right here in this moment?",
+      "rePrompt": "How present do you feel now?",
+      "regulationSummary": "A mindfulness exercise using the senses."
+    },
+    {
+      "category": "emotional_flow",
+      "prompt": "How freely are your emotions moving without feeling stuck or overwhelming?",
+      "rePrompt": "How does your emotional flow feel now?",
+      "regulationSummary": "Emotional regulation through breath, awareness, and allowing."
+    },
+    {
+      "category": "body_awareness",
+      "prompt": "How connected do you feel to your body right now?",
+      "rePrompt": "How connected do you feel now?",
+      "regulationSummary": "Gently wiggle your fingers and toes, notice your feet on the floor, and reconnect with physical sensation."
+    },
+    {
+      "category": "choice",
+      "prompt": "How much do you feel you are responding by choice instead of reacting automatically?",
+      "rePrompt": "How much choice do you feel now?",
+      "regulationSummary": "A pause-and-reflect exercise."
+    },
+    {
+      "category": "connection",
+      "prompt": "How connected do you feel to yourself and to the people around you today?",
+      "rePrompt": "How connected do you feel now?",
+      "regulationSummary": "A simple connection practice."
+    },
+    {
+      "category": "energy",
+      "prompt": "How much healthy energy is available to you right now?",
+      "rePrompt": "How energized do you feel now?",
+      "regulationSummary": "Posture, breathing, and gentle movement."
+    },
+    {
+      "category": "inner_knowing",
+      "prompt": "How clearly can you hear and trust your inner knowing right now?",
+      "rePrompt": "How connected do you feel to your inner knowing now?",
+      "regulationSummary": "A short quiet reflection."
+    },
+    {
+      "category": "authentic_expression",
+      "prompt": "How free do you feel to express your true self today?",
+      "rePrompt": "How free do you feel to express yourself now?",
+      "regulationSummary": "A brief reflection on what feels held back, and an invitation to one small authentic action."
+    }
+  ],
+
+  "motivations": [
+    { "id": "survived-hardest-days", "body": "You've survived 100% of your hardest days.", "tags": ["encouragement"] },
+    { "id": "one-slow-breath", "body": "Take one slow breath.", "tags": ["breath"] },
+    { "id": "shoulders-down", "body": "Shoulders down.", "tags": ["body"] },
+    { "id": "drink-water", "body": "Drink some water.", "tags": ["body"] },
+    { "id": "outside-five-minutes", "body": "Go outside for five minutes.", "tags": ["action"] }
+  ],
+
+  "exercises": [
+    {
+      "slug": "microcosm-macrocosm-breath",
+      "title": "Microcosm → Macrocosm Breath",
+      "category": "connection",
+      "tier": "premium",
+      "version": 1,
+      "script": {
+        "steps": [
+          { "kind": "cue", "text": "Close your eyes and breathe slowly.", "seconds": 6 },
+          { "kind": "cue", "text": "As you inhale, imagine your nervous system as a tiny universe—a living microcosm filled with light, intelligence, and possibility.", "seconds": 11 },
+          { "kind": "inhale", "text": "", "seconds": 4 },
+          { "kind": "exhale", "text": "As you exhale, allow that light to expand beyond your body...", "seconds": 7 },
+          { "kind": "inhale", "text": "", "seconds": 4 },
+          { "kind": "exhale", "text": "Filling the room...", "seconds": 6 },
+          { "kind": "inhale", "text": "", "seconds": 4 },
+          { "kind": "exhale", "text": "Flowing beyond the walls...", "seconds": 6 },
+          { "kind": "inhale", "text": "", "seconds": 4 },
+          { "kind": "exhale", "text": "Expanding into the vast universe—the macrocosm.", "seconds": 7 },
+          { "kind": "cue", "text": "With every breath, remember:", "seconds": 4 },
+          { "kind": "cue", "text": "The light within you is not small or separate. It is connected to something infinitely greater.", "seconds": 10 },
+          { "kind": "cue", "text": "Rest in that feeling for several slow breaths.", "seconds": 5 },
+          { "kind": "inhale", "text": "", "seconds": 4 },
+          { "kind": "exhale", "text": "", "seconds": 6 },
+          { "kind": "repeat", "times": 4 }
+        ]
+      }
+    },
+
+    {
+      "slug": "golden-spark-visualization",
+      "title": "Golden Spark Visualization",
+      "category": "emotional_flow",
+      "tier": "premium",
+      "version": 1,
+      "script": {
+        "steps": [
+          { "kind": "cue", "text": "Close your eyes.", "seconds": 4 },
+          { "kind": "cue", "text": "Notice the stillness between each inhale and exhale.", "seconds": 8 },
+          { "kind": "cue", "text": "In the center of your heart, imagine a tiny golden spark.", "seconds": 8 },
+          { "kind": "cue", "text": "With every breath, watch it become brighter...", "seconds": 7 },
+          { "kind": "cue", "text": "Growing into a warm golden flame.", "seconds": 6 },
+          { "kind": "cue", "text": "Allow this light to gently dissolve tension...", "seconds": 7 },
+          { "kind": "cue", "text": "Releasing fear...", "seconds": 5 },
+          { "kind": "cue", "text": "Softening old patterns...", "seconds": 5 },
+          { "kind": "cue", "text": "Let the golden light spread through your chest...", "seconds": 6 },
+          { "kind": "cue", "text": "Into your spine...", "seconds": 4 },
+          { "kind": "cue", "text": "Through your arms...", "seconds": 4 },
+          { "kind": "cue", "text": "Your abdomen...", "seconds": 4 },
+          { "kind": "cue", "text": "Your legs...", "seconds": 4 },
+          { "kind": "cue", "text": "Until your entire body feels surrounded by a quiet golden glow.", "seconds": 9 },
+          { "kind": "cue", "text": "Rest here for a few breaths.", "seconds": 5 },
+          { "kind": "inhale", "text": "", "seconds": 4 },
+          { "kind": "exhale", "text": "", "seconds": 6 },
+          { "kind": "repeat", "times": 3 }
+        ]
+      }
+    },
+
+    {
+      "slug": "presence-of-light",
+      "title": "Presence of Light",
+      "category": "presence",
+      "tier": "premium",
+      "version": 1,
+      "script": {
+        "steps": [
+          { "kind": "cue", "text": "For the next few moments, don't search for answers.", "seconds": 7 },
+          { "kind": "cue", "text": "Simply experience being.", "seconds": 6 },
+          { "kind": "cue", "text": "Slowly repeat:", "seconds": 4 },
+          { "kind": "cue", "text": "I am here.", "seconds": 7 },
+          { "kind": "cue", "text": "I am whole.", "seconds": 7 },
+          { "kind": "cue", "text": "I am light.", "seconds": 7 },
+          { "kind": "cue", "text": "After each phrase, notice what happens inside your body.", "seconds": 8 },
+          { "kind": "cue", "text": "Does your breathing soften?", "seconds": 6 },
+          { "kind": "cue", "text": "Does your chest feel more open?", "seconds": 6 },
+          { "kind": "cue", "text": "Do you notice even the smallest feeling of peace or expansion?", "seconds": 9 },
+          { "kind": "cue", "text": "There is nothing to force.", "seconds": 6 },
+          { "kind": "cue", "text": "Simply allow yourself to experience this moment exactly as it is.", "seconds": 9 }
+        ]
+      }
+    },
+
+    {
+      "slug": "solar-plexus-light",
+      "title": "Solar Plexus Light",
+      "category": "energy",
+      "tier": "premium",
+      "version": 1,
+      "script": {
+        "steps": [
+          { "kind": "cue", "text": "Place one hand over your solar plexus, just above your navel.", "seconds": 8 },
+          { "kind": "cue", "text": "Feel the warmth beneath your hand.", "seconds": 6 },
+          { "kind": "cue", "text": "Imagine a radiant sun shining there.", "seconds": 6 },
+          { "kind": "inhale", "text": "With each inhale, its light becomes brighter.", "seconds": 5 },
+          { "kind": "exhale", "text": "With every exhale, that light travels throughout your nervous system...", "seconds": 7 },
+          { "kind": "inhale", "text": "", "seconds": 4 },
+          { "kind": "exhale", "text": "Flowing through your chest...", "seconds": 6 },
+          { "kind": "inhale", "text": "", "seconds": 4 },
+          { "kind": "exhale", "text": "Down your spine...", "seconds": 6 },
+          { "kind": "inhale", "text": "", "seconds": 4 },
+          { "kind": "exhale", "text": "Into your shoulders...", "seconds": 6 },
+          { "kind": "inhale", "text": "", "seconds": 4 },
+          { "kind": "exhale", "text": "Arms...", "seconds": 5 },
+          { "kind": "inhale", "text": "", "seconds": 4 },
+          { "kind": "exhale", "text": "Hands...", "seconds": 5 },
+          { "kind": "inhale", "text": "", "seconds": 4 },
+          { "kind": "exhale", "text": "Legs...", "seconds": 5 },
+          { "kind": "inhale", "text": "", "seconds": 4 },
+          { "kind": "exhale", "text": "Feet...", "seconds": 5 },
+          { "kind": "cue", "text": "Illuminating every cell.", "seconds": 5 },
+          { "kind": "cue", "text": "As you breathe, quietly repeat:", "seconds": 5 },
+          { "kind": "cue", "text": "The light I seek already lives within me.", "seconds": 8 },
+          { "kind": "cue", "text": "Rest in that awareness.", "seconds": 6 }
+        ]
+      }
+    },
+
+    {
+      "slug": "sovereignty-reflection",
+      "title": "Sovereignty Reflection",
+      "category": "choice",
+      "tier": "premium",
+      "version": 1,
+      "script": {
+        "steps": [
+          { "kind": "inhale", "text": "Take one slow breath.", "seconds": 5 },
+          { "kind": "exhale", "text": "", "seconds": 7 },
+          { "kind": "cue", "text": "Ask yourself:", "seconds": 4 },
+          { "kind": "cue", "text": "What can I let go of right now so my inner light can shine more freely?", "seconds": 10 },
+          { "kind": "cue", "text": "Wait quietly for whatever arises.", "seconds": 12 },
+          { "kind": "cue", "text": "It may be a fear...", "seconds": 5 },
+          { "kind": "cue", "text": "A need to be right...", "seconds": 5 },
+          { "kind": "cue", "text": "A resentment...", "seconds": 4 },
+          { "kind": "cue", "text": "A worry...", "seconds": 4 },
+          { "kind": "cue", "text": "Or simply the urge to keep fighting.", "seconds": 6 },
+          { "kind": "cue", "text": "You don't need to solve anything in this moment.", "seconds": 8 },
+          { "kind": "cue", "text": "Simply notice it.", "seconds": 6 },
+          { "kind": "inhale", "text": "Breathe.", "seconds": 5 },
+          { "kind": "exhale", "text": "", "seconds": 7 },
+          { "kind": "cue", "text": "Then choose peace over struggle.", "seconds": 7 },
+          { "kind": "cue", "text": "Allow yourself to return to the quiet strength already within you.", "seconds": 10 }
+        ]
+      }
+    },
+
+    {
+      "slug": "seed-placeholder",
+      "title": "One Minute Together (placeholder)",
+      "category": "overall",
+      "tier": "free",
+      "version": 1,
+      "script": {
+        "steps": [
+          { "kind": "cue", "text": "Let's take one minute together.", "seconds": 4 },
+          { "kind": "inhale", "text": "Breathe in through your nose", "seconds": 4 },
+          { "kind": "hold", "text": "Hold", "seconds": 2 },
+          { "kind": "exhale", "text": "Out slowly through your mouth", "seconds": 6 },
+          { "kind": "repeat", "times": 4 },
+          { "kind": "cue", "text": "Let your shoulders drop.", "seconds": 4 }
+        ]
+      }
+    }
+  ]
+}

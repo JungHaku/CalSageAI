@@ -182,8 +182,10 @@ extension ExerciseScript {
     }
 }
 
-/// An exercise as stored in `public.exercises`.
-public struct Exercise: Sendable, Equatable, Identifiable {
+/// An exercise as stored in `public.exercises` — and, in the MVP, as shipped in
+/// `CalContent`'s bundled JSON. `Codable` because those are the same shape:
+/// content moves from bundle to database at Phase B without a translation layer.
+public struct Exercise: Sendable, Equatable, Identifiable, Codable {
     public let slug: String
     public let title: String
     public let category: CoherenceCategory?
