@@ -87,7 +87,7 @@ notice in week one.
 
 Phases 0 and 1 are built and committed: the renamed project, five local Swift
 packages, the check-in state machine, the breathwork player, SwiftData
-persistence, **286 passing tests**, and the 231-place campus dataset. The
+persistence, **308 passing tests**, and the 231-place campus dataset. The
 restructure below throws none of it away — §2 explains why it didn't have to.
 
 ---
@@ -504,14 +504,14 @@ caching. Full comparison, caching traps, and vendor terms in
 
 ## 11. Testing
 
-Six loops. Current state: **286 tests passing** — 241 across packages, 45 app + UI.
+Six loops. Current state: **308 tests passing** — 260 across packages, 48 app + UI.
 
 | Loop | Speed | What | Status |
 |---|---|---|---|
 | 1. Previews | instant | Every component per state, dark, XXXL | partial |
-| 2. `swift test` on packages | ~2s | All logic, no simulator | **241 tests** |
+| 2. `swift test` on packages | ~2s | All logic, no simulator | **260 tests** |
 | 3. Snapshot | ~1 min | `getsentry/SnapshotPreviews` turns each `#Preview` into a test | to build |
-| 4. XCUITest | minutes | 19 seeded flows via launch arguments | **19 flows** |
+| 4. XCUITest | minutes | 22 seeded flows via launch arguments | **22 flows** |
 | 5. TestFlight | days | Dr. Mia feels the pacing on a real phone | pending account |
 | 6. Backend / RLS | — | 9 pgTAP catalog invariants, written | Phase B |
 
@@ -539,6 +539,10 @@ Seeded launch states keep UI tests deterministic: `-CalScenario day30Streak`,
 - **Tests that assert on a persistent store break the moment persistence lands.**
   Assert on the configuration (*is this store ephemeral?*), not on residual disk
   state.
+- **A `.cancel`-role button in a `confirmationDialog` doesn't carry your
+  accessibility identifier**, and on iOS 26 the dialog may render as a popover
+  with **no cancel button at all** — dismissal is a tap outside. A test that taps
+  "Cancel" is testing a control the system chose not to draw.
 - **A SwiftUI `Form` row exposes TWO switches** — the full-width row, which
   carries your `accessibilityIdentifier`, and the actual control inside it.
   `app.switches["my-id"].tap()` taps the row's centre, which is the label, and
@@ -740,7 +744,11 @@ reading the student's existing iOS calendars. The curated resource directory is
 **not** built — see §17, it needs verified phone numbers and the same
 dial-it-first rule as the crisis numbers.
 
-**MVP-6 — profile, export, delete, settings.**
+**MVP-6 — profile, export, delete, settings. ✓ Built.** Profile editing (every
+field optional), a complete JSON export via the share sheet, and a delete that
+hard-erases all three stores behind a confirmation that names what goes.
+`PersonalDataService` in `CalData` owns both export and delete so they can't
+disagree about what "everything" means.
 
 **MVP-7 — premium.** StoreKit, paywall, local entitlement, gating.
 

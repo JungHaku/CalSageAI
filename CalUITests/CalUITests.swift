@@ -132,6 +132,64 @@ final class CalUITests: XCTestCase {
         )
     }
 
+    // MARK: Profile, export, delete (MVP-6)
+
+    func testProfileFieldsAreOptionalAndEditable() {
+        let app = launch()
+        app.tabBars.buttons["Home"].tap()
+        element(app, "dest-settings").tap()
+        element(app, "open-profile").tap()
+
+        let name = element(app, "profile-name")
+        XCTAssertTrue(name.waitForExistence(timeout: 10))
+        name.tap()
+        name.typeText("Sam")
+        XCTAssertEqual(name.value as? String, "Sam")
+    }
+
+    /// Deleting is irreversible with no server-side copy, so it must confirm —
+    /// and the confirmation must name what actually goes, not just "are you sure?".
+    ///
+    /// Only the appearance and wording are asserted. iOS renders this dialog as a
+    /// popover with NO cancel button — dismissal is a tap outside — so a test that
+    /// taps "Cancel" is testing a control the system chose not to draw.
+    func testDeleteAsksBeforeErasingEverything() {
+        let app = launch(scenario: "day30Streak")
+        app.tabBars.buttons["Home"].tap()
+        element(app, "dest-settings").tap()
+
+        let delete = element(app, "delete-data")
+        XCTAssertTrue(delete.waitForExistence(timeout: 10))
+        delete.tap()
+
+        XCTAssertTrue(
+            app.staticTexts["Delete everything?"].waitForExistence(timeout: 10),
+            "a destructive action must confirm"
+        )
+        // The wording has to say it can't be undone and offer the export route.
+        let message = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS %@", "can't be undone")
+        ).firstMatch
+        XCTAssertTrue(message.exists, "the dialog must say the deletion is irreversible")
+        XCTAssertTrue(element(app, "confirm-delete").exists)
+    }
+
+    func testDeleteRemovesTheHistory() {
+        let app = launch(scenario: "day30Streak")
+        app.tabBars.buttons["Home"].tap()
+        element(app, "dest-settings").tap()
+        element(app, "delete-data").tap()
+
+        XCTAssertTrue(app.staticTexts["Delete everything?"].waitForExistence(timeout: 10))
+        element(app, "confirm-delete").tap()
+
+        app.tabBars.buttons["Home"].tap()
+        // With nothing left there is no progress card to render — and the CTA to
+        // start a check-in comes back.
+        XCTAssertTrue(app.buttons["start-checkin"].waitForExistence(timeout: 10))
+        XCTAssertFalse(element(app, "stat-consistency").exists)
+    }
+
     // MARK: Campus (MVP-5)
 
     func testNavigateListsCampusPlacesAndFilters() {

@@ -39,6 +39,9 @@ final class AppContainer {
     /// The student's own iOS calendars. Mocked under test — a system permission
     /// alert would block the run.
     let calendars: any CalendarAccess
+    /// Export and delete. One type owns both so they can't disagree about what
+    /// "everything" means.
+    let personalData: PersonalDataService
     /// True when launched by XCUITest with seeded state (§11.4).
     let isUITesting: Bool
     /// True when nothing written this session survives relaunch — either a UI-test
@@ -56,6 +59,7 @@ final class AppContainer {
         practiceSessions: any PracticeSessionStoring,
         reminders: any ReminderScheduling,
         calendars: any CalendarAccess,
+        personalData: PersonalDataService,
         isUITesting: Bool = false,
         storeIsEphemeral: Bool = true
     ) {
@@ -69,6 +73,7 @@ final class AppContainer {
         self.practiceSessions = practiceSessions
         self.reminders = reminders
         self.calendars = calendars
+        self.personalData = personalData
         self.isUITesting = isUITesting
         self.storeIsEphemeral = storeIsEphemeral
     }
@@ -145,6 +150,9 @@ final class AppContainer {
             practiceSessions: practiceSessions,
             reminders: isUITesting ? MockReminderScheduler() : NotificationReminderScheduler(),
             calendars: isUITesting ? MockCalendarAccess() : EventKitCalendarAccess(),
+            personalData: PersonalDataService(
+                checkIns: store, profiles: profiles, sessions: practiceSessions
+            ),
             isUITesting: isUITesting,
             storeIsEphemeral: ephemeral
         )

@@ -14,6 +14,10 @@ public protocol CoherenceStoring: Sendable {
     func checkIn(id: UUID) async throws -> CheckIn?
     func save(_ checkIn: CheckIn) async throws
     func delete(id: UUID) async throws
+    /// Hard-erases everything. Part of the contract rather than a concrete-store
+    /// detail, because "delete my data" has to work whichever store is wired in —
+    /// including the in-memory one used by previews and UI tests.
+    func purgeAll() async throws
 }
 
 extension CoherenceStoring {
@@ -47,4 +51,6 @@ public actor InMemoryCoherenceStore: CoherenceStoring {
     public func save(_ checkIn: CheckIn) async throws { storage[checkIn.id] = checkIn }
 
     public func delete(id: UUID) async throws { storage[id] = nil }
+
+    public func purgeAll() async throws { storage.removeAll() }
 }
