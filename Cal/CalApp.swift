@@ -25,17 +25,22 @@ final class AppContainer {
     let coach: any CoachClient
     /// True when launched by XCUITest with seeded state (§11.4).
     let isUITesting: Bool
+    /// True when nothing written this session survives relaunch — either a UI-test
+    /// run, or the on-disk container failed to open.
+    let storeIsEphemeral: Bool
 
     init(
         dates: any DateProvider,
         store: any CoherenceStoring,
         coach: any CoachClient,
-        isUITesting: Bool = false
+        isUITesting: Bool = false,
+        storeIsEphemeral: Bool = true
     ) {
         self.dates = dates
         self.store = store
         self.coach = coach
         self.isUITesting = isUITesting
+        self.storeIsEphemeral = storeIsEphemeral
     }
 
     /// Resolves dependencies from launch arguments, so a UI test can pin the app
@@ -61,20 +66,34 @@ final class AppContainer {
                 SystemDateProvider()
             }
 
-        // Phase 0 ships the in-memory store for every configuration. The
-        // SwiftData-backed store and the sync engine (§7) arrive with the check-in
-        // flow in Phase 1 — nothing yet produces data worth persisting.
         let seeded = Scenario(rawValue: scenarioName ?? "")?
             .history(today: dates.today, calendar: dates.calendar) ?? []
+
+        // UI tests and previews get the in-memory store: seeded, deterministic,
+        // and thrown away between runs. Real launches persist to disk (§7).
+        //
+        // The fallback matters: if the on-disk container can't open, an in-memory
+        // store lets the user still complete a check-in rather than facing a launch
+        // crash. That trades durability for availability, which is the right way
+        // round here — but it must be visible, hence `storeIsEphemeral`.
+        var store: any CoherenceStoring = InMemoryCoherenceStore(seeded)
+        var ephemeral = true
+        if !isUITesting {
+            if let container = try? SwiftDataCoherenceStore.container() {
+                store = SwiftDataCoherenceStore(modelContainer: container)
+                ephemeral = false
+            }
+        }
 
         // Likewise the real CoachClient is a Phase 3 deliverable (§19): it needs
         // the Edge Function proxy to exist. Until then the mock is the only
         // implementation, which is also why no API key appears anywhere here.
         return AppContainer(
             dates: dates,
-            store: InMemoryCoherenceStore(seeded),
+            store: store,
             coach: MockCoachClient(),
-            isUITesting: isUITesting
+            isUITesting: isUITesting,
+            storeIsEphemeral: ephemeral
         )
     }
 }

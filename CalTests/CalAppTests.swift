@@ -17,11 +17,23 @@ import Testing
 @Suite("AppContainer launch arguments")
 @MainActor
 struct AppContainerTests {
-    @Test("a plain launch uses the system clock and no seeded data")
-    func defaults() async throws {
+    @Test("a plain launch uses the system clock and the persistent store")
+    func defaults() {
         let container = AppContainer.live(arguments: [])
         #expect(!container.isUITesting)
         #expect(container.dates is SystemDateProvider)
+        // Deliberately does NOT assert the store is empty: since Phase 1 a real
+        // launch persists to disk, so its contents depend on whatever earlier runs
+        // left in the simulator's container. Asserting emptiness here passed only
+        // by accident when every configuration was in-memory.
+        #expect(!container.storeIsEphemeral, "a real launch should persist check-ins")
+    }
+
+    @Test("a UI-test launch is ephemeral, so runs can't contaminate each other")
+    func uiTestLaunchIsEphemeral() async throws {
+        let container = AppContainer.live(arguments: ["-CalUseMockCoach", "1"])
+        #expect(container.isUITesting)
+        #expect(container.storeIsEphemeral)
 
         let today = container.dates.today
         #expect(try await container.store.checkIns(from: today, to: today).isEmpty)

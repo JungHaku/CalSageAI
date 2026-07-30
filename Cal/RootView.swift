@@ -9,7 +9,6 @@ import SwiftUI
 /// built in Phases 1–4 (§19). Each placeholder names its phase so nobody mistakes
 /// it for something that's finished.
 struct RootView: View {
-    @Environment(AppContainer.self) private var container
     @State private var selection: Tab = .home
     @State private var showingEmergency = false
 
@@ -70,53 +69,14 @@ struct RootView: View {
     @ViewBuilder
     private func content(for tab: Tab) -> some View {
         switch tab {
-        case .checkIn: CheckInPlaceholder()
+        // The ten-question flow. Which tier a user gets is an entitlement
+        // question, and entitlements are Phase 5 — until then everyone sees the
+        // full framework, which is the part worth getting right.
+        case .checkIn: CheckInView(kind: .full)
         case .home:     PhasePlaceholder(feature: "Home, streaks, and daily motivation", phase: 2)
         case .navigate: PhasePlaceholder(feature: "Campus map and Navigate", phase: 4)
         case .planner:  PhasePlaceholder(feature: "Today's schedule", phase: 4)
         case .chat:     PhasePlaceholder(feature: "Chat with Cal", phase: 3)
-        }
-    }
-}
-
-/// Phase 0 proof that the package graph is wired and live: real `CalKit` types
-/// driving a real `CalDesign` component. Replaced by the actual check-in flow in
-/// Phase 1.
-private struct CheckInPlaceholder: View {
-    @Environment(AppContainer.self) private var container
-    @State private var score = Score(clamping: 7)
-
-    private var question: CoherenceQuestion { .seeded(.overall) }
-    private var band: CoherenceBand { CoherenceBand(score) }
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
-                Text(question.prompt)
-                    .font(.title2.weight(.semibold))
-
-                ScoreScale(score: $score)
-
-                Text(band.quickCheckInResponse)
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .accessibilityIdentifier("band-response")
-
-                if RegulationPolicy.quick.needsRegulation(score) {
-                    Label(question.regulationSummary, systemImage: "wind")
-                        .font(.callout)
-                        .padding(12)
-                        .background(CoherenceScale.tint(for: band).opacity(0.12), in: .rect(cornerRadius: 12))
-                }
-
-                Divider()
-
-                Text("Phase 0 scaffold — the real check-in flow is Phase 1.")
-                    .font(.footnote)
-                    .foregroundStyle(.tertiary)
-            }
-            .padding()
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }

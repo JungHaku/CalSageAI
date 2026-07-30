@@ -14,5 +14,17 @@
 	<array>
 		<string>audio</string>
 	</array>
+
+	<!--
+	  Portrait only. The breathwork screen is a single large ring the user paces
+	  against, often with the phone propped up or face down; landscape gives it
+	  ~400pt of height and squeezes the whole exercise off screen. Locking here
+	  rather than defensively re-laying-out every screen for a case the product
+	  doesn't want.
+	-->
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
 </dict>
 </plist>

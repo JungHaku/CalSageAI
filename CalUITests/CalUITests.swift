@@ -52,21 +52,72 @@ final class CalUITests: XCTestCase {
         }
     }
 
-    func testScoreScaleDrivesTheBandResponse() {
+    // MARK: The check-in flow (Phase 1)
+
+    func testCheckInOpensOnTheFirstOfDrMiasTenQuestions() {
         let app = launch()
         app.tabBars.buttons["Check-In"].tap()
 
-        let response = app.staticTexts["band-response"]
-        XCTAssertTrue(response.waitForExistence(timeout: 10))
+        let prompt = app.staticTexts["question-prompt"]
+        XCTAssertTrue(prompt.waitForExistence(timeout: 10))
+        XCTAssertEqual(prompt.label, "How safe does your body feel as a place to live right now?")
+    }
 
-        // Seeded at 7 → the moderate band's copy.
-        XCTAssertEqual(response.label, "You seem a little stressed today. Let's stay aware.")
+    /// The spec's core loop: a low score routes into regulation **immediately**,
+    /// before the next category, and the exercise is declinable.
+    func testLowScoreRoutesIntoTheExerciseImmediately() {
+        let app = launch()
+        app.tabBars.buttons["Check-In"].tap()
+        XCTAssertTrue(app.staticTexts["question-prompt"].waitForExistence(timeout: 10))
 
-        // Drag to the bottom of the scale; the low-band copy should replace it.
         app.sliders.firstMatch.adjust(toNormalizedSliderPosition: 0)
+        app.buttons["continue-button"].tap()
+
+        // The breathwork player, not the next question.
+        //
+        // Asserted on the skip button rather than on the cue text: the cue changes
+        // every few seconds as the timeline advances, so matching it is a race the
+        // test would sometimes lose. The button exists for the whole exercise.
+        let skip = app.buttons["skip-exercise"]
+        XCTAssertTrue(
+            skip.waitForExistence(timeout: 10),
+            "a low score should open the exercise before advancing"
+        )
+        XCTAssertTrue(
+            app.staticTexts["One Minute Together (placeholder)"].exists,
+            "the exercise player should show which exercise is running"
+        )
+
+        // Declining is always available — the framework is about restoring choice.
+        skip.tap()
+
+        let prompt = app.staticTexts["question-prompt"]
+        XCTAssertTrue(prompt.waitForExistence(timeout: 10))
         XCTAssertEqual(
-            app.staticTexts["band-response"].label,
-            "I've got you. Let's take one minute together."
+            prompt.label,
+            "How freely is your breath moving into your heart and belly right now?",
+            "skipping should advance to the second category"
+        )
+    }
+
+    func testHighScoresSkipRegulationAndCompleteTheCheckIn() {
+        let app = launch()
+        app.tabBars.buttons["Check-In"].tap()
+
+        for question in 1...10 {
+            let button = app.buttons["continue-button"]
+            XCTAssertTrue(button.waitForExistence(timeout: 10), "stalled at question \(question)")
+            app.sliders.firstMatch.adjust(toNormalizedSliderPosition: 1)
+            button.tap()
+            XCTAssertFalse(
+                app.buttons["skip-exercise"].exists,
+                "a high score must not open an exercise (question \(question))"
+            )
+        }
+
+        XCTAssertTrue(
+            app.staticTexts["checkin-complete"].waitForExistence(timeout: 10),
+            "ten high scores should complete the check-in"
         )
     }
 }

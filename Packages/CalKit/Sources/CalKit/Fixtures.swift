@@ -51,6 +51,46 @@ extension CrisisFixture {
     ]
 }
 
+// MARK: - Bundled placeholder exercise
+
+extension Exercise {
+    /// The one exercise that ships in the binary, so Phase 1's check-in has
+    /// something real to route into and so a low score works offline and on a
+    /// fresh install (§7).
+    ///
+    /// Mirrors the `seed-placeholder` row in `supabase/seed.sql` — there's a test
+    /// asserting the JSON there decodes to the same shape.
+    ///
+    /// ⚠️ **Placeholder copy.** Nothing clinical ships generated or invented
+    /// (§8.1); this is scaffolding pending Dr. Mia's word-for-word scripts
+    /// (§20 item 5), and "placeholder" is in the title so it can't be mistaken for
+    /// approved content in a demo.
+    public static let placeholder = Exercise(
+        slug: "seed-placeholder",
+        title: "One Minute Together (placeholder)",
+        category: .overall,
+        tier: .free,
+        script: ExerciseScript(steps: [
+            .timed(phase: .cue, text: "Let's take one minute together.", seconds: 4),
+            .timed(phase: .inhale, text: "Breathe in through your nose", seconds: 4),
+            .timed(phase: .hold, text: "Hold", seconds: 2),
+            .timed(phase: .exhale, text: "Out slowly through your mouth", seconds: 6),
+            .repeatCycle(times: 4),
+            .timed(phase: .cue, text: "Let your shoulders drop.", seconds: 4),
+        ])
+    )
+
+    /// Exercises available with no network, by slug.
+    ///
+    /// Phase 1 ships exactly one. The server's `exercises` table is authoritative
+    /// once synced (§13); this is the offline floor so a low score always has
+    /// somewhere to go — a check-in that dead-ends because the library hasn't
+    /// downloaded is worse than a placeholder.
+    public static func bundled(slug: String) -> Exercise? {
+        slug == placeholder.slug ? placeholder : nil
+    }
+}
+
 // MARK: - Check-in fixtures
 
 extension CheckIn {
