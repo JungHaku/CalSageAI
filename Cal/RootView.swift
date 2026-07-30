@@ -79,6 +79,7 @@ struct RootView: View {
                     switch route {
                     case .checkIn: CheckInView(kind: .full)
                     case .practices: PracticesLibraryView()
+                    case .progress: AnalyticsView()
                     case .history: HistoryView()
                     case .settings: SettingsView()
                     }

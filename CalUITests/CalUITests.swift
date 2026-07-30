@@ -132,6 +132,62 @@ final class CalUITests: XCTestCase {
         )
     }
 
+    // MARK: Analytics (MVP-4)
+
+    func testProgressShowsTheHeadlineDeltaAndCharts() {
+        let app = launch(scenario: "day30Streak")
+        app.tabBars.buttons["Home"].tap()
+        element(app, "dest-progress").tap()
+
+        // The product's actual claim leads, as a number rather than a chart.
+        let hero = element(app, "hero-delta")
+        XCTAssertTrue(hero.waitForExistence(timeout: 10))
+        XCTAssertTrue(hero.label.hasPrefix("+"), "expected a signed delta, got: \(hero.label)")
+
+        XCTAssertTrue(app.staticTexts["Coherence over time"].exists)
+        XCTAssertTrue(app.staticTexts["By area"].exists)
+    }
+
+    /// Non-negotiable: no value may be reachable only through a chart.
+    func testProgressHasATableViewTwin() {
+        let app = launch(scenario: "day30Streak")
+        app.tabBars.buttons["Home"].tap()
+        element(app, "dest-progress").tap()
+
+        XCTAssertTrue(app.buttons["toggle-table"].waitForExistence(timeout: 10))
+        app.buttons["toggle-table"].tap()
+
+        XCTAssertTrue(
+            element(app, "trend-table").waitForExistence(timeout: 10),
+            "the trend must be readable as a table"
+        )
+        XCTAssertTrue(element(app, "category-table").exists, "areas must be readable as a table")
+    }
+
+    func testGranularityFilterScopesEverything() {
+        let app = launch(scenario: "day30Streak")
+        app.tabBars.buttons["Home"].tap()
+        element(app, "dest-progress").tap()
+
+        let picker = element(app, "granularity-picker")
+        XCTAssertTrue(picker.waitForExistence(timeout: 10))
+        // One filter row above everything it scopes, not a per-chart control.
+        app.buttons["Monthly"].tap()
+        XCTAssertTrue(app.staticTexts["Coherence over time"].waitForExistence(timeout: 10))
+    }
+
+    func testProgressIsHonestWhenThereIsNoData() {
+        let app = launch()
+        app.tabBars.buttons["Home"].tap()
+        element(app, "dest-progress").tap()
+
+        XCTAssertTrue(
+            app.staticTexts["Nothing to show yet"].waitForExistence(timeout: 10),
+            "an empty history must not render an empty chart claiming a trend"
+        )
+        XCTAssertFalse(element(app, "hero-delta").exists)
+    }
+
     // MARK: The practice library (MVP-2)
 
     func testPracticeLibraryListsDrMiasPractices() {

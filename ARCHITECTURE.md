@@ -87,7 +87,7 @@ notice in week one.
 
 Phases 0 and 1 are built and committed: the renamed project, five local Swift
 packages, the check-in state machine, the breathwork player, SwiftData
-persistence, **247 passing tests**, and the 231-place campus dataset. The
+persistence, **272 passing tests**, and the 231-place campus dataset. The
 restructure below throws none of it away — §2 explains why it didn't have to.
 
 ---
@@ -504,14 +504,14 @@ caching. Full comparison, caching traps, and vendor terms in
 
 ## 11. Testing
 
-Six loops. Current state: **247 tests passing** — 209 across packages, 38 app + UI.
+Six loops. Current state: **272 tests passing** — 230 across packages, 42 app + UI.
 
 | Loop | Speed | What | Status |
 |---|---|---|---|
 | 1. Previews | instant | Every component per state, dark, XXXL | partial |
-| 2. `swift test` on packages | ~2s | All logic, no simulator | **209 tests** |
+| 2. `swift test` on packages | ~2s | All logic, no simulator | **230 tests** |
 | 3. Snapshot | ~1 min | `getsentry/SnapshotPreviews` turns each `#Preview` into a test | to build |
-| 4. XCUITest | minutes | 12 seeded flows via launch arguments | **12 flows** |
+| 4. XCUITest | minutes | 16 seeded flows via launch arguments | **16 flows** |
 | 5. TestFlight | days | Dr. Mia feels the pacing on a real phone | pending account |
 | 6. Backend / RLS | — | 9 pgTAP catalog invariants, written | Phase B |
 
@@ -552,6 +552,45 @@ Seeded launch states keep UI tests deterministic: `-CalScenario day30Streak`,
   like a crash in whatever the loop body touches. Bind the result to a `let`
   first. Two MVP-2 tests hit this and cost an hour chasing an innocent
   `timeline()`; the tell is that every test prints "started" and none finishes.
+
+### 11.1 Charting rules
+
+Chart form was chosen from the data's job, not from taste, and the honesty rules
+are enforced in `CalKit` where they can be tested:
+
+- **The mean delta is a hero figure, not a chart.** It is one number; a one-bar
+  bar chart is the classic way to miss that.
+- **Coherence over time is a single-series line** — one hue, no legend (the title
+  names it). Before→after per area is a **dumbbell**, the canonical form for
+  before→after per item, in one hue and two shades.
+- **The y-axis is pinned to the full 0–10 scale, always.** A 0–10 self-report is
+  structurally a gauge, not a step count, and truncation is known to inflate
+  perceived effect size in both line and bar charts — with no truncation cue
+  removing the effect. Auto-scaling would make a ±1 wobble, which is inside the
+  noise floor of a daily Likert item, look like a crisis one week and a triumph
+  the next. There is deliberately no auto-scale toggle.
+- **Missing days are gaps, not interpolations or zeros.** A student who skipped
+  Tuesday did not score zero on Tuesday. `CoherenceTrend.segments` splits the
+  series at gaps so the line actually breaks.
+- **Three points minimum before a trend is drawn at all**; below that the screen
+  says so rather than rendering something over-interpretable.
+- **Every chart has a table-view twin.** No value is reachable only through a
+  chart or only through colour.
+- **Colour never encodes magnitude here.** The band tints that colour a single
+  score are wrong across many categories — colouring each mark by its own value
+  double-encodes position as hue. Charts use one validated blue ramp; the axis
+  carries magnitude.
+- **Gridlines are solid hairlines.** Swift Charts dashes x-axis gridlines by
+  default, and dashing reads as "threshold" or "projection" when it is just a grid.
+- **Axis labels use the secondary ink, not the muted ink.** Labels are *text* and
+  need 4.5:1 under WCAG 1.4.3; the muted ink measures 3.50:1 on the light surface
+  and fails. Gridlines are explicitly exempt and keep the muted ink.
+- **Each chart exposes one summarised accessibility element.** Apple's guidance is
+  to keep tick labels away from assistive tech; a spoken summary plus the table
+  view is the non-visual path.
+- **The screen says "these are your own ratings, not a clinical measure."** This
+  is single-arm self-report with no control, so the honest claim is that the
+  numbers moved — not that the practice moved them.
 
 ---
 
@@ -671,9 +710,11 @@ and a progress card; history list with per-check-in detail; settings with a dail
 local reminder; `CoherenceInsights` computing the whole surface in one pure pass.
 See §7.1 for the streak decision — it is a clinical one, not a product one.
 
-**MVP-4 — analytics.** Daily/weekly/monthly trends, per-category trends, and the
-mean before→after delta as the headline. Where the 60-day synthetic fixture pays
-off.
+**MVP-4 — analytics. ✓ Built.** A Progress screen: the mean before→after change as
+a hero figure, coherence over time as a single-series line, and before→after per
+area as a dumbbell, with daily/weekly/monthly bucketing. `CoherenceTrend` and
+`CategorySummary` in `CalKit` do the aggregation, so the honesty rules below are
+unit-tested rather than trusted to the view. See §11.1 for the charting rules.
 
 **MVP-5 — campus.** Map + 231 places, resource directory, study timer, EventKit
 planner.

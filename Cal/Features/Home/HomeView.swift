@@ -149,6 +149,13 @@ struct HomeView: View {
                 )
             }
             Divider()
+            NavigationLink(value: HomeRoute.progress) {
+                DestinationRow(
+                    title: "Progress", subtitle: "Trends and areas",
+                    icon: "chart.xyaxis.line", identifier: "dest-progress"
+                )
+            }
+            Divider()
             NavigationLink(value: HomeRoute.history) {
                 DestinationRow(
                     title: "History", subtitle: "Your past check-ins",
@@ -178,7 +185,7 @@ struct HomeView: View {
 }
 
 enum HomeRoute: Hashable {
-    case checkIn, practices, history, settings
+    case checkIn, practices, history, progress, settings
 }
 
 private struct MotivationCard: View {
