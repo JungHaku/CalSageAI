@@ -1,0 +1,40 @@
+## macOS
+.DS_Store
+
+## Xcode
+DerivedData/
+build/
+*.xcuserstate
+xcuserdata/
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM
+*.dSYM.zip
+*.xcresult/
+*.xcarchive/
+
+## Swift Package Manager
+.build/
+.swiftpm/
+Packages/*/.build/
+Package.resolved.local
+
+## Secrets — never commit these
+.env
+.env.*
+!.env.example
+Secrets.xcconfig
+*.local.xcconfig
+AuthKey_*.p8
+*.mobileprovision
+*.p12
+
+## Supabase local state
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+
+## Snapshot test failures (the recorded baselines DO get committed)
+**/__Snapshots__/**/*.failure.png
+**/FailureDiffs/
