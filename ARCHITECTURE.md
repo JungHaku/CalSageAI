@@ -697,14 +697,29 @@ What actually happens, in order:
 
    **Email/password only, and no anonymous sign-in.**
 
-   *Not anonymous→upgrade.* GoTrue **deletes anonymous users 30 days after
-   `created_at`**, unconditionally — not "inactive for 30 days", and not
-   configurable. Fourteen tables cascade from `auth.users`, so for this app that
-   is not a cleanup, it is the silent destruction of a student's entire history
-   one month after they first opened the app. The upgrade path itself is fine
-   (the `user_id` survives in place on every route), but the clock starts at
-   account creation and does not care whether the account was upgraded. Staying
-   device-local until someone chooses to sign in has no such timer.
+   *Not anonymous→upgrade.* An earlier version of this section said GoTrue
+   **deletes anonymous users 30 days after `created_at`, unconditionally**, and
+   called it a data-loss event. **That was wrong and is corrected here.** The
+   delete statement does exist in GoTrue's source with a `created_at` predicate,
+   but its only caller is gated on `DB.CleanupEnabled`, which defaults to
+   **false** — `GOTRUE_DB_CLEANUP_ENABLED` is not set on our stack — and
+   Supabase's own documentation states that *"Automatic cleanup of anonymous
+   users is currently not available"*, offering a manual SQL snippet instead. So
+   there is no automatic reaper to fear.
+
+   The decision not to use anonymous auth stands on quieter grounds:
+
+   - The app already works without accounts, so anonymous sign-in buys a uniform
+     code path we do not currently need, at the cost of a second identity state
+     to reason about in every RLS policy.
+   - `updateUser` does **not** mint a new JWT. An upgraded user keeps
+     `is_anonymous: true` in their access token for up to `jwt_expiry` (3600s
+     here), so any policy distinguishing anonymous from permanent users is wrong
+     for an hour after the upgrade. That is a real trap, and avoiding the state
+     entirely avoids it.
+   - If we ever *do* want it, the good news is that the `user_id` survives the
+     upgrade in place on every route — so the claim migration in step 4 works
+     either way, and this is reversible.
 
    *Not Sign in with Apple first.* Guideline 4.8 is triggered only by offering a
    **third-party or social** login; its first exemption covers an app using
