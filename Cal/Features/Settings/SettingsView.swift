@@ -193,8 +193,10 @@ struct SettingsView: View {
             let data = try archive.jsonData()
             // A real file rather than raw `Data`, so the share sheet carries a
             // real filename — "cal-coherence-export-2026-07-30.json" rather than
-            // an untitled blob. Sharing a file URL also avoids a long-standing bug
-            // where a custom `Transferable` breaks "Save to Files".
+            // an untitled blob. A URL also skips the `preview:` argument a custom
+            // `Transferable` requires, and the reports of one breaking "Save to
+            // Files" (FB forums 719429) are old enough that they may well be fixed
+            // — the filename alone is reason enough not to find out.
             //
             // In its own UUID subdirectory: two exports on the same day would
             // otherwise collide on the filename, and overwriting a file the share
