@@ -215,8 +215,10 @@ Other guidelines that apply:
 - **4.3(b) / 4.2** — the sleeper risk. A thin "AI chat wrapper" gets rejected as low-effort. Cal is not that, but the *free tier* needs enough native substance to look it.
 - **Age rating: 17+ no longer exists.** Tiers are now 4+, 9+, 13+, 16+, 18+ (12+ also retired), effective with iOS 26. The driving descriptor is "Medical or Wellness": wellness topics = 9+, infrequent medical/treatment information = 13+, frequent = 16+. **Decided: 16+.** That's the honest answer for open-ended AI chat plus frequent wellness/treatment content, and it removes an argument with review rather than inviting one. Guideline 2.3.6 makes an honest answer a review requirement and warns about regulator inquiry. Answer the rating questionnaire to match — the app's actual behavior is the standard, not the marketing.
 - **`PrivacyInfo.xcprivacy`** with required-reason API declarations has been mandatory since 1 May 2024; missing declarations are rejected at upload.
-- **App Privacy nutrition label:** Health & Fitness > Health, Sensitive Info, User Content, Identifiers, Contact Info — linked to identity, not used for tracking.
-- App Review needs a **working demo account and a live backend**, and non-obvious AI features must be described specifically in review notes.
+- **App Privacy nutrition label — the honest answer differs by phase.** Apple defines "collect" as *transmitting data off the device* in a way that lets you or a partner access it beyond servicing the request in real time, and states that data processed only on-device is not collected. The MVP does neither, so it can truthfully file **"Data Not Collected"** — and should, rather than defensively over-declaring. **At Phase B this flips** to Health & Fitness > Health, Sensitive Info, User Content, Identifiers, Contact Info — linked to identity, not used for tracking. Changing the label is part of the Phase B checklist, not an afterthought.
+- **5.1.1(v) account deletion does not apply yet — and fires the moment Phase B lands.** The obligation is conditioned on supporting account creation; the MVP has no account, so there is nothing to delete server-side. Note this is a *conditional that is already scheduled to trigger*: the first sign-in screen makes in-app account deletion mandatory (deactivation is explicitly insufficient, and it must be initiated in-app). The MVP's Settings > Delete everything is not required today but is the right shape for when it is. What Apple *does* expect of a no-account app is a privacy policy describing the deletion mechanism and a way to withdraw consent.
+- **5.1.3(ii) prohibits storing personal health information in iCloud.** Cal satisfies this structurally today: no CloudKit entitlement (`Cal.entitlements` is deliberately empty) and no `cloudKitDatabase:` on the `ModelConfiguration`. **This is a hard constraint on Phase B** — "just turn on CloudKit sync" is not available as a cross-device story; sync has to go through our own backend. Device backups are a separate matter from iCloud *storage* and are disclosed in the Settings footer rather than prevented.
+- App Review needs a **working demo account and a live backend**, and non-obvious AI features must be described specifically in review notes. *(Phase B only — the MVP has neither, which is itself worth stating in review notes so a reviewer doesn't go looking.)*
 
 ### 18.5 Claim language — FDA general wellness
 
@@ -236,7 +238,9 @@ Related: wrongful-death product-liability litigation against AI chatbots over us
 - [ ] Separate opt-ins for collection and sharing (MHMDA).
 - [ ] Standalone consumer-health-data privacy policy at its own homepage link.
 - [ ] Deletion cascading to backups, Storage, and the LLM provider's retention window.
-- [ ] Data export endpoint.
+- [x] Data export. **Built in MVP-6** — complete JSON archive, all stores, no truncation; a test fails if a new store isn't carried. Satisfies Connecticut's "portable and, to the extent technically feasible, readily usable" format requirement, the one regime that constrains export *format* and does so with no size threshold.
+- [x] In-app delete that actually erases rather than tombstones. **Built in MVP-6.** Beats Nevada SB 370's 30-day deadline trivially by being immediate. Becomes *mandatory* (not merely good) the moment Phase B adds accounts — see 5.1.1(v) in §18.4.
+- [ ] Nutrition label filed as **"Data Not Collected"** for the MVP; re-filed at Phase B (§18.4).
 - [ ] Zero third-party analytics or ad SDKs. Verified by a dependency test.
 - [ ] SB 243: AI-generated disclosure, crisis protocol published on the website, `safety_events` queryable for the July 2027 report.
 - [ ] Crisis numbers human-verified (§9.3).
