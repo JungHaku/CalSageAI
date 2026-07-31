@@ -42,3 +42,7 @@ supabase/.env
 # Supabase local stack. `config.toml` and migrations ARE tracked; these are not.
 supabase/.branches
 supabase/.temp
+
+# Demo launcher's build output. The launcher keeps its own DerivedData so a demo
+# build never fights the one Xcode is using.
+.demo-build/
