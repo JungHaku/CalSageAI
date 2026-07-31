@@ -14,8 +14,15 @@
 -- can't flake.
 
 -- Fixed UUID so tests can reference the user without a lookup.
-\set test_user_id '00000000-0000-4000-a000-000000000001'
-\set test_email 'cal.tester@example.com'
+--
+-- Written out in full rather than held in a client variable, and that is not a
+-- style choice. Backslash meta-commands and colon-prefixed interpolation are
+-- *psql client* constructs: piping this file through psql works, but
+-- `supabase start` seeds over a direct SQL connection with no psql involved, so
+-- they never expand and the whole batch fails with a bare "failed to send
+-- batch". Keep this file free of client-side syntax.
+--   test user:  00000000-0000-4000-a000-000000000001
+--   test email: cal.tester@example.com
 
 insert into auth.users (
   instance_id, id, aud, role, email,
@@ -25,8 +32,8 @@ insert into auth.users (
 )
 values (
   '00000000-0000-0000-0000-000000000000',
-  :'test_user_id',
-  'authenticated', 'authenticated', :'test_email',
+  '00000000-0000-4000-a000-000000000001',
+  'authenticated', 'authenticated', 'cal.tester@example.com',
   crypt('password123', gen_salt('bf')), now(),
   '{"provider":"email","providers":["email"]}', '{}',
   now(), now()
@@ -41,7 +48,7 @@ update public.profiles
        goals        = 'Sleep more. Panic less.',
        interests    = array['climbing', 'ceramics'],
        onboarded_at = now()
- where id = :'test_user_id';
+ where id = '00000000-0000-4000-a000-000000000001';
 
 -- 60 consecutive days of completed full check-ins, ending today.
 with days as (
@@ -50,7 +57,7 @@ with days as (
 ),
 inserted as (
   insert into public.checkins (user_id, kind, local_date, timezone, started_at, completed_at)
-  select :'test_user_id', 'full', d.local_date, 'America/Los_Angeles',
+  select '00000000-0000-4000-a000-000000000001', 'full', d.local_date, 'America/Los_Angeles',
          d.local_date + time '08:00', d.local_date + time '08:04'
     from days d
   returning id, local_date
@@ -58,7 +65,7 @@ inserted as (
 insert into public.checkin_scores (checkin_id, user_id, category, score_before, score_after, exercise_slug)
 select
   i.id,
-  :'test_user_id',
+  '00000000-0000-4000-a000-000000000001',
   cat.category,
   before_score.value,
   -- Only regulated when the premium rule fires (score <= 5), and the improvement

@@ -38,3 +38,7 @@ supabase/.env
 ## Snapshot test failures (the recorded baselines DO get committed)
 **/__Snapshots__/**/*.failure.png
 **/FailureDiffs/
+
+# Supabase local stack. `config.toml` and migrations ARE tracked; these are not.
+supabase/.branches
+supabase/.temp

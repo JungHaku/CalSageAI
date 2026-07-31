@@ -10,16 +10,30 @@
 
 begin;
 create extension if not exists pgtap;
-select plan(9);
+select plan(10);
 
 -- --------------------------------------------------------------- invariant 1 ---
 -- Every table in `public` has RLS enabled. No policy means deny-all, which is
 -- safe; RLS *disabled* means wide open, which is not.
+--
+-- Extension-owned objects are excluded, and by dependency rather than by name.
+-- PostGIS puts `spatial_ref_sys` in `public` and it genuinely cannot have RLS
+-- enabled by a non-superuser — Supabase documents it as an accepted exception.
+-- Excluding by `pg_depend.deptype = 'e'` rather than by a name list keeps this a
+-- real sweep: a table *we* add without RLS still fails, and so would one added by
+-- a future extension we install deliberately. Invariant 10 guards the exclusion
+-- from swallowing everything.
 select is_empty(
   $$ select c.relname
        from pg_class c
        join pg_namespace n on n.oid = c.relnamespace
-      where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity $$,
+      where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity
+        and not exists (
+          select 1 from pg_depend d
+           where d.classid = 'pg_class'::regclass
+             and d.objid = c.oid
+             and d.deptype = 'e'
+        ) $$,
   'every public table has row level security enabled'
 );
 
@@ -34,7 +48,13 @@ select is_empty(
       where n.nspname = 'public'
         and c.relkind = 'v'
         and coalesce(array_to_string(c.reloptions, ','), '') not like '%security_invoker=%on%'
-        and coalesce(array_to_string(c.reloptions, ','), '') not like '%security_invoker=%true%' $$,
+        and coalesce(array_to_string(c.reloptions, ','), '') not like '%security_invoker=%true%'
+        and not exists (
+          select 1 from pg_depend d
+           where d.classid = 'pg_class'::regclass
+             and d.objid = c.oid
+             and d.deptype = 'e'
+        ) $$,
   'every public view is defined with security_invoker on'
 );
 
@@ -130,6 +150,41 @@ select is_empty(
            and k.confdeltype = 'c'          -- ON DELETE CASCADE
       ) $$,
   'every user-scoped table cascades from auth.users on delete'
+);
+
+-- -------------------------------------------------------------- invariant 10 ---
+-- The guard on invariants 1 and 2. Both now exclude extension-owned objects, and
+-- an exclusion that quietly matched more than intended would make them pass
+-- vacuously forever.
+--
+-- Asserting a bare count would be a weak guard — with 22 tables in `public`, any
+-- threshold low enough to be safe is too low to catch real breakage. So this
+-- names our tables and asserts every one of them is still *visible* to the sweep.
+-- If the extension filter ever starts hiding one, this fails and says which.
+select is_empty(
+  $$ with ours(t) as (
+       values ('profiles'),('checkins'),('checkin_scores'),('journal_entries'),
+              ('chat_threads'),('chat_messages'),('action_plans'),('weekly_reviews'),
+              ('emergency_contacts'),('consents'),('calendar_feeds'),
+              ('ai_usage'),('safety_events'),('subscriptions')
+     )
+     select ours.t
+       from ours
+      where not exists (
+        select 1
+          from pg_class c
+          join pg_namespace n on n.oid = c.relnamespace
+         where n.nspname = 'public'
+           and c.relkind = 'r'
+           and c.relname = ours.t
+           and not exists (
+             select 1 from pg_depend d
+              where d.classid = 'pg_class'::regclass
+                and d.objid = c.oid
+                and d.deptype = 'e'
+           )
+      ) $$,
+  'the extension exclusion still leaves every one of our own tables in the sweep'
 );
 
 select * from finish();
