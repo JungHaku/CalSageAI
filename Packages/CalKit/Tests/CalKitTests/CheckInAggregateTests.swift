@@ -132,7 +132,21 @@ struct CoherenceSummaryTests {
         // ~4 chars/token: a few hundred characters is the ~50-token budget in §8.3.
         #expect(text.count < 400, "digest grew to \(text.count) chars:\n\(text)")
         #expect(text.contains("7-day avg coherence"))
-        #expect(text.contains("Streak: 30 days"))
+    }
+
+    /// §7.1 decided the daily streak is not shown to the student. The digest is
+    /// the back door into that decision: a number in Cal's context comes back out
+    /// of Cal's mouth, so this asserts the omission rather than trusting it.
+    @Test("the digest never mentions a streak, however long the history is")
+    func digestNeverMentionsAStreak() {
+        let today = LocalDate(iso: "2026-07-29")!
+        let history = CheckIn.syntheticHistory(days: 120, endingOn: today, calendar: pacific)
+        let text = CoherenceSummary.build(history: history, today: today, calendar: pacific).promptText
+
+        #expect(!text.isEmpty, "120 days of history should still produce a digest")
+        #expect(!text.lowercased().contains("streak"))
+        #expect(!text.lowercased().contains("in a row"))
+        #expect(!text.lowercased().contains("consecutive"))
     }
 
     @Test("incomplete check-ins are excluded from the digest")
@@ -147,7 +161,6 @@ struct CoherenceSummaryTests {
         )
         let summary = CoherenceSummary.build(history: [abandoned], today: today, calendar: pacific)
         #expect(summary.promptText.isEmpty)
-        #expect(summary.streak == 0)
     }
 
     @Test("an empty history produces an empty digest, not a sentence full of nils")

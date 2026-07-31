@@ -1,16 +1,62 @@
 import CalAI
+import CalData
 import CalKit
 import Foundation
 import Testing
 
 @testable import Cal
 
+/// Wraps `MockCoachClient` and keeps every request, so the tests can assert what
+/// actually left the view model rather than only what came back.
+private final class RecordingCoachClient: CoachClient, @unchecked Sendable {
+    private let lock = NSLock()
+    private var recorded: [CoachRequest] = []
+    private let inner: MockCoachClient
+
+    init(_ behaviour: MockCoachClient.Behaviour) {
+        self.inner = MockCoachClient(behaviour: behaviour)
+    }
+
+    var requests: [CoachRequest] {
+        lock.lock()
+        defer { lock.unlock() }
+        return recorded
+    }
+
+    func send(_ request: CoachRequest) -> AsyncThrowingStream<CoachEvent, Error> {
+        lock.lock()
+        recorded.append(request)
+        lock.unlock()
+        return inner.send(request)
+    }
+}
+
 @Suite("Chat")
 @MainActor
 struct ChatViewModelTests {
 
-    private func model(_ behaviour: MockCoachClient.Behaviour = .reply("Let's take one slow breath.")) -> ChatViewModel {
-        ChatViewModel(coach: MockCoachClient(behaviour: behaviour))
+    private static let today = LocalDate(iso: "2026-07-29")!
+
+    private func model(
+        _ behaviour: MockCoachClient.Behaviour = .reply("Let's take one slow breath."),
+        store: any CoherenceStoring = InMemoryCoherenceStore()
+    ) -> ChatViewModel {
+        ChatViewModel(
+            coach: MockCoachClient(behaviour: behaviour),
+            store: store,
+            dates: FixedDateProvider(day: Self.today)
+        )
+    }
+
+    private func recording(
+        _ behaviour: MockCoachClient.Behaviour = .reply("ok"),
+        store: any CoherenceStoring = InMemoryCoherenceStore()
+    ) -> (ChatViewModel, RecordingCoachClient) {
+        let coach = RecordingCoachClient(behaviour)
+        let model = ChatViewModel(
+            coach: coach, store: store, dates: FixedDateProvider(day: Self.today)
+        )
+        return (model, coach)
     }
 
     /// Waits for streaming to settle rather than sleeping a fixed interval.
@@ -18,6 +64,15 @@ struct ChatViewModelTests {
         let deadline = ContinuousClock.now.advanced(by: timeout)
         while ContinuousClock.now < deadline {
             if !model.isStreaming && !model.messages.isEmpty { return }
+            try await Task.sleep(for: .milliseconds(5))
+        }
+    }
+
+    /// A suppressed turn produces no assistant message, so `settle` — which waits
+    /// for one — is the wrong condition to wait on.
+    private func settleCrisis(_ model: ChatViewModel, timeout: Duration = .seconds(2)) async throws {
+        let deadline = ContinuousClock.now.advanced(by: timeout)
+        while ContinuousClock.now < deadline && model.isStreaming {
             try await Task.sleep(for: .milliseconds(5))
         }
     }
@@ -56,6 +111,113 @@ struct ChatViewModelTests {
             model.send()
             #expect(model.messages.isEmpty, "sent \(text.debugDescription)")
         }
+    }
+
+    // MARK: Memory — conversation
+
+    /// Without this the coach answers every message cold, and "Cal remembers me"
+    /// is false however good the prompt is.
+    @Test("the previous turns travel with the next message")
+    func historyIsSent() async throws {
+        let (model, coach) = recording()
+
+        model.draft = "I have a chemistry exam"
+        model.send()
+        try await settle(model)
+
+        model.draft = "it's tomorrow"
+        model.send()
+        try await settle(model)
+
+        let second = try #require(coach.requests.last)
+        #expect(second.message == "it's tomorrow")
+        #expect(second.history.count == 2, "the first exchange should have been carried")
+        #expect(second.history.first?.role == .user)
+        #expect(second.history.first?.text == "I have a chemistry exam")
+        #expect(second.history.last?.role == .assistant)
+    }
+
+    @Test("the first message carries no history")
+    func firstMessageHasNoHistory() async throws {
+        let (model, coach) = recording()
+        model.draft = "hello"
+        model.send()
+        try await settle(model)
+
+        #expect(coach.requests.first?.history.isEmpty == true)
+    }
+
+    /// The message being sent must not appear in its own history, or the model
+    /// sees it twice and reads the repetition as emphasis.
+    @Test("a message is not included in its own history")
+    func messageIsNotInItsOwnHistory() async throws {
+        let (model, coach) = recording()
+        model.draft = "only once"
+        model.send()
+        try await settle(model)
+
+        let request = try #require(coach.requests.first)
+        #expect(!request.history.contains { $0.text == "only once" })
+    }
+
+    /// The end-to-end version of `ConversationWindowTests.acuteIsNeverCarried`:
+    /// the prefilter suppresses the model on the turn itself, and this asserts it
+    /// is not quietly handed over on the *next* turn instead.
+    @Test("an acute message is never carried into a later request")
+    func acuteNeverTravels() async throws {
+        let (model, coach) = recording()
+
+        model.draft = "I want to kill myself"
+        model.send()
+        try await settleCrisis(model)
+        #expect(model.crisis == .acute)
+
+        model.draft = "sorry, I meant the exam is brutal"
+        model.send()
+        try await settle(model)
+
+        let follow = try #require(coach.requests.last)
+        #expect(
+            !follow.history.contains { $0.text.contains("kill myself") },
+            "suppressed content must not reach the model one turn later"
+        )
+        #expect(
+            model.messages.contains { $0.text.contains("kill myself") },
+            "it stays on the person's screen — it just doesn't travel"
+        )
+    }
+
+    // MARK: Memory — coherence digest
+
+    @Test("the digest is attached when there are completed check-ins")
+    func digestIsAttached() async throws {
+        // Built against the provider's own calendar, not `.current` — otherwise
+        // the fixture's days and the digest's window can land a day apart
+        // depending on the machine's time zone.
+        let calendar = FixedDateProvider(day: Self.today).calendar
+        let store = InMemoryCoherenceStore(
+            CheckIn.syntheticHistory(days: 5, endingOn: Self.today, calendar: calendar)
+        )
+        let (model, coach) = recording(store: store)
+
+        model.draft = "how am I doing"
+        model.send()
+        try await settle(model)
+
+        let digest = try #require(coach.requests.first?.coherence)
+        #expect(!digest.promptText.isEmpty)
+    }
+
+    /// Absence is silence. An empty digest block would read to the model as a
+    /// claim that the student has no data, which is a different thing.
+    @Test("no digest is sent when there is no history")
+    func noDigestWhenEmpty() async throws {
+        let (model, coach) = recording()
+        model.draft = "hello"
+        model.send()
+        try await settle(model)
+
+        #expect(coach.requests.first?.coherence == nil)
     }
 
     // MARK: Safety

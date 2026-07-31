@@ -24,7 +24,11 @@ struct ChatView: View {
         }
         .navigationTitle("Chat with Cal")
         .task {
-            if model == nil { model = ChatViewModel(coach: container.coach) }
+            if model == nil {
+                model = ChatViewModel(
+                    coach: container.coach, store: container.store, dates: container.dates
+                )
+            }
         }
         .sheet(isPresented: $showingEmergency) { EmergencyView() }
     }

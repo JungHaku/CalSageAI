@@ -19,6 +19,7 @@
 // place it works before a token is spent.
 
 import { CAL_SYSTEM_PROMPT, PROMPT_VERSION } from "./prompt.ts";
+import { assembleMessages, type Turn } from "./assemble.ts";
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 const DEFAULT_MODEL = "gpt-5.6-luna";
@@ -33,7 +34,15 @@ interface CoachBody {
   threadId?: string;
   /// Prior turns, oldest first. The app sends these because the function keeps no
   /// state — there is no session here, deliberately.
-  history?: { role: "user" | "assistant"; text: string }[];
+  ///
+  /// Note what is *not* in here: anything the on-device prefilter assessed as
+  /// acute. That filtering happens on the phone, in `ConversationWindow`, and is
+  /// applied again at the client's network boundary. By the time a message
+  /// reaches this function it has already passed both.
+  history?: Turn[];
+  /// The rendered coherence digest — `CoherenceSummary.promptText`, ~50 tokens of
+  /// numbers, never journal text or raw history (§8.3).
+  coherence?: string | null;
 }
 
 function sse(event: Record<string, unknown>): Uint8Array {
@@ -80,16 +89,20 @@ Deno.serve(async (req) => {
   const message = (body.message ?? "").trim();
   if (!message) return new Response("empty message", { status: 400 });
 
+  const threadId = (body.threadId ?? "").trim();
+
   const model = Deno.env.get("CAL_MODEL") ?? DEFAULT_MODEL;
 
   // System prompt first and byte-identical every time: prompt caching keys on a
   // stable prefix, so anything that reorders or interpolates into it silently
-  // destroys the discount (§10.4).
-  const messages = [
-    { role: "system", content: CAL_SYSTEM_PROMPT },
-    ...(body.history ?? []).map((m) => ({ role: m.role, content: m.text })),
-    { role: "user", content: message },
-  ];
+  // destroys the discount (§10.4). `assemble.ts` owns that ordering and explains
+  // why each piece sits where it does.
+  const messages = assembleMessages({
+    systemPrompt: CAL_SYSTEM_PROMPT,
+    coherence: body.coherence,
+    history: body.history,
+    message,
+  });
 
   let upstream: Response;
   try {
@@ -107,6 +120,10 @@ Deno.serve(async (req) => {
         // cost-per-reply is unknowable.
         stream_options: { include_usage: true },
         max_completion_tokens: MAX_OUTPUT_TOKENS,
+        // Required for reliable cache matching on GPT-5.6 (§10.4 item 5).
+        // Keyed on the thread so a single conversation's turns route together —
+        // which is exactly the case where the growing history prefix pays off.
+        ...(threadId ? { prompt_cache_key: threadId } : {}),
       }),
     });
   } catch (error) {

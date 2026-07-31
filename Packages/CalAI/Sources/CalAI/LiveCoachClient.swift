@@ -76,8 +76,20 @@ public struct LiveCoachClient: CoachClient {
             urlRequest.setValue("Bearer \(anonKey)", forHTTPHeaderField: "Authorization")
             urlRequest.setValue(anonKey, forHTTPHeaderField: "apikey")
         }
+        // The acute filter is applied again here, at the actual network boundary,
+        // even though `ConversationWindow` already did it. Defence in depth is
+        // cheap and the failure it guards against — self-harm text reaching a
+        // model because some future caller built a request by hand — is not.
+        let digest = request.coherence?.promptText
         urlRequest.httpBody = try JSONEncoder().encode(
-            Payload(message: request.message, threadId: request.threadID.uuidString)
+            Payload(
+                message: request.message,
+                threadId: request.threadID.uuidString,
+                history: request.history
+                    .filter { $0.safety != .acute }
+                    .map { Turn(role: $0.role.rawValue, text: $0.text) },
+                coherence: (digest?.isEmpty ?? true) ? nil : digest
+            )
         )
 
         let (bytes, response) = try await session.bytes(for: urlRequest)
@@ -133,6 +145,19 @@ public struct LiveCoachClient: CoachClient {
     private struct Payload: Encodable {
         let message: String
         let threadId: String
+        let history: [Turn]
+        /// The digest is sent **rendered**, not as a struct.
+        ///
+        /// `CoherenceSummary.promptText` is already the exact text that goes in
+        /// the prompt, and it is unit-tested in `CalKit`. Sending the numbers and
+        /// re-rendering them in TypeScript would mean two copies of that wording,
+        /// one of them untested, drifting apart.
+        let coherence: String?
+    }
+
+    private struct Turn: Encodable {
+        let role: String
+        let text: String
     }
 
     private struct ServerEvent: Decodable {

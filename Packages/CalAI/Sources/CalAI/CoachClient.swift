@@ -85,13 +85,26 @@ public struct CoachRequest: Sendable {
     public let surface: CoachSurface
     public let threadID: UUID
     public let message: String
+    /// Prior turns, oldest first, already windowed by `ConversationWindow`.
+    ///
+    /// The client carries these because the proxy keeps no state — there is no
+    /// session on the server, deliberately (§10.4 item 4 caps the context rather
+    /// than accumulating one).
+    public let history: [CoachMessage]
     /// The compact digest from §8.3 — never raw journal text or full history.
     public let coherence: CoherenceSummary?
 
-    public init(surface: CoachSurface, threadID: UUID, message: String, coherence: CoherenceSummary? = nil) {
+    public init(
+        surface: CoachSurface,
+        threadID: UUID,
+        message: String,
+        history: [CoachMessage] = [],
+        coherence: CoherenceSummary? = nil
+    ) {
         self.surface = surface
         self.threadID = threadID
         self.message = message
+        self.history = history
         self.coherence = coherence
     }
 }

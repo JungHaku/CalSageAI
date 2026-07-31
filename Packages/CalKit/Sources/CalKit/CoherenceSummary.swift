@@ -21,7 +21,6 @@ public struct CoherenceSummary: Hashable, Sendable {
     public let todayRegulatedCount: Int
     public let todayCategoryCount: Int
     public let todayAverageDelta: Double?
-    public let streak: Int
 
     public init(
         windowDays: Int,
@@ -30,8 +29,7 @@ public struct CoherenceSummary: Hashable, Sendable {
         lowestCategories: [(category: CoherenceCategory, score: Int)],
         todayRegulatedCount: Int,
         todayCategoryCount: Int,
-        todayAverageDelta: Double?,
-        streak: Int
+        todayAverageDelta: Double?
     ) {
         self.windowDays = windowDays
         self.averageThisWindow = averageThisWindow
@@ -40,7 +38,6 @@ public struct CoherenceSummary: Hashable, Sendable {
         self.todayRegulatedCount = todayRegulatedCount
         self.todayCategoryCount = todayCategoryCount
         self.todayAverageDelta = todayAverageDelta
-        self.streak = streak
     }
 
     public static func == (lhs: CoherenceSummary, rhs: CoherenceSummary) -> Bool {
@@ -78,10 +75,19 @@ public struct CoherenceSummary: Hashable, Sendable {
             lines.append(line + ".")
         }
 
-        if streak > 0 {
-            lines.append("Streak: \(streak) day\(streak == 1 ? "" : "s").")
-        }
-
+        // No streak. Deliberately, and it is not an oversight to correct.
+        //
+        // §7.1 decided against showing a daily streak at all: the gamification
+        // evidence associates streak mechanics with pressure and diminished
+        // meaning, the engagement→outcome link is small (pooled r = 0.16), and
+        // median users practise about three times a month — so a daily count
+        // marks most people as failing. Home leads with days-practised instead.
+        //
+        // Putting the number in Cal's context would route it straight back to the
+        // student in conversation ("nice work on your 18-day streak!") — the
+        // metric the UI refuses to display, delivered by the warmest surface in
+        // the app. `CoherenceSummaryTests.digestNeverMentionsAStreak` fails if it
+        // comes back.
         return lines.joined(separator: "\n")
     }
 
@@ -162,10 +168,7 @@ extension CoherenceSummary {
                 let deltas = todays.flatMap { $0.scores.compactMap { $0.delta.map(Double.init) } }
                 guard !deltas.isEmpty else { return nil }
                 return deltas.reduce(0, +) / Double(deltas.count)
-            }(),
-            streak: StreakCalculator().currentStreak(
-                checkInDates: completed.map(\.localDate), today: today, calendar: calendar
-            )
+            }()
         )
     }
 }
