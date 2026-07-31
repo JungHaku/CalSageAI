@@ -56,6 +56,9 @@ struct ChatView: View {
                     if model.failed { failureNotice }
                 }
                 .padding()
+                // Clearance under the last item so the crisis card's bottom edge
+                // isn't flush against the composer when scrolled fully down.
+                .padding(.bottom, 12)
             }
             .scrollDismissesKeyboard(.interactively)
             .onChange(of: model.messages.count) { _, _ in scroll(proxy, to: model) }
@@ -68,8 +71,13 @@ struct ChatView: View {
             // who was misread needs to reach. Scroll to the card itself.
             .onChange(of: model.crisis) { _, severity in
                 guard severity == .acute else { return }
+                // Anchored to the card's TOP, not its bottom. `.bottom` aligns
+                // with the scroll view's own bottom edge, which sits underneath
+                // the composer's safe-area inset — so the card's last few points
+                // stayed tucked behind it. From the top the whole card is visible,
+                // dismiss control included.
                 withAnimation(.easeOut(duration: 0.25)) {
-                    proxy.scrollTo(Self.crisisAnchor, anchor: .bottom)
+                    proxy.scrollTo(Self.crisisAnchor, anchor: .top)
                 }
             }
         }
