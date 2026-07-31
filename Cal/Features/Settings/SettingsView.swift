@@ -109,11 +109,14 @@ struct SettingsView: View {
     /// because that is where cancellation actually happens — but do not read that
     /// as Apple owning the obligation. On the US storefront Apple is appointed our
     /// **agent**, not the merchant of record (Schedule 2, Exhibit A §1), and we are
-    /// the principal. California's Automatic Renewal Law therefore binds *us*: it
-    /// requires cancellation to be available online and at will, and its remedy for
-    /// getting this wrong is that everything delivered counts as an unconditional
-    /// gift. Making the way out easy to find is the cheap half of complying;
-    /// `docs/LAUNCH-REQUIREMENTS.md` §18.7 carries the rest.
+    /// the principal, so California's Automatic Renewal Law binds *us*.
+    ///
+    /// This placement is expressly contemplated rather than merely tolerated:
+    /// §17602(d)(1)(A) requires "a prominently located direct link or button which
+    /// may be located within either a customer account or profile, **or within
+    /// either device or user settings**." Linking out to iOS Settings is the
+    /// statute's own example, not a workaround. `docs/LAUNCH-REQUIREMENTS.md`
+    /// §18.7 carries the obligations this does *not* discharge.
     @ViewBuilder
     private var subscriptionSection: some View {
         Section {

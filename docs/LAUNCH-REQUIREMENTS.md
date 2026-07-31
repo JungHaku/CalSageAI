@@ -275,21 +275,34 @@ ANPRM in March 2026 but no rule exists today. The binding federal constraints ar
 **California's ARL, as amended by AB 2863, is the strict one**, and it applies to
 every contract entered into on or after 1 July 2025 — i.e. all of ours. It
 expressly reaches charges billed through a third party, so Apple IAP is captured.
-Its remedy is unusually punitive: anything delivered without compliant consent is
-an **unconditional gift**, refundable without limit.
+
+⚠️ **One thing to *not* repeat, because it circulates widely and it is wrong for
+this app.** The ARL's famous "unconditional gift" remedy, §17603, reads: *"In any
+case in which a business sends any **goods, wares, merchandise, or products** to a
+consumer … the goods, wares, merchandise, or products shall for all purposes be
+deemed an unconditional gift."* The word *services* appears nowhere, and the
+section's closing clause is about **shipping costs** — it is written for physical
+fulfilment. A subscription to app features is a service, so §17603 very likely
+does not reach it. The real exposure here is §17604 enforcement, UCL claims, and
+the plaintiffs' bar, which is quite enough to comply for — but do not put
+"unlimited refunds" in a risk memo on the strength of §17603.
 
 | Requirement | Status |
 |---|---|
-| Renewal terms in *visual proximity* to the consent control | **Done** — directly above the Subscribe button, not in a footer |
-| Cancellation available online, at will | **Done** — Settings links to the App Store subscription screen |
+| Renewal terms in *visual proximity* to the consent control (§17602(a)(1)) | **Done** — directly above the Subscribe button, not in a footer |
+| Affirmative consent to *the agreement containing the renewal terms* (§17602(a)(2)) | **Partly ours.** Apple's sheet evidences authorisation of a *charge*, not assent to *our* terms — which is exactly why the disclosure sits on our screen |
+| Cancellation available online, at will (§17602(d)) | **Done.** §17602(d)(1)(A) expressly allows the link to sit "within either device or user settings", so linking to the App Store subscription screen is the statute's own example, not a workaround |
 | Price, period, title, and what you get, before purchase | **Done** — Schedule 2 §3.8(b) plus Apple's sign-up-screen list |
 | Restore affordance on the sign-up screen | **Done** |
-| **Retainable post-purchase acknowledgment** carrying renewal terms, cancellation policy, and how to cancel | **NOT BUILT.** Apple's receipt email is not ours and may not carry the required terms |
+| **Retainable post-purchase acknowledgment** carrying renewal terms, cancellation policy, and how to cancel (§17602(a)(3)) | **NOT BUILT.** Apple's receipt email is not ours and may not carry the required terms |
 | **Three-year recordkeeping of consent** | **NOT POSSIBLE TODAY.** Directly conflicts with a device-local, no-backend architecture — there is nowhere to keep the record. Phase B, or accept the exposure knowingly |
+| Pre-billing notice (§17602(a)(8)) | **Not triggered** at $11/month with no long trial. Subdivision (b) limits it to a free trial or promotional price lasting **more than 31 days**, or an initial term of **a year or longer**. Adding a 2-month trial later would trigger it |
 
 Also live: **New York**'s amended statute (stricter than California on price
-increases) and **Colorado**'s one-step online cancellation. Both bind a nationally
-available app.
+increases) and **Colorado**'s one-step online cancellation, which for individual
+consumers has been in force since **6 August 2025** — the February 2026 date that
+gets quoted is a later stage that pulls in business-to-business subscriptions, not
+the consumer obligation.
 
 **Minors.** At a 16+ rating some subscribers are under 18. A 16-year-old *can*
 form the contract in California but may **disaffirm it and recover the money**,
@@ -313,9 +326,20 @@ account termination. Of the nine feature groups in `SPEC-premium.md`, three are
 built. The paywall generates its list from `PremiumFeature.allCases` and a UI test
 fails if the unbuilt ones appear.
 
-**No student pricing exists.** Apple has no educational-pricing mechanism for an
-in-app subscription; the only educational discount applies to an app's own
-purchase price via Volume Purchase.
+**Institutional pricing is arriving, and for this app that is a business
+opportunity rather than a footnote.** The old rule — that Apple has no
+educational-pricing mechanism for an in-app *subscription*, only a 50% discount on
+an app's own purchase price at 20+ copies — stopped being true at WWDC26 (June
+2026). Apple's What's New page: *"Volume Purchasing makes your subscription
+available to enterprise and education buyers through Apple School Manager and
+Apple Business"*, marked **"Coming this fall"**, with **Group Purchases** (one
+buyer purchases multiple seats and invites others) *"coming later this year"*.
+
+For a product sold to Berkeley students, that is the difference between $11/month
+per student and a conversation with a department, a college, or a student health
+service that buys seats. Worth raising with Dr. Mia before pricing is fixed, and
+worth re-checking the availability date before relying on it — "this fall" is
+Apple's wording, not a commitment we have seen honoured.
 
 ### 18.8 The Sacred Care Fund sentence cannot ship as written
 
@@ -324,28 +348,60 @@ Student Restoration Initiative (WSRI) and contributes to the Sacred Care Fund…
 Attaching that to a paid subscription is a **commercial co-venture**, and the
 wording is the exact pattern the regulators target. **Blocking on Dr. Mia.**
 
-- **Neither "WholeLife Student Restoration Initiative", "Sacred Care Fund", nor
-  "Breathe Health Center" appears in the IRS-derived tax-exempt index.** Everything
-  below assumes they turn out to be registered charities; if either is a program of
-  the for-profit clinic, the claim has to be deleted outright — Cal. Gov. Code
-  §12599.6(f)(3)–(4) is violated on its face and no disclosure cures it.
-- **§12599.6(f)(11)**: naming a charity in a promotion at all requires that
-  charity's prior written consent, signed by an authorised officer.
+- **The recipients could not be found in a public charity index.** A ProPublica
+  Nonprofit Explorer search on 2026-07-30 returned zero results for all three of
+  "WholeLife Student Restoration Initiative", "Sacred Care Fund", and "Breathe
+  Health Center". Treat that as a prompt, not a finding: ProPublica is a secondary
+  index built from the IRS Business Master File, and a name search cannot see a
+  DBA, a fiscally sponsored project, a very recent recognition, or a restricted
+  fund sitting inside a differently-named charity. **Ask Dr. Mia for the EIN and
+  determination letter**, then confirm against IRS Tax Exempt Organization Search
+  directly. If either turns out to be a program of the for-profit clinic rather
+  than a charity, the claim has to go entirely — Cal. Gov. Code §12599.6(f)(3)–(4)
+  is violated on its face and no disclosure cures it.
+- **N.Y. Exec. Law §174-c is the sharpest provision here, and it is binding.**
+  *"All advertising, of every kind and nature, that a sale of goods, services,
+  entertainment or any other thing of value will benefit a charitable organization
+  shall set forth the anticipated portion of the sales price, anticipated
+  percentage of the gross proceeds, anticipated dollar amount per purchase, or
+  other consideration or benefit the charitable organization is to receive."* It
+  names *services*, it is a statute rather than guidance, and it makes the
+  quantified disclosure mandatory outright. This — not California — is what makes
+  "helps support" unusable as written.
+- **§12599.6(f)(11) is narrower than it is usually quoted.** It bars *representing
+  that any part of the contributions solicited will be given or donated to* a
+  charity without that charity's prior written consent — it is not a prohibition on
+  naming a charity at all. It also carries an express carve-out the short quote
+  drops: *"Written consent is not needed if the requirements of Section 12599.9 are
+  met."*
 - **§12599.2(b)**: exemption from registering with the CA AG requires *all three*
   conditions, including a written contract signed by two officers of the charity.
-  Fail any one and registration on Form CT-5CF is mandatory; fail worse and the app
-  is reclassified as a **charitable fundraising platform** under §12599.9, which
-  requires registration *before* soliciting.
+  Fail any one and registration on Form CT-5CF is mandatory (fee now $500, not the
+  statutory $200); fail the §12599.2(a) carve-out and the app is reclassified as a
+  **charitable fundraising platform** under §12599.9, which requires registration
+  *before* soliciting.
 - **Cal. Bus. & Prof. Code §§17510.2–17510.4** separately require a
   point-of-sale disclosure on exactly this fact pattern.
-- **Massachusetts is harsher** and attaches the moment a resident sees the
-  listing: registration, a **$25,000 surety bond**, and a filed contract.
-- **The FTC's on-point precedent** holds that a "portion of proceeds" claim is
-  deceptive absent substantiation. BBB Standard 19 wants the portion, the duration,
-  and any cap — all three, at the point of sale.
+- **Massachusetts** imposes registration, a **$25,000 surety bond** (M.G.L. c. 68
+  §24(b)), and a contract signed by two officers and filed before any solicitation
+  (§22(a)). Note the predicate: §24(a) reaches a person acting as a commercial
+  co-venturer **"for a charitable organization"**, so this attaches once there is a
+  real charity and a real promotion — not, as is sometimes claimed, the instant a
+  Massachusetts resident sees the App Store listing.
+- **The FTC's closest matter is a 1996 consent agreement, not a holding.**
+  *In re Benckiser* (File No. 932 3310) settled a "one percent of proceeds" charity
+  claim and required disclosure of the method of calculation — but the FTC's own
+  release says a consent agreement *"is for settlement purposes only and does not
+  constitute an admission of a law violation."* Persuasive on what the FTC thinks;
+  not precedent. BBB Standard 19 (voluntary) wants the portion, the duration, and
+  any cap, all at the point of sale.
 - **Apple 3.2.2(iv)** independently bars a non-approved-nonprofit app from
-  collecting funds for charities in-app, and **3.1.2(a)** means a donation cannot
-  count toward the subscription's own value proposition.
+  collecting funds for charities in-app. Note that only **two** guidelines mention
+  charity at all — 3.2.1(vi) and 3.2.2(iv); 3.2.1(vii) is about a monetary gift to
+  *another individual* and is not a charity provision. The related argument that
+  3.1.2(a) stops a donation counting toward the subscription's value is a sensible
+  inference, not guideline text — keep the donation line out of the value
+  description because it is prudent, not because Apple says so.
 - **Structural problem specific to this MVP:** §12599.2(b)(3) requires an
   accounting of the amount raised, and with device-local entitlement and no backend
   the app cannot count its own subscribers.

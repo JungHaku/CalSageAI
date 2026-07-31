@@ -134,8 +134,12 @@ public final class PremiumStore {
 
 /// A `Sendable` holder for the update-listening task.
 ///
-/// Exists only because `deinit` is nonisolated and so cannot read a
-/// `@MainActor` stored property. A `let` of a `Sendable` type it can read.
+/// The reason is narrower than it looks, and worth stating precisely because the
+/// obvious explanation is wrong: a nonisolated `deinit` on a `@MainActor` class
+/// *can* read `Sendable` **stored** properties, and a plain `Task<Void, Never>?`
+/// is one. What breaks it here is `@Observable` — the macro rewrites stored
+/// properties into computed ones, and a nonisolated `deinit` cannot touch those.
+/// Hence a `let` of a `Sendable` box, which the macro leaves alone.
 private final class TaskBox: @unchecked Sendable {
     private let lock = NSLock()
     private var task: Task<Void, Never>?

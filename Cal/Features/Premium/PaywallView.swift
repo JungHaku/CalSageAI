@@ -141,9 +141,10 @@ struct PaywallView: View {
                 // 1 July 2025) requires the automatic-renewal terms to appear in
                 // "visual proximity" to the control that gives consent. Apple is
                 // our agent on the US storefront rather than the merchant of
-                // record, so this obligation is ours, and its remedy for getting
-                // it wrong is that everything delivered becomes an unconditional
-                // gift — a refund claim with no ceiling.
+                // record, so the obligation is ours — and §17602(a)(2) wants
+                // consent to *the agreement containing the renewal terms*, which
+                // a payment sheet authorising a charge does not by itself supply.
+                // Hence this line, here, rather than relying on Apple's flow.
                 renewalTerms
 
                 Button {
