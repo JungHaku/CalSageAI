@@ -252,6 +252,107 @@ Related: wrongful-death product-liability litigation against AI chatbots over us
 - [ ] Berkeley marks resolved or renamed (§1).
 - [ ] Breach response plan written before you need it.
 
+### 18.7 The paid tier — auto-renewal law and App Review
+
+Built in MVP-7 and verified against primary sources; the gaps below are real and
+none of them are code.
+
+**Correct the premise first: on the US storefront Apple is our *agent*, not the
+merchant of record.** Schedule 2, Exhibit A §1 appoints Apple under Cal. Civ. Code
+§2295 et seq., and Schedule 2 §1.3 makes the developer "as principal … solely
+responsible." §3.10 assigns all legal and regulatory compliance to us. Apple's
+purchase flow discharges the charge authorisation and the bare existence of a
+cancellation path — nothing else. Every auto-renewal obligation below lands on
+Breathe Health Center, not on Apple.
+
+**The federal rule people cite no longer exists.** The Eighth Circuit vacated the
+FTC's 2024 "Click-to-Cancel" Negative Option Rule in its entirety on **8 July
+2025**; 16 CFR Part 425 now contains only the 1973 prenotification rule, which
+does not reach an app subscription. A replacement rulemaking restarted with an
+ANPRM in March 2026 but no rule exists today. The binding federal constraints are
+**ROSCA (15 U.S.C. §8403)** and **FTC Act §5**.
+
+**California's ARL, as amended by AB 2863, is the strict one**, and it applies to
+every contract entered into on or after 1 July 2025 — i.e. all of ours. It
+expressly reaches charges billed through a third party, so Apple IAP is captured.
+Its remedy is unusually punitive: anything delivered without compliant consent is
+an **unconditional gift**, refundable without limit.
+
+| Requirement | Status |
+|---|---|
+| Renewal terms in *visual proximity* to the consent control | **Done** — directly above the Subscribe button, not in a footer |
+| Cancellation available online, at will | **Done** — Settings links to the App Store subscription screen |
+| Price, period, title, and what you get, before purchase | **Done** — Schedule 2 §3.8(b) plus Apple's sign-up-screen list |
+| Restore affordance on the sign-up screen | **Done** |
+| **Retainable post-purchase acknowledgment** carrying renewal terms, cancellation policy, and how to cancel | **NOT BUILT.** Apple's receipt email is not ours and may not carry the required terms |
+| **Three-year recordkeeping of consent** | **NOT POSSIBLE TODAY.** Directly conflicts with a device-local, no-backend architecture — there is nowhere to keep the record. Phase B, or accept the exposure knowingly |
+
+Also live: **New York**'s amended statute (stricter than California on price
+increases) and **Colorado**'s one-step online cancellation. Both bind a nationally
+available app.
+
+**Minors.** At a 16+ rating some subscribers are under 18. A 16-year-old *can*
+form the contract in California but may **disaffirm it and recover the money**,
+and that refund lands on us, not Apple. Apple's account rules do not screen them
+out and the age rating confers no legal protection. Ask to Buy is handled in code
+(`PurchaseOutcome.pending` never unlocks); the disaffirmance exposure is a
+business decision.
+
+**Release sequencing — this one changes the plan.** The first auto-renewable
+subscription **must be submitted in the same submission as an app version** and is
+reviewed alongside the binary (App Store Connect Help, "Submit an In-App
+Purchase"). And if a reviewer can see a paywall but cannot complete the purchase,
+that is a **2.1(b)** App Completeness rejection. So the two options are: submit the
+subscription *with* the build, or ship a build with no reachable paywall. Shipping
+a paywall whose product is not for sale is the one thing that cannot work.
+
+**Selling what isn't built is the live risk.** Guideline 3.1.2(a)'s anti-scam
+bullet names "false pretenses" and "bait-and-switch"; 2.3.1 is what gets cited
+when a paywall advertises features the app does not ship, and 2.3.1(a) carries
+account termination. Of the nine feature groups in `SPEC-premium.md`, three are
+built. The paywall generates its list from `PremiumFeature.allCases` and a UI test
+fails if the unbuilt ones appear.
+
+**No student pricing exists.** Apple has no educational-pricing mechanism for an
+in-app subscription; the only educational discount applies to an app's own
+purchase price via Volume Purchase.
+
+### 18.8 The Sacred Care Fund sentence cannot ship as written
+
+`SPEC-premium.md` ends: *"Every Premium membership helps support the WholeLife
+Student Restoration Initiative (WSRI) and contributes to the Sacred Care Fund…"*
+Attaching that to a paid subscription is a **commercial co-venture**, and the
+wording is the exact pattern the regulators target. **Blocking on Dr. Mia.**
+
+- **Neither "WholeLife Student Restoration Initiative", "Sacred Care Fund", nor
+  "Breathe Health Center" appears in the IRS-derived tax-exempt index.** Everything
+  below assumes they turn out to be registered charities; if either is a program of
+  the for-profit clinic, the claim has to be deleted outright — Cal. Gov. Code
+  §12599.6(f)(3)–(4) is violated on its face and no disclosure cures it.
+- **§12599.6(f)(11)**: naming a charity in a promotion at all requires that
+  charity's prior written consent, signed by an authorised officer.
+- **§12599.2(b)**: exemption from registering with the CA AG requires *all three*
+  conditions, including a written contract signed by two officers of the charity.
+  Fail any one and registration on Form CT-5CF is mandatory; fail worse and the app
+  is reclassified as a **charitable fundraising platform** under §12599.9, which
+  requires registration *before* soliciting.
+- **Cal. Bus. & Prof. Code §§17510.2–17510.4** separately require a
+  point-of-sale disclosure on exactly this fact pattern.
+- **Massachusetts is harsher** and attaches the moment a resident sees the
+  listing: registration, a **$25,000 surety bond**, and a filed contract.
+- **The FTC's on-point precedent** holds that a "portion of proceeds" claim is
+  deceptive absent substantiation. BBB Standard 19 wants the portion, the duration,
+  and any cap — all three, at the point of sale.
+- **Apple 3.2.2(iv)** independently bars a non-approved-nonprofit app from
+  collecting funds for charities in-app, and **3.1.2(a)** means a donation cannot
+  count toward the subscription's own value proposition.
+- **Structural problem specific to this MVP:** §12599.2(b)(3) requires an
+  accounting of the amount raised, and with device-local entitlement and no backend
+  the app cannot count its own subscribers.
+
+Nothing in the shipped paywall mentions any of this, and a UI test keeps it that
+way.
+
 ---
 
 ---

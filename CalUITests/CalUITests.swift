@@ -11,12 +11,24 @@ final class CalUITests: XCTestCase {
         continueAfterFailure = false
     }
 
-    private func launch(scenario: String = "empty", extra: [String] = []) -> XCUIApplication {
+    /// Launches as a **subscriber** by default.
+    ///
+    /// This suite is about whether the features themselves work — the ten-question
+    /// framework, the Progress charts, the practice library — and since MVP-7 those
+    /// sit behind Cal+. Pinning the tier here keeps these tests testing the thing
+    /// they were written to test. Gating itself, and everything the free tier does
+    /// and doesn't get, is `PremiumUITests`.
+    private func launch(
+        scenario: String = "empty",
+        entitlement: String = "plus",
+        extra: [String] = []
+    ) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = [
             "-CalScenario", scenario,
             "-CalUseMockCoach", "1",
             "-CalFixedDate", "2026-07-29",
+            "-CalEntitlement", entitlement,
         ] + extra
         app.launch()
         return app

@@ -750,7 +750,25 @@ hard-erases all three stores behind a confirmation that names what goes.
 `PersonalDataService` in `CalData` owns both export and delete so they can't
 disagree about what "everything" means.
 
-**MVP-7 — premium.** StoreKit, paywall, local entitlement, gating.
+**MVP-7 — premium. ✓ Built.** `CalStore` holds the purchase seam:
+`EntitlementProviding`, a StoreKit-backed provider, a scriptable mock, and the
+observable `PremiumStore` the UI reads. The *policy* — what paying unlocks — lives
+in `CalKit.Entitlement`, so it is unit-tested rather than scattered through views.
+
+Three surfaces gate, and they are the three that are **built**: the ten-question
+check-in, the Progress screen, and the browsable practice library. Her premium
+spec promises six more feature groups that do not exist, so the paywall generates
+its included-list from `PremiumFeature.allCases` and a UI test fails if any of the
+unbuilt ones appear (see `docs/LAUNCH-REQUIREMENTS.md` §18.7 — this is a 2.3.1
+removal offence, not a nicety).
+
+The free tier is not a demo: it keeps Dr. Mia's single-question check-in *with*
+guided regulation, the emergency affordance, its own history, and the export.
+`PremiumFeature.neverGated` names those four and a test guards them.
+
+Not shipped, deliberately: the product must be submitted **with** an app version
+and a paywall whose product isn't for sale is a 2.1(b) rejection (§18.7). The
+Sacred Care Fund claim is blocked on Dr. Mia (§18.8).
 
 **MVP-8 — polish and TestFlight.** Snapshot tests, accessibility pass, App Store
 assets, external testers.

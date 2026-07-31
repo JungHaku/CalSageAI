@@ -2,6 +2,7 @@ import CalContent
 import CalData
 import CalDesign
 import CalKit
+import CalStore
 import SwiftUI
 
 /// The landing screen: where you are today, one line of encouragement, and the
@@ -142,17 +143,23 @@ struct HomeView: View {
 
     private var destinations: some View {
         VStack(spacing: 0) {
+            // Locked rows stay visible and still navigate. Hiding them would leave
+            // the free app looking like the whole app, which misleads in the other
+            // direction — and the lock glyph is the honest way to say "there's more
+            // here, and it costs money" without a banner nagging on every screen.
             NavigationLink(value: HomeRoute.practices) {
                 DestinationRow(
                     title: "Practices", subtitle: "Guided coherence sessions",
-                    icon: "wind", identifier: "dest-practices"
+                    icon: "wind", identifier: "dest-practices",
+                    isLocked: !container.premium.unlocks(.practiceLibrary)
                 )
             }
             Divider()
             NavigationLink(value: HomeRoute.progress) {
                 DestinationRow(
                     title: "Progress", subtitle: "Trends and areas",
-                    icon: "chart.xyaxis.line", identifier: "dest-progress"
+                    icon: "chart.xyaxis.line", identifier: "dest-progress",
+                    isLocked: !container.premium.unlocks(.coherenceAnalytics)
                 )
             }
             Divider()
@@ -176,6 +183,17 @@ struct HomeView: View {
                     icon: "gear", identifier: "dest-settings"
                 )
             }
+            // Only for people who haven't bought it. An app that keeps advertising
+            // an upgrade to someone who already paid is just noise.
+            if container.premium.entitlement != .plus {
+                Divider()
+                NavigationLink(value: HomeRoute.premium) {
+                    DestinationRow(
+                        title: "Cal+ Coherence", subtitle: "All ten areas, and your full progress",
+                        icon: "sparkles", identifier: "dest-premium"
+                    )
+                }
+            }
         }
         .background(.quaternary.opacity(0.35), in: .rect(cornerRadius: 14))
     }
@@ -192,7 +210,7 @@ struct HomeView: View {
 }
 
 enum HomeRoute: Hashable {
-    case checkIn, practices, history, progress, study, settings
+    case checkIn, practices, history, progress, study, settings, premium
 }
 
 private struct MotivationCard: View {
@@ -235,6 +253,7 @@ private struct DestinationRow: View {
     let subtitle: String
     let icon: String
     let identifier: String
+    var isLocked = false
 
     var body: some View {
         HStack(spacing: 14) {
@@ -247,6 +266,13 @@ private struct DestinationRow: View {
                 Text(subtitle).font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
+            if isLocked {
+                Image(systemName: "lock.fill")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    // Not colour or a glyph alone: VoiceOver has to say it too.
+                    .accessibilityLabel("Requires Cal+")
+            }
             Image(systemName: "chevron.right")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.tertiary)

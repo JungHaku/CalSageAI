@@ -1,5 +1,6 @@
 import CalData
 import CalKit
+import CalStore
 import SwiftUI
 
 struct SettingsView: View {
@@ -17,6 +18,7 @@ struct SettingsView: View {
         Form {
             if let model {
                 profileSection
+                subscriptionSection
                 reminderSection(model)
                 dataSection(model)
                 aboutSection
@@ -98,6 +100,43 @@ struct SettingsView: View {
                 .accessibilityIdentifier("open-profile")
         }
     }
+
+    // MARK: Subscription
+
+    /// Status, a way in, and a way out.
+    ///
+    /// The cancel path is a link to the App Store's own subscription screen,
+    /// because that is where cancellation actually happens — but do not read that
+    /// as Apple owning the obligation. On the US storefront Apple is appointed our
+    /// **agent**, not the merchant of record (Schedule 2, Exhibit A §1), and we are
+    /// the principal. California's Automatic Renewal Law therefore binds *us*: it
+    /// requires cancellation to be available online and at will, and its remedy for
+    /// getting this wrong is that everything delivered counts as an unconditional
+    /// gift. Making the way out easy to find is the cheap half of complying;
+    /// `docs/LAUNCH-REQUIREMENTS.md` §18.7 carries the rest.
+    @ViewBuilder
+    private var subscriptionSection: some View {
+        Section {
+            if container.premium.entitlement == .plus {
+                LabeledContent("Cal+ Coherence", value: "Subscribed")
+                    .accessibilityIdentifier("subscription-status")
+                Link("Manage or cancel", destination: Self.manageSubscriptions)
+                    .accessibilityIdentifier("manage-subscription")
+            } else {
+                NavigationLink("Cal+ Coherence") { PaywallView() }
+                    .accessibilityIdentifier("open-paywall")
+                Button("Restore purchases") {
+                    Task { await container.premium.restore() }
+                }
+                .accessibilityIdentifier("settings-restore")
+            }
+        } header: {
+            Text("Subscription")
+        }
+    }
+
+    /// The system's own subscription management screen.
+    static let manageSubscriptions = URL(string: "https://apps.apple.com/account/subscriptions")!
 
     // MARK: Reminder
 

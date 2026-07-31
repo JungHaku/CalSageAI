@@ -2,6 +2,7 @@ import CalAI
 import CalContent
 import CalData
 import CalKit
+import CalStore
 import SwiftUI
 
 @main
@@ -12,6 +13,9 @@ struct CalApp: App {
         WindowGroup {
             RootView()
                 .environment(container)
+                // At the root, not inside a gated screen: the transaction listener
+                // has to be running whether or not anyone visits the paywall.
+                .task { await container.premium.start() }
         }
     }
 }
@@ -42,6 +46,9 @@ final class AppContainer {
     /// Export and delete. One type owns both so they can't disagree about what
     /// "everything" means.
     let personalData: PersonalDataService
+    /// What the person has paid for, and the only thing any view should ask about
+    /// gating (§2). Observable, so a purchase or a lapse re-renders the app.
+    let premium: PremiumStore
     /// True when launched by XCUITest with seeded state (§11.4).
     let isUITesting: Bool
     /// True when nothing written this session survives relaunch — either a UI-test
@@ -60,6 +67,7 @@ final class AppContainer {
         reminders: any ReminderScheduling,
         calendars: any CalendarAccess,
         personalData: PersonalDataService,
+        premium: PremiumStore,
         isUITesting: Bool = false,
         storeIsEphemeral: Bool = true
     ) {
@@ -74,6 +82,7 @@ final class AppContainer {
         self.reminders = reminders
         self.calendars = calendars
         self.personalData = personalData
+        self.premium = premium
         self.isUITesting = isUITesting
         self.storeIsEphemeral = storeIsEphemeral
     }
@@ -85,6 +94,8 @@ final class AppContainer {
     ///   `-CalScenario <name>`   seeded history: `empty`, `lowCoherenceDay`, `day30Streak`
     ///   `-CalUseMockCoach 1`    never reach a real model — no cost, no network, no flake
     ///   `-CalFixedDate <iso>`   freeze the clock so streak assertions are stable
+    ///   `-CalEntitlement <tier>` `free` or `plus`, so a UI test can assert both
+    ///                            sides of the paywall without a sandbox account
     static func live(arguments: [String] = ProcessInfo.processInfo.arguments) -> AppContainer {
         func value(for flag: String) -> String? {
             guard let index = arguments.firstIndex(of: flag), index + 1 < arguments.count else { return nil }
@@ -92,7 +103,9 @@ final class AppContainer {
         }
 
         let scenarioName = value(for: "-CalScenario")
-        let isUITesting = value(for: "-CalUseMockCoach") == "1" || scenarioName != nil
+        let pinnedTier = value(for: "-CalEntitlement").flatMap(Entitlement.init(rawValue:))
+        let isUITesting =
+            value(for: "-CalUseMockCoach") == "1" || scenarioName != nil || pinnedTier != nil
 
         let dates: any DateProvider =
             if let iso = value(for: "-CalFixedDate"), let day = LocalDate(iso: iso) {
@@ -152,6 +165,14 @@ final class AppContainer {
             calendars: isUITesting ? MockCalendarAccess() : EventKitCalendarAccess(),
             personalData: PersonalDataService(
                 checkIns: store, profiles: profiles, sessions: practiceSessions
+            ),
+            // A real StoreKit purchase needs a sandbox account and a system sheet
+            // XCUITest can't drive, so tests pin the tier instead and assert the
+            // app's own behaviour on each side of it (§11.2).
+            premium: PremiumStore(
+                provider: isUITesting
+                    ? MockEntitlementProvider(entitlement: pinnedTier ?? .free)
+                    : StoreKitEntitlementProvider()
             ),
             isUITesting: isUITesting,
             storeIsEphemeral: ephemeral

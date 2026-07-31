@@ -70,6 +70,7 @@
 				CA3000000000000000000003 /* CalData in Frameworks */,
 				CA3000000000000000000004 /* CalAI in Frameworks */,
 				CA3000000000000000000005 /* CalContent in Frameworks */,
+				CA3000000000000000000006 /* CalStore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -124,6 +125,7 @@
 				CA2000000000000000000003 /* CalData */,
 				CA2000000000000000000004 /* CalAI */,
 				CA2000000000000000000005 /* CalContent */,
+				CA2000000000000000000006 /* CalStore */,
 			);
 			productName = "Cal";
 			productReference = 8CBF4DE2301AEE0F00AE31EB /* Cal.app */;
@@ -214,6 +216,7 @@
 				CA1000000000000000000003 /* XCLocalSwiftPackageReference "Packages/CalData" */,
 				CA1000000000000000000004 /* XCLocalSwiftPackageReference "Packages/CalAI" */,
 				CA1000000000000000000005 /* XCLocalSwiftPackageReference "Packages/CalContent" */,
+				CA1000000000000000000006 /* XCLocalSwiftPackageReference \"Packages/CalStore\" */,
 			);
 			productRefGroup = 8CBF4DD9301AEE0F00AE31EB;
 			projectDirPath = "";
@@ -607,6 +610,7 @@
 		CA3000000000000000000003 /* CalData in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000003 /* CalData */; };
 		CA3000000000000000000004 /* CalAI in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000004 /* CalAI */; };
 		CA3000000000000000000005 /* CalContent in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000005 /* CalContent */; };
+		CA3000000000000000000006 /* CalStore in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000006 /* CalStore */; };
 /* End PBXBuildFile section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -630,6 +634,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/CalContent;
 		};
+		CA1000000000000000000006 /* XCLocalSwiftPackageReference \"Packages/CalStore\" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/CalStore;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -652,6 +660,10 @@
 		CA2000000000000000000005 /* CalContent */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = CalContent;
+		};
+		CA2000000000000000000006 /* CalStore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CalStore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -1,5 +1,6 @@
 import CalDesign
 import CalKit
+import CalStore
 import SwiftUI
 
 /// The five tabs from Dr. Mia's spec, plus the Emergency affordance that must be
@@ -9,6 +10,7 @@ import SwiftUI
 /// built in Phases 1–4 (§19). Each placeholder names its phase so nobody mistakes
 /// it for something that's finished.
 struct RootView: View {
+    @Environment(AppContainer.self) private var container
     @State private var selection: Tab = .home
     @State private var showingEmergency = false
 
@@ -69,20 +71,25 @@ struct RootView: View {
     @ViewBuilder
     private func content(for tab: Tab) -> some View {
         switch tab {
-        // The ten-question flow. Which tier a user gets is an entitlement
-        // question, and entitlements are Phase 5 — until then everyone sees the
-        // full framework, which is the part worth getting right.
-        case .checkIn: CheckInView(kind: .full)
+        // Not gated — *routed*. Free gets Dr. Mia's single-question check-in from
+        // `SPEC-free.md` §1, premium the ten-category framework. Both regulate a
+        // low score into guided breathing, so nobody is locked out of the part
+        // that helps (`PremiumFeature.neverGated`).
+        case .checkIn: CheckInView(kind: container.premium.checkInKind)
         case .home:
             HomeView()
                 .navigationDestination(for: HomeRoute.self) { route in
                     switch route {
-                    case .checkIn: CheckInView(kind: .full)
-                    case .practices: PracticesLibraryView()
-                    case .progress: AnalyticsView()
+                    case .checkIn: CheckInView(kind: container.premium.checkInKind)
+                    case .practices:
+                        PremiumGate(feature: .practiceLibrary) { PracticesLibraryView() }
+                    case .progress:
+                        PremiumGate(feature: .coherenceAnalytics) { AnalyticsView() }
                     case .study: StudyTimerView()
+                    // Never gated: this is the person's own data (§ Entitlement).
                     case .history: HistoryView()
                     case .settings: SettingsView()
+                    case .premium: PaywallView()
                     }
                 }
         case .navigate: NavigateView()
