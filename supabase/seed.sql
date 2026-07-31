@@ -24,11 +24,18 @@
 --   test user:  00000000-0000-4000-a000-000000000001
 --   test email: cal.tester@example.com
 
+-- The token columns are set to '' rather than left to default to NULL, and this
+-- is not cosmetic. GoTrue scans them into non-nullable Go strings, so a NULL
+-- makes every sign-in fail with a 500 and the unhelpful message "Database error
+-- querying schema" — the row looks perfectly fine in psql, the RLS tests pass
+-- because they never authenticate, and only an actual login attempt reveals it.
 insert into auth.users (
   instance_id, id, aud, role, email,
   encrypted_password, email_confirmed_at,
   raw_app_meta_data, raw_user_meta_data,
-  created_at, updated_at
+  created_at, updated_at,
+  confirmation_token, recovery_token, email_change_token_new, email_change,
+  email_change_token_current, phone_change, phone_change_token, reauthentication_token
 )
 values (
   '00000000-0000-0000-0000-000000000000',
@@ -36,7 +43,8 @@ values (
   'authenticated', 'authenticated', 'cal.tester@example.com',
   crypt('password123', gen_salt('bf')), now(),
   '{"provider":"email","providers":["email"]}', '{}',
-  now(), now()
+  now(), now(),
+  '', '', '', '', '', '', '', ''
 )
 on conflict (id) do nothing;
 
