@@ -15,7 +15,7 @@
 
 begin;
 create extension if not exists pgtap;
-select plan(14);
+select plan(19);
 
 -- Two users. The first is the seeded tester; the second is created here so the
 -- test does not depend on seed order.
@@ -31,6 +31,11 @@ insert into auth.users (
   crypt('password123', gen_salt('bf')), now(),
   '{"provider":"email","providers":["email"]}', '{}', now(), now()
 ) on conflict (id) do nothing;
+
+-- Give Alice a practice session, so "Mallory sees none" is distinguishable from
+-- "there are none".
+insert into public.practice_sessions (user_id, exercise_slug, local_date, started_at, completed_at, progress)
+values ('00000000-0000-4000-a000-000000000001', 'presence-of-light', current_date, now(), now(), 1);
 
 -- Give Mallory one check-in of her own, so "sees nothing" can be distinguished
 -- from "sees only her own".
@@ -155,6 +160,64 @@ select throws_ok(
   null,
   'safety_events is not readable by a client at all'
 );
+
+-- ------------------------------------------------------- the sync contract ---
+
+select is(
+  (select count(*)::int from public.practice_sessions),
+  0,
+  'Mallory sees none of the other user''s practice sessions'
+);
+
+-- `updated_at` is the sync watermark. If a client can set it, a device with a
+-- skewed clock can write a row that a "changed since X" query never returns
+-- again — the row becomes permanently invisible to sync rather than conflicted.
+-- The trigger fires on insert as well as update, and this proves it.
+-- The insert is its own statement for the same reason as the tombstone below:
+-- a data-modifying CTE cannot sit inside a subquery. `timezone = 'Etc/UTC'` is
+-- the marker that finds this row again — Mallory's setup row uses a different one.
+insert into public.checkins (user_id, kind, local_date, timezone, started_at, updated_at)
+values ('00000000-0000-4000-a000-000000000002', 'quick', current_date, 'Etc/UTC', now(),
+        '2001-01-01T00:00:00Z');
+
+select ok(
+  (select updated_at > now() - interval '1 minute'
+     from public.checkins
+    where user_id = '00000000-0000-4000-a000-000000000002'
+      and timezone = 'Etc/UTC'),
+  'a client-supplied updated_at is overwritten by the server on insert'
+);
+
+select test_reset();
+
+-- The tombstone has to actually remove the day from the analytics, or a deleted
+-- check-in keeps showing up in the charts that read this view.
+select test_become('00000000-0000-4000-a000-000000000001');
+
+select is(
+  (select count(*)::int from public.daily_coherence),
+  60,
+  'Alice sees all 60 of her own coherence days before any deletion'
+);
+
+-- Two statements, not a data-modifying CTE inside a subquery: Postgres rejects
+-- that with "WITH clause containing a data-modifying statement must be at the top
+-- level". Same mistake as the cross-user UPDATE above, same fix — do the write,
+-- then assert on what it left behind.
+select lives_ok(
+  $$ update public.checkins set deleted_at = now()
+      where user_id = '00000000-0000-4000-a000-000000000001'
+        and local_date = current_date $$,
+  'a person can tombstone their own check-in'
+);
+
+select is(
+  (select count(*)::int from public.daily_coherence),
+  59,
+  'a tombstoned check-in drops out of daily_coherence rather than lingering in the analytics'
+);
+
+select test_reset();
 
 -- ---------------------------------------------------------------- anonymous ---
 

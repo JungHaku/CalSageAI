@@ -10,31 +10,47 @@
 
 begin;
 create extension if not exists pgtap;
-select plan(10);
+select plan(13);
 
 -- --------------------------------------------------------------- invariant 1 ---
--- Every table in `public` has RLS enabled. No policy means deny-all, which is
--- safe; RLS *disabled* means wide open, which is not.
+-- Every table that holds user data has RLS enabled. No policy means deny-all,
+-- which is safe; RLS *disabled* means wide open, which is not.
 --
--- Extension-owned objects are excluded, and by dependency rather than by name.
--- PostGIS puts `spatial_ref_sys` in `public` and it genuinely cannot have RLS
--- enabled by a non-superuser — Supabase documents it as an accepted exception.
--- Excluding by `pg_depend.deptype = 'e'` rather than by a name list keeps this a
--- real sweep: a table *we* add without RLS still fails, and so would one added by
--- a future extension we install deliberately. Invariant 10 guards the exclusion
--- from swallowing everything.
+-- Scoped to tables that actually hold user data — one with a `user_id` column, or
+-- a foreign key to `auth.users`, or one we have named ourselves. It used to sweep
+-- every table in `public`, and that made it a claim about objects we do not
+-- control. Two things broke it: PostGIS's `spatial_ref_sys`, which cannot be given
+-- RLS by a non-superuser, and a stray `public.wm` table (id, body, updated_at,
+-- xid8) that appeared mid-session, was owned by `postgres`, belonged to no
+-- extension, and did not reappear after a reset — I could not establish what
+-- created it and am not going to guess in a comment.
+--
+-- The narrower question is the one the app actually needs answered, and it cannot
+-- be made flaky by infrastructure: a table with a `user_id` and no RLS is a leak,
+-- and a table with neither is not this test's business. Invariant 10 separately
+-- pins that our own tables are all still in scope here.
 select is_empty(
   $$ select c.relname
        from pg_class c
        join pg_namespace n on n.oid = c.relnamespace
-      where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity
+      where n.nspname = 'public'
+        and c.relkind = 'r'
+        and not c.relrowsecurity
         and not exists (
           select 1 from pg_depend d
-           where d.classid = 'pg_class'::regclass
-             and d.objid = c.oid
-             and d.deptype = 'e'
+           where d.classid = 'pg_class'::regclass and d.objid = c.oid and d.deptype = 'e'
+        )
+        and (
+          exists (
+            select 1 from pg_attribute a
+             where a.attrelid = c.oid and a.attname = 'user_id' and not a.attisdropped
+          )
+          or exists (
+            select 1 from pg_constraint k
+             where k.conrelid = c.oid and k.contype = 'f' and k.confrelid = 'auth.users'::regclass
+          )
         ) $$,
-  'every public table has row level security enabled'
+  'every table holding user data has row level security enabled'
 );
 
 -- --------------------------------------------------------------- invariant 2 ---
@@ -64,9 +80,9 @@ select is_empty(
 -- returns nothing. Both look like app bugs for hours.
 select is_empty(
   $$ with owned(t) as (
-       values ('profiles'),('checkins'),('checkin_scores'),('journal_entries'),
-              ('chat_threads'),('chat_messages'),('action_plans'),('weekly_reviews'),
-              ('emergency_contacts'),('consents'),('calendar_feeds')
+       values ('profiles'),('checkins'),('checkin_scores'),('practice_sessions'),
+              ('journal_entries'),('chat_threads'),('chat_messages'),('action_plans'),
+              ('weekly_reviews'),('emergency_contacts'),('consents'),('calendar_feeds')
      )
      select owned.t || ' has ' || count(p.polname) || ' policies'
        from owned
@@ -134,9 +150,9 @@ select is_empty(
 -- silently leaves health data behind (§5.4, §18.2).
 select is_empty(
   $$ with owned(t) as (
-       values ('profiles'),('checkins'),('checkin_scores'),('journal_entries'),
-              ('chat_threads'),('chat_messages'),('action_plans'),('weekly_reviews'),
-              ('emergency_contacts'),('consents'),('calendar_feeds'),
+       values ('profiles'),('checkins'),('checkin_scores'),('practice_sessions'),
+              ('journal_entries'),('chat_threads'),('chat_messages'),('action_plans'),
+              ('weekly_reviews'),('emergency_contacts'),('consents'),('calendar_feeds'),
               ('ai_usage'),('safety_events'),('subscriptions')
      )
      select owned.t
@@ -163,9 +179,9 @@ select is_empty(
 -- If the extension filter ever starts hiding one, this fails and says which.
 select is_empty(
   $$ with ours(t) as (
-       values ('profiles'),('checkins'),('checkin_scores'),('journal_entries'),
-              ('chat_threads'),('chat_messages'),('action_plans'),('weekly_reviews'),
-              ('emergency_contacts'),('consents'),('calendar_feeds'),
+       values ('profiles'),('checkins'),('checkin_scores'),('practice_sessions'),
+              ('journal_entries'),('chat_threads'),('chat_messages'),('action_plans'),
+              ('weekly_reviews'),('emergency_contacts'),('consents'),('calendar_feeds'),
               ('ai_usage'),('safety_events'),('subscriptions')
      )
      select ours.t
@@ -185,6 +201,78 @@ select is_empty(
            )
       ) $$,
   'the extension exclusion still leaves every one of our own tables in the sweep'
+);
+
+-- -------------------------------------------------------------- invariant 11 ---
+-- Every synced table carries `updated_at` AND a trigger that maintains it.
+--
+-- The column alone is not enough. If the client supplies the value, a device with
+-- a skewed clock can write a row that a watermark query never sees again — the
+-- row is silently invisible to sync forever. The trigger is what makes the server
+-- the only writer of that column, so this asserts both.
+select is_empty(
+  $$ with synced(t) as (
+       values ('profiles'),('checkins'),('checkin_scores'),('practice_sessions')
+     )
+     select synced.t || ' is missing ' ||
+            case when a.attname is null then 'the updated_at column' else 'its touch trigger' end
+       from synced
+       left join pg_attribute a
+         on a.attrelid = ('public.' || synced.t)::regclass
+        and a.attname = 'updated_at'
+        and not a.attisdropped
+       left join pg_trigger g
+         on g.tgrelid = ('public.' || synced.t)::regclass
+        and g.tgname = synced.t || '_touch_updated_at'
+        and not g.tgisinternal
+      where a.attname is null or g.tgname is null $$,
+  'every synced table has updated_at and a server-side trigger that stamps it'
+);
+
+-- -------------------------------------------------------------- invariant 12 ---
+-- Rows the client can delete individually carry a tombstone.
+--
+-- Without one, a delete on device A is undone by the next push from device B: an
+-- absent row is indistinguishable from one that was never sent.
+select is_empty(
+  $$ with tombstoned(t) as (values ('checkins'),('practice_sessions'))
+     select tombstoned.t
+       from tombstoned
+      where not exists (
+        select 1 from pg_attribute a
+         where a.attrelid = ('public.' || tombstoned.t)::regclass
+           and a.attname = 'deleted_at'
+           and not a.attisdropped
+      ) $$,
+  'individually-deletable tables carry a deleted_at tombstone'
+);
+
+-- -------------------------------------------------------------- invariant 13 ---
+-- Policies without privileges are policies nobody can exercise.
+--
+-- RLS restricts which rows a role may touch; the GRANT decides whether it may
+-- issue the statement at all. They are independent, and getting the second one
+-- wrong fails in a way the other twelve invariants cannot see: the shape is
+-- perfect, and every query returns "permission denied for table". That is exactly
+-- what happened to `practice_sessions` — created by a later migration, so it
+-- missed the default privileges the original tables inherited.
+select is_empty(
+  $$ with owned(t) as (
+       values ('profiles'),('checkins'),('checkin_scores'),('practice_sessions'),
+              ('journal_entries'),('chat_threads'),('chat_messages'),('action_plans'),
+              ('weekly_reviews'),('emergency_contacts'),('consents'),('calendar_feeds')
+     )
+     select owned.t || ' is missing: ' ||
+            array_to_string(array(
+              select p from unnest(array['SELECT','INSERT','UPDATE','DELETE']) p
+               where not has_table_privilege('authenticated', ('public.' || owned.t)::regclass, p)
+            ), ', ')
+       from owned
+      where exists (
+        select 1 from unnest(array['SELECT','INSERT','UPDATE','DELETE']) p
+         where not has_table_privilege('authenticated', ('public.' || owned.t)::regclass, p)
+      ) $$,
+  'every user-owned table grants all four statements to authenticated'
 );
 
 select * from finish();
