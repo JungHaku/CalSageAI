@@ -94,20 +94,7 @@ struct RootView: View {
                 }
         case .navigate: NavigateView()
         case .planner:  PlannerView()
-        case .chat:     PhasePlaceholder(feature: "Chat with Cal", phase: 3)
-        }
-    }
-}
-
-private struct PhasePlaceholder: View {
-    let feature: String
-    let phase: Int
-
-    var body: some View {
-        ContentUnavailableView {
-            Label(feature, systemImage: "hammer")
-        } description: {
-            Text("Built in Phase \(phase). See ARCHITECTURE.md §19.")
+        case .chat:     ChatView()
         }
     }
 }

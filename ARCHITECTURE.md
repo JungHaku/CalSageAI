@@ -807,6 +807,22 @@ Not shipped, deliberately: the product must be submitted **with** an app version
 and a paywall whose product isn't for sale is a 2.1(b) rejection (§18.7). The
 Sacred Care Fund claim is blocked on Dr. Mia (§18.8).
 
+**Chat with Cal. ✓ Built (mock-backed).** The tab was a placeholder; it is now a
+real conversation screen. It runs against `MockCoachClient`, so it works with **no
+API key, no backend and no network** — the Edge Function at Phase B step 7 drops in
+behind the same `CoachClient` protocol and changes nothing on the screen.
+
+Three things it does that are not optional. The AI disclosure sits permanently at
+the top of the thread rather than in a one-time alert, because SB 243 wants the
+person to know they are not talking to a human and guideline 1.4.1 wants a
+wellness app to point at real care. An acute crisis **suppresses the model** and
+routes to `EmergencyView` — the existing surface with the verified 988 options,
+working offline — rather than authoring a second set of crisis copy that could
+drift from the first. And the crisis card is **dismissible and does not end the
+conversation**, because an on-device keyword filter will read "this exam is
+killing me" as acute, and someone misread that way must not be locked out of the
+thing they opened the app for.
+
 **MVP-8 — polish and TestFlight. ✓ Built, except the parts that are blocked.**
 
 *Accessibility.* Apple's `performAccessibilityAudit` runs over every screen. Its
