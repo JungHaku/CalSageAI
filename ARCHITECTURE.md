@@ -693,8 +693,30 @@ What actually happens, in order:
    supabase test db` — the schema, the `daily_coherence` view with
    `security_invoker`, the generated RLS policies, and 9 pgTAP catalog invariants
    are all in the repo, correct, and unrun.
-2. **Auth.** Sign in with Apple first, then email/password, then
-   anonymous→upgrade.
+2. **Auth. ⚠️ This step was replanned — the original order was wrong twice.**
+
+   **Email/password only, and no anonymous sign-in.**
+
+   *Not anonymous→upgrade.* GoTrue **deletes anonymous users 30 days after
+   `created_at`**, unconditionally — not "inactive for 30 days", and not
+   configurable. Fourteen tables cascade from `auth.users`, so for this app that
+   is not a cleanup, it is the silent destruction of a student's entire history
+   one month after they first opened the app. The upgrade path itself is fine
+   (the `user_id` survives in place on every route), but the clock starts at
+   account creation and does not care whether the account was upgraded. Staying
+   device-local until someone chooses to sign in has no such timer.
+
+   *Not Sign in with Apple first.* Guideline 4.8 is triggered only by offering a
+   **third-party or social** login; its first exemption covers an app using
+   exclusively its own sign-in system, which email/password via Supabase is. It
+   also cannot be enabled at all without a paid Apple Developer Program
+   membership — which is blocked on the D-U-N-S number — and Supabase exposes no
+   Apple token-revocation endpoint, so 5.1.1(v)'s revocation obligation would
+   have to be hand-built. Revisit when the organization account exists and there
+   is a reason to want it.
+
+   One consequence worth stating plainly: until someone signs in there is no
+   backup. The export in §5.4 remains the honest answer to "where is my data".
 3. **`SupabaseIdentity`** replaces `LocalIdentity` behind `IdentityProviding`.
 4. **The claim migration** (§2) — first sign-in is a pure push of every dirty row
    under the new `user_id`. No id remapping; the UUIDs already match.
