@@ -120,7 +120,7 @@ struct StudyTimerView: View {
 
                 VStack(spacing: 4) {
                     Text(session.remainingLabel(at: now))
-                        .font(.system(size: 52, weight: .semibold))
+                        .displayNumeral(size: 52)
                         .monospacedDigit()
                         .accessibilityIdentifier("study-remaining")
                     Text("\(session.length.minutes) min block")
@@ -148,7 +148,7 @@ struct StudyTimerView: View {
         VStack(spacing: 20) {
             Spacer()
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 52))
+                .displayGlyph(size: 52)
                 .foregroundStyle(ChartPalette.improvement)
             Text("Back to work.")
                 .font(.title2.weight(.semibold))

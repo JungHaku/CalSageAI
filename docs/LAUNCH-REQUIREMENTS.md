@@ -341,6 +341,72 @@ service that buys seats. Worth raising with Dr. Mia before pricing is fixed, and
 worth re-checking the availability date before relying on it — "this fall" is
 Apple's wording, not a commitment we have seen honoured.
 
+### 18.9 Accessibility — what binds, and what doesn't
+
+Verified 2026-07-30. The headline is that the two obligations people worry about
+most probably don't apply, and the one nobody mentions is the sharpest.
+
+**The European Accessibility Act reaches this app — and the reason is the
+subscription, not the health content.** It has applied since **28 June 2025**,
+and it binds US developers on EU storefronts: Art. 3(4) defines a service
+provider as anyone who "makes offers to provide such a service to consumers in
+the Union", with no establishment or nexus condition. The duty lands on the
+developer, not on Apple.
+
+Its scope is a **closed list of six service types** in Art. 2(2), and there is no
+"health", "wellness" or "apps generally" category — which is why it is tempting to
+conclude the app is out of scope. It isn't. **Art. 3(30) "e-commerce services"**
+means services provided at a distance, by electronic means, at a consumer's
+individual request, with a view to concluding a consumer contract. Cal+ Coherence
+meets all four. A wholly free version of this app would very likely be out of
+scope; the $11/month subscription is what pulls it in.
+
+**What saves it today is the microenterprise exemption** (Art. 4(5)), which is
+self-executing — no filing, no declaration. The threshold in Art. 3(23) is
+routinely misquoted: fewer than 10 persons **AND** (turnover ≤ €2m **OR** balance
+sheet total ≤ €2m). The second limb is **OR**. A firm with €3m turnover and a €1m
+balance sheet still qualifies. **This is the thing to re-check as Breathe Health
+Center grows** — the exemption is the entire defence, and it evaporates at ten
+employees.
+
+Two further carve-outs worth knowing, both from **Art. 2(4)**, which removes
+specified content from the Directive outright: **online maps and mapping
+services** are excluded "if essential information is provided in an accessible
+digital manner for maps intended for navigational use" — directly relevant to the
+campus map — and so is third-party content the developer neither funds nor
+develops. Also note Art. 31(3) permits Member State derogations, so "the deadline
+has passed, nothing is left" is too strong a statement to make in either
+direction.
+
+No harmonised standard has yet been cited in the Official Journal under the EAA,
+so **no presumption of conformity is available to anyone**. EN 301 549 / WCAG AA
+is the defensible benchmark, not a safe harbour.
+
+**ADA Title II is the real exposure, precisely because of who this is for.**
+UC Berkeley is a public university, Title II explicitly covers mobile apps and
+vendor-built content, and any route to campus distribution — including the Apple
+School Manager volume purchasing in §18.7 — pulls the app into a Title II
+procurement conversation. DOJ **extended the compliance dates by one year in
+April 2026**, so the widely-cited 24 April 2026 date is no longer operative;
+confirm the current one before relying on it. HHS likewise extended its
+Section 504 web/app rule by a year, effective 7 May 2026 — that is the
+health-adjacent one.
+
+**Apple's Accessibility Nutrition Labels are live but voluntary**, with no
+announced mandatory date. Nine features are declarable, each with published
+criteria, and Apple's VoiceOver criterion sets a *task-completion* bar and calls
+out charts explicitly — directly relevant to the Progress screen. Shipping-order
+trap: **a label cannot be published until the app is already live**, so this is a
+post-launch task, not a submission one.
+
+**What was actually done** (MVP-8): every contrast figure in `CalDesign` is now
+computed and asserted rather than written in a comment; the band tints gained
+text-safe variants at separated luminances; six fixed font sizes that never
+scaled were replaced; undersized hit targets were fixed; and the app is driven at
+AX5 in `DynamicTypeTests` to prove the check-in, the 988 path, and the
+cancellation link still work at the largest text size. WCAG 2.2 AA is the
+operative reference.
+
 ### 18.8 The Sacred Care Fund sentence cannot ship as written
 
 `SPEC-premium.md` ends: *"Every Premium membership helps support the WholeLife

@@ -94,7 +94,7 @@ struct AnalyticsView: View {
                 // Proportional figures, system sans — a hero number is not a
                 // column and doesn't want tabular digits.
                 Text((delta >= 0 ? "+" : "") + delta.formatted(.number.precision(.fractionLength(1))))
-                    .font(.system(size: 52, weight: .semibold))
+                    .displayNumeral(size: 52)
                     .foregroundStyle(ChartPalette.improvement)
                     .accessibilityIdentifier("hero-delta")
                 Text("average change after a practice, across \(model.regulatedCount) sessions")

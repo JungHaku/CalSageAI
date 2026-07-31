@@ -26,8 +26,13 @@ public enum ChartPalette {
     public static let mutedInk = Color(light: 0x898781, dark: 0x898781)
 
     /// Axis tick labels. These are *text*, so they need 4.5:1 under WCAG 1.4.3.
-    /// The muted ink measures only 3.50:1 on the light surface and fails; the
-    /// secondary ink clears it in both modes (7.73:1 light, 9.72:1 dark).
+    /// The muted ink fails (3.59:1 on white) and this one clears it comfortably
+    /// (7.94:1 light, 11.72:1 dark, both against the app background).
+    ///
+    /// Those figures are measured by `ContrastTests`, not asserted here in prose.
+    /// An earlier version of this comment claimed 7.73:1 and 9.72:1 against a
+    /// tinted chart surface that no longer exists, and nothing caught the drift —
+    /// which is the whole argument for putting the numbers in a test.
     public static let axisLabel = Color(light: 0x52514E, dark: 0xC3C2B7)
 
     /// Improvement. Paired with an arrow glyph and a label, never colour alone.

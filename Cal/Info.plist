@@ -16,6 +16,21 @@
 	</array>
 
 	<!--
+	  Export compliance. The app uses only HTTPS and system-provided crypto, with
+	  nothing proprietary, so it is exempt from export documentation. Declaring it
+	  here means App Store Connect stops asking on every single upload — otherwise
+	  every build sits at "Missing Compliance" until someone answers by hand.
+
+	  Note Apple's own wording is that OS-provided encryption is *typically*
+	  exempt. If anything custom is ever added, this answer has to be revisited.
+	  Separately and easy to forget: the BIS annual self-classification report is
+	  due 1 February and is a US government filing, not an Apple one
+	  (docs/APP-STORE.md §5).
+	-->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+
+	<!--
 	  Portrait only. The breathwork screen is a single large ring the user paces
 	  against, often with the phone propped up or face down; landscape gives it
 	  ~400pt of height and squeezes the whole exercise off screen. Locking here

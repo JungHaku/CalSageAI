@@ -770,8 +770,42 @@ Not shipped, deliberately: the product must be submitted **with** an app version
 and a paywall whose product isn't for sale is a 2.1(b) rejection (§18.7). The
 Sacred Care Fund claim is blocked on Dr. Mia (§18.8).
 
-**MVP-8 — polish and TestFlight.** Snapshot tests, accessibility pass, App Store
-assets, external testers.
+**MVP-8 — polish and TestFlight. ✓ Built, except the parts that are blocked.**
+
+*Accessibility.* Apple's `performAccessibilityAudit` runs over every screen. Its
+contrast check turned out to be unreliable here — with the Home subtitles set to
+pure black (18.57:1) it still reported "Contrast failed", so it cannot resolve the
+effective background behind those rows. The enforced set is therefore hit region,
+element description, and traits, and **contrast is verified by computation
+instead**: `CalDesign.Contrast` measures WCAG ratios and `ContrastTests` asserts
+every ink against every surface it lands on. That found three real defects the
+audit could not have: the band tints failed as text (1.85–3.21:1), the row titles
+were accent blue at 3.55:1, and six `.font(.system(size:))` call sites never
+scaled at all.
+
+*Snapshot tests — deliberately not built, for narrower reasons than first claimed.*
+An initial investigation reported a showstopper bug making achromatic SwiftUI
+snapshots fail after recording. **That was refuted on re-testing**: the failures
+came from views with no explicit size, where the library records its own error
+placeholder; give a view a real frame and achromatic snapshots round-trip fine,
+on 1.19.2 and 1.19.4 alike. So image snapshots *work*. They were still declined,
+on the two reasons that survived: Xcode Cloud has no source tree at test time, so
+file-based baselines have nowhere to live, and its toolchain trails this machine's,
+so locally-recorded baselines would fail remotely for reasons unrelated to the
+code. `CalTests/LayoutRegressionTests`
+gets the same value from `UIHostingController.sizeThatFits` — deterministic, no
+baseline files, milliseconds — and it immediately caught a real bug the audit
+missed: `ScoreScale` pinned its numeral to `.frame(height: 68)`, so the figure
+scaled and was then clipped by its own container.
+
+*Store assets.* `docs/APP-STORE.md` carries the metadata, the privacy answers,
+export compliance, and the TestFlight prerequisites. `ScreenshotTests` captures
+6.9" frames.
+
+**Blocked, and not by code:** the name "Cal" pending the Berkeley marks question,
+D-U-N-S for the organization account, a privacy-policy URL that resolves, the
+crisis numbers, and the decision on whether the subscription ships with this
+build (§18.7).
 
 Then Phase B (§15), when a wide launch, cross-device sync, or the AI coach makes a
 backend worth its cost.

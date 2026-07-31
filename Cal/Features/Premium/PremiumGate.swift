@@ -66,6 +66,7 @@ struct PremiumLockedView: View {
                 .buttonStyle(.borderedProminent)
                 .accessibilityIdentifier("locked-upgrade")
         }
+        .scrollableWhenLarge()
     }
 }
 

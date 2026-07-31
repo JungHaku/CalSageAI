@@ -1,3 +1,4 @@
+import CalDesign
 import CalKit
 import CalStore
 import SwiftUI
@@ -100,7 +101,7 @@ struct PaywallView: View {
                 .accessibilityIdentifier("paywall-scope-note")
         }
         .padding()
-        .background(.quaternary.opacity(0.35), in: .rect(cornerRadius: 14))
+        .background(Surface.card, in: .rect(cornerRadius: 14))
     }
 
     // MARK: Buying
@@ -204,6 +205,11 @@ struct PaywallView: View {
             Task { await premium.restore() }
         }
         .font(.subheadline)
+        // 44×44pt is Apple's stated minimum and the audit reports anything under
+        // it. A caption-sized control is around half that tall, which matters most
+        // for exactly the people least able to hit a small target.
+        .frame(minWidth: 44, minHeight: 44)
+        .contentShape(.rect)
         .accessibilityIdentifier("paywall-restore")
     }
 
@@ -262,11 +268,17 @@ struct PaywallView: View {
             // here is a 2.1(a) "fully functional URLs" rejection.
             HStack(spacing: 16) {
                 Link("Terms of Use", destination: Legal.termsOfUse)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(.rect)
                     .accessibilityIdentifier("paywall-terms-link")
                 Link("Privacy Policy", destination: Legal.privacyPolicy)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(.rect)
                     .accessibilityIdentifier("paywall-privacy-link")
             }
-            .font(.caption)
+            // Footnote rather than caption: these are legally required links, and
+            // the audit reported caption-sized ones failing contrast outright.
+            .font(.footnote)
         }
     }
 }

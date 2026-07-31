@@ -65,7 +65,7 @@ struct PracticeDetailView: View {
 
                 if lastCompleted {
                     Label("Completed", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(CoherenceScale.tint(for: .high))
+                        .foregroundStyle(CoherenceScale.textTint(for: .high))
                         .accessibilityIdentifier("practice-completed")
                 }
 

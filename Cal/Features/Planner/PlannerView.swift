@@ -53,6 +53,9 @@ struct PlannerView: View {
             .buttonStyle(.borderedProminent)
             .accessibilityIdentifier("connect-calendar")
         }
+        // The longest explanatory copy in the app, and it clips at accessibility
+        // text sizes without this.
+        .scrollableWhenLarge()
     }
 
     private var denied: some View {

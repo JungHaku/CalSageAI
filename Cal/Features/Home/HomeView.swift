@@ -38,7 +38,7 @@ struct HomeView: View {
 
             if done, let checkIn = insights?.todaysCheckIn {
                 Label("Checked in today", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(CoherenceScale.tint(for: .high))
+                    .foregroundStyle(CoherenceScale.textTint(for: .high))
                     .accessibilityIdentifier("checked-in-today")
                 if let delta = checkIn.averageDelta, checkIn.regulatedCount > 0 {
                     Text(
@@ -93,7 +93,7 @@ struct HomeView: View {
                     label: "Average change after regulating",
                     value: (delta >= 0 ? "+" : "") + delta.formatted(.number.precision(.fractionLength(1))),
                     identifier: "stat-delta",
-                    tint: CoherenceScale.tint(for: .high)
+                    tint: CoherenceScale.textTint(for: .high)
                 )
             }
 
@@ -118,7 +118,7 @@ struct HomeView: View {
             }
         }
         .padding()
-        .background(.quaternary.opacity(0.35), in: .rect(cornerRadius: 14))
+        .background(Surface.card, in: .rect(cornerRadius: 14))
     }
 
     // Neutral vocabulary on purpose: "easing" rather than "worse". A number going
@@ -195,7 +195,15 @@ struct HomeView: View {
                 }
             }
         }
-        .background(.quaternary.opacity(0.35), in: .rect(cornerRadius: 14))
+        // Plain, not the default link style.
+        //
+        // A `NavigationLink` tints its whole label with the accent colour, which
+        // turned every row title into accent blue — measured at 3.55:1 on this
+        // card, below the 4.5:1 that body text needs. It also read as five links
+        // rather than a list. `.plain` returns the titles to primary ink; the
+        // chevron already carries the "this goes somewhere" signal.
+        .buttonStyle(.plain)
+        .background(Surface.card, in: .rect(cornerRadius: 14))
     }
 
     private func load() async {
@@ -221,7 +229,7 @@ private struct MotivationCard: View {
             .font(.title3)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
-            .background(.quaternary.opacity(0.35), in: .rect(cornerRadius: 14))
+            .background(Surface.card, in: .rect(cornerRadius: 14))
             .accessibilityIdentifier("daily-motivation")
     }
 }
@@ -236,7 +244,7 @@ private struct StatRow: View {
         HStack(alignment: .firstTextBaseline) {
             Text(label)
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Surface.inkSecondary)
             Spacer()
             Text(value)
                 .font(.headline)
@@ -263,7 +271,7 @@ private struct DestinationRow: View {
                 .foregroundStyle(.secondary)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.headline).foregroundStyle(.primary)
-                Text(subtitle).font(.caption).foregroundStyle(.secondary)
+                Text(subtitle).font(.caption).foregroundStyle(Surface.inkSecondary)
             }
             Spacer()
             if isLocked {

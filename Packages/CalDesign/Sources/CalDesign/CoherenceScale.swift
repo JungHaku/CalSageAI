@@ -7,16 +7,65 @@ import SwiftUI
 /// here, so swapping them later is a single edit rather than a hunt through
 /// feature code.
 public enum CoherenceScale {
+    /// The **fill** tint — swatches, dots, and filled shapes.
+    ///
+    /// Not safe as a text colour, and that is not a subtlety: measured against the
+    /// app background these are 3.21:1, 1.85:1 and 2.57:1, where text needs 4.5:1.
+    /// Use `textTint(for:)` for anything a person reads. `ContrastTests` asserts
+    /// both facts so the two cannot be quietly merged back together.
     public static func tint(for band: CoherenceBand) -> Color {
         switch band {
-        case .low:      Color(red: 0.85, green: 0.45, blue: 0.35)
-        case .moderate: Color(red: 0.90, green: 0.72, blue: 0.35)
-        case .high:     Color(red: 0.35, green: 0.70, blue: 0.55)
+        case .low:      Color(rgb: Band.lowFill)
+        case .moderate: Color(rgb: Band.moderateFill)
+        case .high:     Color(rgb: Band.highFill)
         }
+    }
+
+    /// The same three hues, darkened (or lightened, in dark mode) until they clear
+    /// 4.5:1 against **both** the app background and the card surface.
+    ///
+    /// Hue and saturation are preserved — only lightness moved — so the bands still
+    /// read as the same three colours, just legibly.
+    public static func textTint(for band: CoherenceBand) -> Color {
+        switch band {
+        case .low:      Color(light: Band.lowTextLight, dark: Band.lowTextDark)
+        case .moderate: Color(light: Band.moderateTextLight, dark: Band.moderateTextDark)
+        case .high:     Color(light: Band.highTextLight, dark: Band.highTextDark)
+        }
+    }
+
+    /// Raw values, exposed so `Contrast` can measure exactly what is drawn.
+    public enum Band {
+        public static let lowFill: UInt32 = 0xD97359
+        public static let moderateFill: UInt32 = 0xE6B859
+        public static let highFill: UInt32 = 0x59B28C
+
+        // Chosen to sit at *separated* contrast ratios — roughly 9.0, 6.4 and 4.6
+        // against the card — rather than all pushed to the 4.5:1 minimum.
+        //
+        // The first attempt did exactly that, and a test caught it: three colours
+        // tuned to the same threshold end up at the same luminance, so they are
+        // distinguishable only by hue. That is precisely the case a red-green
+        // colourblind reader, a greyscale screenshot, and a printed page all fail.
+        // Spreading the luminance costs nothing and fixes all three.
+        public static let lowTextLight: UInt32 = 0x712B1A
+        public static let lowTextDark: UInt32 = 0xE9AFA0
+        public static let moderateTextLight: UInt32 = 0x715111
+        public static let moderateTextDark: UInt32 = 0xCD9420
+        public static let highTextLight: UInt32 = 0x38785D
+        public static let highTextDark: UInt32 = 0x449371
+
+        public static let allFills: [UInt32] = [lowFill, moderateFill, highFill]
+        public static let allTextLight: [UInt32] = [lowTextLight, moderateTextLight, highTextLight]
+        public static let allTextDark: [UInt32] = [lowTextDark, moderateTextDark, highTextDark]
     }
 
     public static func tint(for score: Score) -> Color {
         tint(for: CoherenceBand(score))
+    }
+
+    public static func textTint(for score: Score) -> Color {
+        textTint(for: CoherenceBand(score))
     }
 
     /// Shown before the student has answered. Deliberately neutral — a coloured
@@ -48,9 +97,23 @@ public struct ScoreScale: View {
         Double(Score.validRange.lowerBound + Score.validRange.upperBound) / 2
     }
 
+    /// The slider's control tint — a fill, so the fill palette is correct here.
     private var tint: Color {
         score.map(CoherenceScale.tint(for:)) ?? CoherenceScale.unsetTint
     }
+
+    /// The numeral is read, not just seen, so it takes the measured text palette.
+    private var numeralTint: Color {
+        score.map(CoherenceScale.textTint(for:)) ?? CoherenceScale.unsetTint
+    }
+
+    /// Reserved height for the numeral row.
+    ///
+    /// Scaled, and a *minimum* rather than a fixed height. It was `.frame(height: 68)`,
+    /// which held the row at 68pt however large the type got — so the numeral scaled
+    /// correctly and was then clipped by its own container. A layout test caught it
+    /// by measuring that the control's height did not change at AX5.
+    @ScaledMetric(relativeTo: .largeTitle) private var reservedHeight: CGFloat = 68
 
     public var body: some View {
         VStack(spacing: 12) {
@@ -60,9 +123,9 @@ public struct ScoreScale: View {
             Group {
                 if let score {
                     Text(score.description)
-                        .font(.system(size: 56, weight: .semibold, design: .rounded))
+                        .displayNumeral(size: 56, design: .rounded)
                         .monospacedDigit()
-                        .foregroundStyle(tint)
+                        .foregroundStyle(numeralTint)
                         .contentTransition(.numericText())
                 } else {
                     Text("Choose a number")
@@ -70,7 +133,7 @@ public struct ScoreScale: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .frame(height: 68)
+            .frame(minHeight: reservedHeight)
             .animation(.snappy, value: score?.value)
             .accessibilityHidden(true)
 

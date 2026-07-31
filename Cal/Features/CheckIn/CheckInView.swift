@@ -187,8 +187,8 @@ private struct CheckInSummary: View {
         ScrollView {
             VStack(spacing: 24) {
                 Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 52))
-                    .foregroundStyle(CoherenceScale.tint(for: .high))
+                    .displayGlyph(size: 52)
+                    .foregroundStyle(CoherenceScale.textTint(for: .high))
 
                 Text("Check-in complete")
                     .font(.title2.weight(.semibold))
@@ -201,9 +201,9 @@ private struct CheckInSummary: View {
                     VStack(spacing: 4) {
                         Text(delta >= 0 ? "+\(delta, format: .number.precision(.fractionLength(1)))"
                                         : "\(delta, format: .number.precision(.fractionLength(1)))")
-                            .font(.system(size: 44, weight: .bold, design: .rounded))
+                            .displayNumeral(size: 44, weight: .bold, design: .rounded)
                             .monospacedDigit()
-                            .foregroundStyle(CoherenceScale.tint(for: .high))
+                            .foregroundStyle(CoherenceScale.textTint(for: .high))
                         Text("average change across \(checkIn.regulatedCount) regulated \(checkIn.regulatedCount == 1 ? "area" : "areas")")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
