@@ -96,6 +96,9 @@ final class AppContainer {
     ///   `-CalFixedDate <iso>`   freeze the clock so streak assertions are stable
     ///   `-CalEntitlement <tier>` `free` or `plus`, so a UI test can assert both
     ///                            sides of the paywall without a sandbox account
+    ///   `-CalLiveCoach 1`       talk to the real model via the local Edge Function
+    ///                            (`supabase functions serve`). Opt-in, because the
+    ///                            default must never spend money by accident.
     static func live(arguments: [String] = ProcessInfo.processInfo.arguments) -> AppContainer {
         func value(for flag: String) -> String? {
             guard let index = arguments.firstIndex(of: flag), index + 1 < arguments.count else { return nil }
@@ -149,13 +152,21 @@ final class AppContainer {
             return try await tracked.pendingSyncCount()
         }
 
-        // The real CoachClient needs the key-holder proxy to exist (§10), so the
-        // mock remains the only implementation — which is also why no API key
-        // appears anywhere in this binary.
+        // The proxy now exists, so a real client is possible — but the mock stays
+        // the default. Opting in with `-CalLiveCoach 1` is deliberate: a default
+        // that reaches a paid model is a default that bills you for running the
+        // test suite. Still no API key in this binary; the function holds it.
         return AppContainer(
             dates: dates,
             store: store,
-            coach: MockCoachClient(),
+            // Gated on the explicit mock flag rather than on `isUITesting`.
+            // `-CalScenario` sets `isUITesting` to get the seeded in-memory store,
+            // and a demo wants exactly that *plus* a real model — so keying off it
+            // here would make the two mutually exclusive. UI tests always pass
+            // `-CalUseMockCoach 1`, which still wins.
+            coach: value(for: "-CalLiveCoach") == "1" && value(for: "-CalUseMockCoach") != "1"
+                ? LiveCoachClient.local()
+                : MockCoachClient(),
             content: BundledContentRepository(),
             identity: LocalIdentity(profiles: profiles),
             sync: sync,
