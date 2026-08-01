@@ -21,6 +21,8 @@
 import { CAL_SYSTEM_PROMPT, PROMPT_VERSION } from "./prompt.ts";
 import { assembleMessages, type Turn } from "./assemble.ts";
 import { ChromaVectorStore, OpenAIEmbedder, retrieve } from "./retrieval.ts";
+import { verifyUser } from "./identity.ts";
+import { ChromaMemoryBackend, personalMemoryFor } from "./memory.ts";
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 const DEFAULT_MODEL = "gpt-5.6-luna";
@@ -48,6 +50,13 @@ interface CoachBody {
   /// is allowed to see: chat gets practices and coherence questions, navigate
   /// gets campus places.
   surface?: string;
+  /// The on-device crisis assessment for this message, if the client ran one.
+  ///
+  /// Advisory, and used only to *withhold* — anything non-"none" is not written
+  /// to memory. Trusting a client here is safe in that direction: the worst a
+  /// dishonest client achieves is storing its own text. It is not a substitute
+  /// for the server-side classifier (§9.2 Layer B), which does not exist yet.
+  severity?: string;
 }
 
 /// Retrieval is opt-in via configuration. With no CHROMA_URL the function
@@ -60,6 +69,13 @@ const EMBED_MODEL = Deno.env.get("CAL_EMBED_MODEL") ?? "text-embedding-3-small";
 
 const vectorStore = CHROMA_URL
   ? new ChromaVectorStore(CHROMA_URL, CAL_COLLECTION, "default_tenant", "default_database", CHROMA_TOKEN)
+  : null;
+
+/// Personal memory (M2). Separate collection, separate rules — see memory.ts.
+/// Unreachable in practice until the app can sign in, because without a verified
+/// token every request is anonymous and anonymous requests have no memory.
+const memoryBackend = CHROMA_URL
+  ? new ChromaMemoryBackend(CHROMA_URL, "cal_memory", "default_tenant", "default_database", CHROMA_TOKEN)
   : null;
 
 function sse(event: Record<string, unknown>): Uint8Array {
@@ -110,24 +126,49 @@ Deno.serve(async (req) => {
 
   const model = Deno.env.get("CAL_MODEL") ?? DEFAULT_MODEL;
 
-  // System prompt first and byte-identical every time: prompt caching keys on a
-  // stable prefix, so anything that reorders or interpolates into it silently
-  // destroys the discount (§10.4). `assemble.ts` owns that ordering and explains
-  // why each piece sits where it does.
+  // Who is asking. `null` for every request today: the app sends no session, so
+  // there is no identity, so there is no personal memory. That is the intended
+  // resting state until sign-in and the consent flow exist.
+  const user = await verifyUser(req);
+  const embedder = new OpenAIEmbedder(apiKey, EMBED_MODEL);
+  const memory = user && memoryBackend
+    ? personalMemoryFor(user, memoryBackend, embedder)
+    : null;
+
+  const memories = memory ? await memory.recall(message) : [];
+
   // Retrieval runs against the message alone, not the message plus history: a
   // student who spent four turns on their roommate and then asks about breathing
   // should get the breath practice, not a vector averaged over both.
   const retrieved = await retrieve({
     surface: body.surface ?? "chat",
     query: message,
-    embedder: new OpenAIEmbedder(apiKey, EMBED_MODEL),
+    embedder,
     store: vectorStore,
   });
 
+  // Written before the reply streams, not after. The student's own words are the
+  // durable fact worth keeping; Cal's reply is reconstructable from them, and
+  // waiting for the stream to finish would mean losing the write whenever
+  // someone closes the screen mid-answer.
+  if (memory) {
+    await memory.remember({
+      id: crypto.randomUUID(),
+      text: message,
+      createdAt: new Date().toISOString(),
+      severity: body.severity,
+    });
+  }
+
+  // System prompt first and byte-identical every time: prompt caching keys on a
+  // stable prefix, so anything that reorders or interpolates into it silently
+  // destroys the discount (§10.4). `assemble.ts` owns that ordering and explains
+  // why each piece sits where it does.
   const messages = assembleMessages({
     systemPrompt: CAL_SYSTEM_PROMPT,
     coherence: body.coherence,
     history: body.history,
+    memories,
     retrieved,
     message,
   });
