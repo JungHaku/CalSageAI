@@ -126,3 +126,17 @@ def chroma_query(collection_id, vector, kinds, n_results):
             result["distances"][0],
         )
     ]
+
+
+def delete(url):
+    """DELETE, tolerating a 404 — dropping something absent is success."""
+    request = urllib.request.Request(url, method="DELETE")
+    try:
+        with urllib.request.urlopen(request) as response:
+            return response.read().decode()
+    except urllib.error.HTTPError as error:
+        if error.code == 404:
+            return ""
+        sys.exit("FAIL: %s -> %s\n%s" % (url, error.code, error.read().decode()[:400]))
+    except urllib.error.URLError as error:
+        sys.exit("FAIL: could not reach %s (%s)\nIs Chroma running?" % (url, error.reason))
