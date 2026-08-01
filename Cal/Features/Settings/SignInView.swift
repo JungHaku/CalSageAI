@@ -16,7 +16,6 @@ import SwiftUI
 /// signature, drafted by counsel. What is here is the right *shape* for it.
 struct SignInView: View {
     @Environment(AppContainer.self) private var container
-    @Environment(\.dismiss) private var dismiss
 
     @State private var email = ""
     @State private var password = ""
@@ -25,26 +24,23 @@ struct SignInView: View {
     @State private var error: String?
     @State private var signedInEmail: String?
 
+    // No NavigationStack of its own. This is pushed from Settings, which already
+    // provides one, and nesting a second stack inside a pushed view makes the
+    // outer stack pop straight back to the root — the row simply appeared not to
+    // work. Found by tapping it, not by reading it.
     var body: some View {
-        NavigationStack {
-            Form {
-                if let signedInEmail {
-                    signedInSection(signedInEmail)
-                    consentSection
-                } else {
-                    explanation
-                    credentialsSection
-                }
+        Form {
+            if let signedInEmail {
+                signedInSection(signedInEmail)
+                consentSection
+            } else {
+                explanation
+                credentialsSection
             }
-            .navigationTitle(signedInEmail == nil ? "Sign in" : "Account")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }.accessibilityIdentifier("signin-done")
-                }
-            }
-            .task { signedInEmail = await container.auth.credentials()?.email }
         }
+        .navigationTitle(signedInEmail == nil ? "Sign in" : "Account")
+        .navigationBarTitleDisplayMode(.inline)
+        .task { signedInEmail = await container.auth.credentials()?.email }
     }
 
     // MARK: Signed out
@@ -183,5 +179,6 @@ struct SignInView: View {
 }
 
 #Preview("signed out") {
-    SignInView().environment(AppContainer.live(arguments: ["-CalUseMockCoach", "1"]))
+    NavigationStack { SignInView() }
+        .environment(AppContainer.live(arguments: ["-CalUseMockCoach", "1"]))
 }
