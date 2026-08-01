@@ -18,6 +18,7 @@ offline, that one costs money and needs a key.
 """
 
 import json
+import math
 import pathlib
 import sys
 
@@ -68,6 +69,72 @@ def clean_name(name):
 def sentence(text):
     """Terminate `text` without doubling punctuation it already ends with."""
     return text if text[-1:] in ".!?" else text + "."
+
+
+# The origin every place is described relative to.
+#
+# Taken from the seed itself rather than written down here, so the reference and
+# the places it describes always come from one extraction. The Campanile is the
+# right choice on the merits too: it is visible from most of campus and is the
+# landmark a Berkeley student actually navigates by.
+CAMPANILE_SLUG = "campanile-sather-tower"
+
+COMPASS = [
+    "north", "north-east", "east", "south-east",
+    "south", "south-west", "west", "north-west",
+]
+
+# Beyond this, a bearing from the Campanile stops being directions and starts
+# being trivia — the seed includes genuine off-campus UCB property such as the
+# Richmond field stations and the Botanical Garden up in the hills.
+MAIN_CAMPUS_RADIUS_M = 1000
+
+EARTH_RADIUS_M = 6_371_000
+
+
+def offset_from(origin, place):
+    """Metres east and north of `origin`, by equirectangular approximation.
+
+    Exact enough by a wide margin at this scale: the whole dataset spans about
+    3 km, where the error against a proper geodesic is centimetres.
+    """
+    mean_latitude = math.radians((origin["lat"] + place["lat"]) / 2)
+    east = math.radians(place["lng"] - origin["lng"]) * math.cos(mean_latitude) * EARTH_RADIUS_M
+    north = math.radians(place["lat"] - origin["lat"]) * EARTH_RADIUS_M
+    return east, north
+
+
+def location_sentence(origin, place):
+    """A human-usable position, derived rather than invented.
+
+    This is arithmetic on the coordinates the seed already carries — no judgement
+    about what a building is near, and nothing asserted that the data does not
+    contain. It exists because "Campus location at UC Berkeley: Wheeler Hall." told
+    Cal a building existed and nothing about where, so Cal correctly answered
+    "I don't know where that is" to a question the dataset could answer.
+
+    Rounded deliberately coarsely. The source coordinates are single pins taken
+    from map embeds, and a building has extent, so "about 150 metres" is honest
+    where "153 metres" would imply a precision the pin does not have.
+    """
+    east, north = offset_from(origin, place)
+    distance = math.hypot(east, north)
+
+    if distance < 40:
+        return "Right at the center of campus, by the Campanile (Sather Tower)."
+
+    bearing = math.degrees(math.atan2(east, north)) % 360
+    direction = COMPASS[int(round(bearing / 45)) % 8]
+
+    if distance < MAIN_CAMPUS_RADIUS_M:
+        rounded = int(round(distance / 50.0) * 50)
+        return "About %d metres %s of the Campanile (Sather Tower), on the main campus." % (
+            rounded, direction
+        )
+
+    return "About %.1f km %s of the Campanile (Sather Tower), away from the main campus." % (
+        distance / 1000.0, direction
+    )
 
 
 def deduplicated(places):
@@ -161,6 +228,14 @@ def question_chunks(bundle):
 
 
 def place_chunks(places):
+    origin = next((p for p in places if p["slug"] == CAMPANILE_SLUG), None)
+    if origin is None:
+        sys.exit(
+            "FAIL: '%s' is not in the seed, so places cannot be located.\n"
+            "      A re-scrape may have renamed it — pick a new reference and say so."
+            % CAMPANILE_SLUG
+        )
+
     for place in places:
         name = clean_name(place["name"])
         category = place.get("category") or "building"
@@ -175,8 +250,18 @@ def place_chunks(places):
             # the embedding model — see ARCHITECTURE §17 item 14.
             # `sentence` guards names that already end in punctuation — a good
             # few are street addresses ending "Ave." or "St.".
+            #
+            # The location is deliberately NOT in `text`, which is what gets
+            # embedded. See the note on `document` below — this cost a retrieval
+            # regression to learn.
             "text": "Campus location at UC Berkeley: %s\nKind of place: %s."
             % (sentence(name), CATEGORY_NAMES.get(category, category)),
+            "document": "Campus location at UC Berkeley: %s\nKind of place: %s.\n%s"
+            % (
+                sentence(name),
+                CATEGORY_NAMES.get(category, category),
+                location_sentence(origin, place),
+            ),
             "metadata": {
                 "kind": "place",
                 "slug": place["slug"],
@@ -200,6 +285,36 @@ def build():
 
     for chunk in chunks:
         chunk["contentVersion"] = bundle["version"]
+        # `text` is what gets embedded; `document` is what Cal reads. They are
+        # the same for everything except places, and splitting them was not a
+        # refinement — it was a bug fix.
+        #
+        # Putting the derived location into the embedded text made retrieval
+        # measurably worse: the sentence is near-identical boilerplate across all
+        # 231 places ("About N metres <dir> of the Campanile..."), so it diluted
+        # the one distinctive signal each chunk had — its name. "Where is Wheeler
+        # Hall?" stopped returning Wheeler Hall at 0.376 and started returning the
+        # Wheeler Brain Imaging Center at 0.511, with Wheeler Hall outside the top
+        # four entirely.
+        #
+        # The general rule, and it is easy to get backwards: embed what the chunk
+        # is *about*, store what the reader needs. Boilerplate added to embedded
+        # text makes every chunk look more like every other chunk.
+        chunk.setdefault("document", chunk["text"])
+
+    # Every place must carry a usable position. Without this the corpus can
+    # regress to "Wheeler Hall exists" — which is what it said before, and which
+    # made Cal answer "I don't know where that is" to a question the data could
+    # answer. Silent, and invisible until someone reads a transcript.
+    unlocated = [
+        chunk["id"] for chunk in chunks
+        if chunk["kind"] == "place" and "Campanile" not in chunk["document"]
+    ]
+    if unlocated:
+        sys.exit(
+            "FAIL: %d place chunks have no location: %s"
+            % (len(unlocated), ", ".join(unlocated[:5]))
+        )
 
     return chunks, len(raw_places), len(places)
 

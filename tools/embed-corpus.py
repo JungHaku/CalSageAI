@@ -46,8 +46,15 @@ def existing_hashes(collection_id):
     }
 
 
-def text_hash(text):
-    return hashlib.sha256(text.encode()).hexdigest()[:16]
+def chunk_hash(chunk):
+    """Covers both the embedded text and the stored document.
+
+    They are different for places — see `build-content-corpus.py` — and a change
+    to either has to reach Chroma. Hashing only the embedded text would leave a
+    corrected location sitting in the corpus file and never shipped.
+    """
+    payload = chunk["text"] + "\x00" + chunk.get("document", chunk["text"])
+    return hashlib.sha256(payload.encode()).hexdigest()[:16]
 
 
 def main():
@@ -61,7 +68,7 @@ def main():
     collection_id = ensure_collection()
     stored = {} if force else existing_hashes(collection_id)
 
-    pending = [c for c in chunks if stored.get(c["id"]) != text_hash(c["text"])]
+    pending = [c for c in chunks if stored.get(c["id"]) != chunk_hash(c)]
     unchanged = len(chunks) - len(pending)
 
     print("collection %s (%s)" % (COLLECTION, collection_id))
@@ -84,15 +91,18 @@ def main():
 
     for start in range(0, len(pending), BATCH):
         batch = pending[start : start + BATCH]
+        # Embeds `text`, stores `document`. For places those differ: the
+        # location is what Cal needs to read but would dilute the name signal if
+        # it were part of the vector.
         vectors = embed([c["text"] for c in batch], api_key)
         post(
             "%s/%s/upsert" % (collections_url(), collection_id),
             {
                 "ids": [c["id"] for c in batch],
                 "embeddings": vectors,
-                "documents": [c["text"] for c in batch],
+                "documents": [c.get("document", c["text"]) for c in batch],
                 "metadatas": [
-                    dict(c["metadata"], textHash=text_hash(c["text"]), contentVersion=c["contentVersion"])
+                    dict(c["metadata"], textHash=chunk_hash(c), contentVersion=c["contentVersion"])
                     for c in batch
                 ],
             },
