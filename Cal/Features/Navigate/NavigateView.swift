@@ -19,6 +19,12 @@ struct NavigateView: View {
     @State private var selected: CampusPlace?
     @State private var camera: MapCameraPosition = .region(Self.campusRegion)
 
+    /// Results from semantic search, used only when substring matching found
+    /// nothing. Kept separate from `places` so the offline list is never
+    /// replaced by something that needed a network to arrive.
+    @State private var semanticMatches: [CampusPlace] = []
+    @State private var isSearchingSemantically = false
+
     /// Frames main campus. Deliberately fixed rather than fitted to the data —
     /// the seed includes genuinely off-campus UCB properties (the Richmond library
     /// facilities), and fitting to those would zoom the map out to uselessness.
@@ -27,10 +33,26 @@ struct NavigateView: View {
         span: MKCoordinateSpan(latitudeDelta: 0.016, longitudeDelta: 0.016)
     )
 
+    private var trimmedQuery: String {
+        query.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Substring matching, computed synchronously on every keystroke. Instant,
+    /// offline, and the path that must never regress.
+    private var localMatches: [CampusPlace] {
+        trimmedQuery.isEmpty ? places : places.filter { $0.matches(trimmedQuery) }
+    }
+
+    /// Semantic results stand in only when the literal search came up empty —
+    /// which is exactly the case it helps with. "Wheeler" is answered locally;
+    /// "where's the gym" matches no building name at all.
+    private var isShowingSemanticResults: Bool {
+        !trimmedQuery.isEmpty && localMatches.isEmpty && !semanticMatches.isEmpty
+    }
+
     private var filtered: [CampusPlace] {
-        places
+        (isShowingSemanticResults ? semanticMatches : localMatches)
             .filter { category == nil || $0.category == category }
-            .filter { $0.matches(query) }
     }
 
     var body: some View {
@@ -39,9 +61,13 @@ struct NavigateView: View {
             filterRow
             list
         }
-        .searchable(text: $query, prompt: "Search campus")
+        .searchable(text: $query, prompt: "Search campus or describe it")
         .navigationTitle("Navigate")
         .task { await load() }
+        // `.task(id:)` cancels the in-flight search when the query changes, so
+        // the debounce below is a real debounce rather than a queue of stale
+        // requests all landing at once.
+        .task(id: query) { await searchSemantically() }
         .sheet(item: $selected) { place in
             PlaceDetailSheet(place: place)
                 .presentationDetents([.medium])
@@ -108,7 +134,18 @@ struct NavigateView: View {
 
     private var list: some View {
         List {
-            if filtered.isEmpty {
+            if isSearchingSemantically {
+                // Only ever shown when the literal search already came up empty,
+                // so this replaces "No results" rather than delaying results the
+                // student could otherwise be reading.
+                HStack(spacing: 10) {
+                    ProgressView().controlSize(.small)
+                    Text("Looking for places that match what you meant…")
+                        .font(.footnote)
+                        .foregroundStyle(Surface.inkSecondary)
+                }
+                .accessibilityIdentifier("semantic-searching")
+            } else if filtered.isEmpty {
                 ContentUnavailableView.search(text: query)
             } else {
                 Section {
@@ -125,16 +162,58 @@ struct NavigateView: View {
                         }
                         .accessibilityIdentifier("place-\(place.slug)")
                     }
+                } header: {
+                    if isShowingSemanticResults {
+                        // Say why these matched. Nothing here contains the words
+                        // that were typed, so without a note the list reads as if
+                        // the search is broken.
+                        Label("Closest matches by meaning, not by name", systemImage: "sparkles")
+                            .font(.footnote)
+                            .textCase(nil)
+                            .accessibilityIdentifier("semantic-results-header")
+                    }
                 } footer: {
-                    Text("\(filtered.count) of \(places.count) places. Categories are auto-derived and still being checked.")
+                    Text(footerText)
                 }
             }
         }
         .listStyle(.plain)
     }
 
+    private var footerText: String {
+        if isShowingSemanticResults {
+            return "\(filtered.count) suggested for “\(trimmedQuery)”. Categories are auto-derived and still being checked."
+        }
+        return "\(filtered.count) of \(places.count) places. Categories are auto-derived and still being checked."
+    }
+
     private func load() async {
         places = ((try? CampusPlaceSeed.load()) ?? []).sorted { $0.name < $1.name }
+    }
+
+    /// Asks the endpoint only when substring matching has already failed.
+    ///
+    /// Three properties worth keeping: a building name never waits on a network
+    /// round trip, an offline device behaves exactly as it did before semantic
+    /// search existed, and we spend an embedding only on queries the local index
+    /// genuinely cannot serve.
+    private func searchSemantically() async {
+        semanticMatches = []
+        let asked = trimmedQuery
+        guard !asked.isEmpty, localMatches.isEmpty else { return }
+
+        // Typing "recreational" passes through four failing prefixes on the way.
+        // Without this each one is a request.
+        try? await Task.sleep(for: .milliseconds(350))
+        guard !Task.isCancelled else { return }
+
+        isSearchingSemantically = true
+        defer { isSearchingSemantically = false }
+
+        let found = await container.placeSearch.search(asked, in: places)
+        // The query may have moved on while this was in flight.
+        guard !Task.isCancelled, asked == trimmedQuery else { return }
+        semanticMatches = found
     }
 }
 

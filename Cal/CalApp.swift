@@ -30,6 +30,9 @@ final class AppContainer {
     let coach: any CoachClient
     /// Authored content — bundled in the MVP, remote at Phase B (§2, §6).
     let content: any ContentRepository
+    /// Campus place lookup. Substring matching offline, semantic when the local
+    /// functions are running — see `-CalLiveCoach`.
+    let placeSearch: any PlaceSearching
     /// Who the data belongs to. No accounts in the MVP (§2).
     let identity: any IdentityProviding
     /// Inert in the MVP, but real enough to report what exists only on this phone.
@@ -60,6 +63,7 @@ final class AppContainer {
         store: any CoherenceStoring,
         coach: any CoachClient,
         content: any ContentRepository,
+        placeSearch: any PlaceSearching,
         identity: any IdentityProviding,
         sync: any SyncEngine,
         profiles: any ProfileStoring,
@@ -75,6 +79,7 @@ final class AppContainer {
         self.store = store
         self.coach = coach
         self.content = content
+        self.placeSearch = placeSearch
         self.identity = identity
         self.sync = sync
         self.profiles = profiles
@@ -96,9 +101,12 @@ final class AppContainer {
     ///   `-CalFixedDate <iso>`   freeze the clock so streak assertions are stable
     ///   `-CalEntitlement <tier>` `free` or `plus`, so a UI test can assert both
     ///                            sides of the paywall without a sandbox account
-    ///   `-CalLiveCoach 1`       talk to the real model via the local Edge Function
-    ///                            (`supabase functions serve`). Opt-in, because the
-    ///                            default must never spend money by accident.
+    ///   `-CalLiveCoach 1`       use the local Edge Functions (`supabase functions
+    ///                            serve`) — both the coach and semantic place
+    ///                            search. Opt-in, because the default must never
+    ///                            spend money, or depend on a server, by accident.
+    ///                            Navigate still finds places by name without it;
+    ///                            only phrasing queries need the endpoint.
     static func live(arguments: [String] = ProcessInfo.processInfo.arguments) -> AppContainer {
         func value(for flag: String) -> String? {
             guard let index = arguments.firstIndex(of: flag), index + 1 < arguments.count else { return nil }
@@ -168,6 +176,13 @@ final class AppContainer {
                 ? LiveCoachClient.local()
                 : MockCoachClient(),
             content: BundledContentRepository(),
+            // Same gate as the coach: `-CalLiveCoach 1` means "use the local
+            // Edge Functions". Semantic search costs one embedding rather than a
+            // completion, but the default still must not reach the network —
+            // a UI test that searches should not depend on a server being up.
+            placeSearch: value(for: "-CalLiveCoach") == "1" && value(for: "-CalUseMockCoach") != "1"
+                ? SemanticPlaceSearch.local()
+                : LocalPlaceSearch(),
             identity: LocalIdentity(profiles: profiles),
             sync: sync,
             profiles: profiles,
