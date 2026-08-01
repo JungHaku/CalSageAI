@@ -18,6 +18,7 @@
 
 import type { Embedder, RetrievedChunk, VectorStore } from "./retrieval.ts";
 import type { VerifiedUser } from "./identity.ts";
+import { isDurable } from "./distillation.ts";
 
 /// How many remembered fragments may reach a prompt.
 export const MEMORY_TOP_K = 3;
@@ -29,19 +30,59 @@ export const MEMORY_TOP_K = 3;
 /// nothing and is the kind of thing that ends trust in a coach permanently.
 export const MEMORY_MAX_DISTANCE = 0.75;
 
+/// Near-identical memories are not written twice.
+///
+/// Students repeat themselves — the same worry three nights running is the
+/// normal shape of a worry. Without this, the most-repeated concern crowds out
+/// everything else in the top-3 and Cal recalls one thing five ways.
+///
+/// Measured, and the first guess of 0.12 was wrong twice over. The same standing
+/// fact told on two different nights — "my roommate keeps having loud people
+/// over past midnight" and "my roommate had people over really late again last
+/// night" — sits at 0.2271 as raw text and 0.1848 once distilled, so 0.12 let
+/// both through and 0.20 still let the raw pair through.
+///
+/// The negative control is what makes 0.30 safe rather than merely bigger: an
+/// unrelated memory in the same store (a chemistry midterm) is 0.7355 away. Same
+/// fact clusters at 0.18–0.23, different facts at 0.73+, and there is nothing in
+/// between to get wrong.
+export const DEDUPE_DISTANCE = 0.30;
+
+/// Recall favours recent memories, without ever hard-dropping old ones.
+///
+/// A hard age cutoff is wrong for a coach: a roommate conflict from three months
+/// ago may be the most relevant thing in the store. But "my exam is Thursday" is
+/// actively misleading in March, and nothing here can tell those apart — that
+/// distinction needs the distillation pass to mark a fact as time-bound, which
+/// it does not yet do. So the compromise is a nudge, not a filter: an
+/// old memory has to be more relevant to win, and can still win.
+export const RECENCY_PENALTY_PER_YEAR = 0.10;
+
 export interface MemoryRecord {
   id: string;
   text: string;
   createdAt: string;
 }
 
+/// Distance adjusted for age. Pure, so the curve is testable.
+export function agedDistance(distance: number, createdAt: string, now: Date): number {
+  const created = Date.parse(createdAt);
+  if (Number.isNaN(created)) return distance;
+  const years = Math.max(0, (now.getTime() - created) / (365.25 * 24 * 60 * 60 * 1000));
+  return distance + years * RECENCY_PENALTY_PER_YEAR;
+}
+
 /// A Chroma-backed store scoped to one verified person.
+export interface RecalledMemory extends RetrievedChunk {
+  createdAt?: string;
+}
+
 export interface MemoryBackend {
   query(
     profileId: string,
     vector: number[],
     k: number,
-  ): Promise<RetrievedChunk[]>;
+  ): Promise<RecalledMemory[]>;
   upsert(
     profileId: string,
     record: MemoryRecord,
@@ -71,12 +112,22 @@ export class PersonalMemory {
   /// Fails open like content retrieval: memory makes Cal better, it is not what
   /// makes Cal work, and a vector store outage must not cost someone their
   /// coach.
-  async recall(query: string, k = MEMORY_TOP_K): Promise<RetrievedChunk[]> {
+  async recall(query: string, k = MEMORY_TOP_K, now = new Date()): Promise<RetrievedChunk[]> {
     if (!query.trim()) return [];
     try {
       const vector = await this.embedder.embed(query);
-      const hits = await this.backend.query(this.profileId, vector, k);
-      const kept = hits.filter((hit) => hit.distance <= MEMORY_MAX_DISTANCE);
+      // Over-fetch, because ageing re-ranks: the nearest three by raw distance
+      // are not necessarily the best three once a two-year-old memory is
+      // penalised against a recent one.
+      const hits = await this.backend.query(this.profileId, vector, k * 3);
+      const kept = hits
+        .map((hit) => ({
+          ...hit,
+          distance: hit.createdAt ? agedDistance(hit.distance, hit.createdAt, now) : hit.distance,
+        }))
+        .filter((hit) => hit.distance <= MEMORY_MAX_DISTANCE)
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, k);
       console.log(
         `memory.recall ${kept.length}/${hits.length} kept for profile ${redact(this.profileId)}`,
       );
@@ -101,6 +152,25 @@ export class PersonalMemory {
     if (!shouldRemember(input.text, input.severity)) return false;
     try {
       const vector = await this.embedder.embed(input.text);
+
+      // Dedupe with the embedding we already have, so this costs one query and
+      // no extra embedding. A student saying the same thing three nights running
+      // should be one memory, not three competing for the same top-3 slot.
+      const near = await this.backend.query(this.profileId, vector, 1);
+      if (near.length && near[0].distance <= DEDUPE_DISTANCE) {
+        // Skipping loses one real signal: "it happened AGAIN last night" is
+        // partly news, and collapsing it hides that a problem is recurring. The
+        // better behaviour is to refresh the existing memory's timestamp so
+        // recurrence shows up as recency instead of as duplication — that needs
+        // an update path the backend does not have yet, and is the first thing
+        // to do here next.
+        console.log(
+          `memory.remember skipped as duplicate of ${near[0].id} ` +
+            `(distance ${near[0].distance.toFixed(4)})`,
+        );
+        return false;
+      }
+
       await this.backend.upsert(
         this.profileId,
         { id: input.id, text: input.text, createdAt: input.createdAt },
@@ -142,8 +212,10 @@ export function personalMemoryFor(
 export function shouldRemember(text: string, severity?: string): boolean {
   if (!text || !text.trim()) return false;
   if (severity && severity !== "none") return false;
-  // Fragments too short to carry meaning cost tokens and recall noise.
-  return text.trim().length >= 12;
+  // M3: a question is a request for information, not information. Storing
+  // "what did I tell you about my roommate?" was the first thing the live M2
+  // test produced, sitting in the store next to the fact it was asking about.
+  return isDurable(text);
 }
 
 /// Profile ids are pseudonymous but they are still identifiers, and this line is
@@ -196,7 +268,7 @@ export class ChromaMemoryBackend implements MemoryBackend {
     return this.collectionId!;
   }
 
-  async query(profileId: string, vector: number[], k: number): Promise<RetrievedChunk[]> {
+  async query(profileId: string, vector: number[], k: number): Promise<RecalledMemory[]> {
     const id = await this.resolveCollection();
     const response = await fetch(`${this.collectionsUrl}/${id}/query`, {
       method: "POST",
@@ -206,7 +278,7 @@ export class ChromaMemoryBackend implements MemoryBackend {
         n_results: k,
         // The isolation boundary, and the only one there is.
         where: { profileId: { $eq: profileId } },
-        include: ["documents", "distances"],
+        include: ["documents", "distances", "metadatas"],
       }),
     });
     if (!response.ok) throw new Error(`chroma memory query ${response.status}`);
@@ -215,10 +287,12 @@ export class ChromaMemoryBackend implements MemoryBackend {
     const ids: string[] = json.ids?.[0] ?? [];
     const documents: string[] = json.documents?.[0] ?? [];
     const distances: number[] = json.distances?.[0] ?? [];
+    const metadatas: Record<string, string>[] = json.metadatas?.[0] ?? [];
     return ids.map((chunkId, index) => ({
       id: chunkId,
       text: documents[index] ?? "",
       distance: distances[index] ?? 1,
+      createdAt: metadatas[index]?.createdAt,
     }));
   }
 

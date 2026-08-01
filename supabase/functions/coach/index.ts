@@ -23,6 +23,7 @@ import { assembleMessages, type Turn } from "./assemble.ts";
 import { ChromaVectorStore, OpenAIEmbedder, retrieve } from "./retrieval.ts";
 import { verifyUser } from "./identity.ts";
 import { ChromaMemoryBackend, personalMemoryFor } from "./memory.ts";
+import { distill, isDurable } from "./distillation.ts";
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 const DEFAULT_MODEL = "gpt-5.6-luna";
@@ -66,6 +67,11 @@ const CHROMA_URL = Deno.env.get("CHROMA_URL");
 const CHROMA_TOKEN = Deno.env.get("CHROMA_TOKEN");
 const CAL_COLLECTION = Deno.env.get("CAL_COLLECTION") ?? "cal_content";
 const EMBED_MODEL = Deno.env.get("CAL_EMBED_MODEL") ?? "text-embedding-3-small";
+
+/// Optional (M3). Unset means memories are stored as the student wrote them.
+/// Setting it adds one model call per remembered turn — worth measuring against
+/// §10.5's budget before turning on in anything but development.
+const DISTILL_MODEL = Deno.env.get("CAL_DISTILL_MODEL");
 
 const vectorStore = CHROMA_URL
   ? new ChromaVectorStore(CHROMA_URL, CAL_COLLECTION, "default_tenant", "default_database", CHROMA_TOKEN)
@@ -152,12 +158,21 @@ Deno.serve(async (req) => {
   // waiting for the stream to finish would mean losing the write whenever
   // someone closes the screen mid-answer.
   if (memory) {
-    await memory.remember({
-      id: crypto.randomUUID(),
-      text: message,
-      createdAt: new Date().toISOString(),
-      severity: body.severity,
-    });
+    // Distillation runs only for turns that already passed the free gate, so a
+    // question never costs a model call on its way to being discarded.
+    const durable = !body.severity || body.severity === "none" ? isDurable(message) : false;
+    const text = durable && DISTILL_MODEL
+      ? await distill(message, { apiKey, model: DISTILL_MODEL })
+      : message;
+
+    if (text) {
+      await memory.remember({
+        id: crypto.randomUUID(),
+        text,
+        createdAt: new Date().toISOString(),
+        severity: body.severity,
+      });
+    }
   }
 
   // System prompt first and byte-identical every time: prompt caching keys on a

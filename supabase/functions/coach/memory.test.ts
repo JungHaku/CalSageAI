@@ -7,6 +7,7 @@
 import { assertEquals, assertRejects } from "jsr:@std/assert";
 import { type VerifiedUser, verifyUser } from "./identity.ts";
 import {
+  agedDistance,
   type MemoryBackend,
   MEMORY_MAX_DISTANCE,
   type MemoryRecord,
@@ -27,7 +28,11 @@ class FakeBackend implements MemoryBackend {
     this.queriedProfiles.push(profileId);
     const records = this.byProfile.get(profileId) ?? [];
     return Promise.resolve(
-      records.slice(0, k).map((record) => ({ id: record.id, text: record.text, distance: 0.3 })),
+      // 0.6 because that is roughly where genuinely distinct memories sit —
+      // measured live, two unrelated topics in one store are ~0.73 apart, while
+      // the same fact retold is ~0.23. An arbitrary 0.3 sat right on the dedupe
+      // threshold and made this fixture change meaning when the threshold moved.
+      records.slice(0, k).map((record) => ({ id: record.id, text: record.text, distance: 0.6 })),
     );
   }
 
@@ -60,10 +65,16 @@ Deno.test("isolation: one person's memory is never returned to another", async (
   await aliceMemory.remember(write("my roommate keeps having people over late"));
 
   const bobMemory = personalMemoryFor(bob, backend, embedder);
+  // Writing also queries now (M3 dedupe), so measure only what Bob's recall did.
+  const before = backend.queriedProfiles.length;
   const recalled = await bobMemory.recall("roommate");
 
   assertEquals(recalled, [], "Bob must not see Alice's memory");
-  assertEquals(backend.queriedProfiles, [bob.id], "the query must be scoped to Bob");
+  assertEquals(
+    backend.queriedProfiles.slice(before),
+    [bob.id],
+    "Bob's recall must query only Bob",
+  );
 });
 
 Deno.test("isolation: the profile id comes from the verified user, not a caller", async () => {
@@ -73,14 +84,17 @@ Deno.test("isolation: the profile id comes from the verified user, not a caller"
   // There is no API surface that accepts a profile id — the only way to reach
   // memory is to hold a VerifiedUser. This asserts the shape stays that way.
   const memory = personalMemoryFor(bob, backend, embedder);
+  const before = backend.queriedProfiles.length;
   await memory.recall("week");
-  assertEquals(backend.queriedProfiles.every((id) => id === bob.id), true);
+  assertEquals(backend.queriedProfiles.slice(before).every((id) => id === bob.id), true);
 });
 
 Deno.test("isolation: forgetting one person leaves the other untouched", async () => {
   const backend = new FakeBackend();
-  await personalMemoryFor(alice, backend, embedder).remember(write("alice remembers this"));
-  await personalMemoryFor(bob, backend, embedder).remember(write("bob remembers this"));
+  await personalMemoryFor(alice, backend, embedder)
+    .remember(write("my roommate has loud guests on weeknights"));
+  await personalMemoryFor(bob, backend, embedder)
+    .remember(write("my chemistry midterm is on Thursday morning"));
 
   await personalMemoryFor(alice, backend, embedder).forgetEverything();
 
@@ -223,4 +237,64 @@ Deno.test("an unreachable auth server fails closed", async () => {
     fetchImpl: () => Promise.reject(new Error("connection refused")),
   });
   assertEquals(result, null, "an auth outage must not grant an identity");
+});
+
+// --- M3: dedupe and decay --------------------------------------------------
+
+Deno.test("saying the same thing twice does not store it twice", async () => {
+  // A worry repeated three nights running is the normal shape of a worry. Stored
+  // three times it crowds everything else out of the top-3.
+  const backend: MemoryBackend = {
+    query: () => Promise.resolve([{ id: "existing", text: "same worry", distance: 0.05 }]),
+    upsert: () => {
+      throw new Error("a near-duplicate must not be written");
+    },
+    deleteAll: () => Promise.resolve(),
+  };
+
+  const wrote = await personalMemoryFor(alice, backend, embedder)
+    .remember(write("my roommate is still having people over late"));
+
+  assertEquals(wrote, false);
+});
+
+Deno.test("a genuinely different memory is still written", async () => {
+  const backend = new FakeBackend();
+  await personalMemoryFor(alice, backend, embedder).remember(write("my roommate has loud guests late"));
+  // FakeBackend reports 0.6, comfortably outside the dedupe radius.
+  const wrote = await personalMemoryFor(alice, backend, embedder)
+    .remember(write("my chemistry midterm is on Thursday and I am dreading it"));
+
+  assertEquals(wrote, true);
+  assertEquals(backend.byProfile.get(alice.id)?.length, 2);
+});
+
+Deno.test("age penalises a memory without ever hard-dropping it", () => {
+  const now = new Date("2026-08-01T00:00:00Z");
+  const fresh = agedDistance(0.40, "2026-07-31T00:00:00Z", now);
+  const old = agedDistance(0.40, "2024-08-01T00:00:00Z", now);
+
+  assertEquals(fresh < old, true, "a fresher memory must rank ahead of an identical old one");
+  assertEquals(Math.abs(fresh - 0.40) < 0.001, true, "yesterday is essentially unpenalised");
+  assertEquals(old > 0.59 && old < 0.61, true, `two years should cost ~0.2, got ${old}`);
+});
+
+Deno.test("a recent, slightly-worse match beats a stale, slightly-better one", async () => {
+  const now = new Date("2026-08-01T00:00:00Z");
+  const backend: MemoryBackend = {
+    query: () =>
+      Promise.resolve([
+        { id: "stale", text: "from two years ago", distance: 0.30, createdAt: "2024-08-01T00:00:00Z" },
+        { id: "recent", text: "from last week", distance: 0.38, createdAt: "2026-07-25T00:00:00Z" },
+      ]),
+    upsert: () => Promise.resolve(),
+    deleteAll: () => Promise.resolve(),
+  };
+
+  const recalled = await personalMemoryFor(alice, backend, embedder).recall("anything", 2, now);
+  assertEquals(recalled[0].id, "recent");
+});
+
+Deno.test("a malformed timestamp leaves the distance alone rather than corrupting it", () => {
+  assertEquals(agedDistance(0.4, "not a date", new Date()), 0.4);
 });
