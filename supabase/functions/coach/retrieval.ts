@@ -32,8 +32,13 @@ export interface Embedder {
 ///
 /// Mirrored by `KINDS` in tools/eval-retrieval.py — if these drift, the eval is
 /// measuring something the function does not do.
+/// Chat includes `place` because students ask campus questions in the chat tab —
+/// `SPEC-free.md` §11 lists "I have three hours between classes" among its own
+/// examples, and the tab is called Chat with Cal, not Chat About Feelings.
+/// Without it Cal answered "where is Wheeler Hall?" from training data while 231
+/// verified buildings sat unread in the corpus.
 export const KINDS_FOR_SURFACE: Record<string, string[]> = {
-  chat: ["practice", "question"],
+  chat: ["practice", "question", "place"],
   navigate: ["place"],
   journal_reflection: ["practice", "question"],
   weekly_review: ["practice", "question"],

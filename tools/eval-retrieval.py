@@ -55,6 +55,24 @@ CASES = [
     ("chat", "I just finished studying and need to reset",
      ["practice:study-reset"]),
 
+    # --- chat: campus questions asked in the chat tab ---
+    #
+    # These are why `place` was added to the chat surface. Before it, Cal
+    # answered these from training data with 231 verified buildings sitting
+    # unread in the corpus. They also guard the other direction: if adding 231
+    # place chunks starts crowding practices out of the coaching cases above,
+    # this file is where that shows up.
+    ("chat", "where is Wheeler Hall?", ["place:wheeler-hall"]),
+    # No single building is the right answer to this, so asserting one would be
+    # fitting the test to whatever the model happened to return. What IS
+    # checkable is that a campus-shaped question surfaces campus data rather than
+    # breathing practices — that is the routing decision under test.
+    ("chat", "I have three hours between classes, where should I go", ["kind:place"]),
+    # Dining, and the corpus knows about dining. This was a "retrieve nothing"
+    # case while chat was blind to places; now that it can see them, pointing a
+    # hungry student at Martinez Commons is the correct answer, not noise.
+    ("chat", "what should I have for lunch", ["kind:place"]),
+
     # --- navigate: campus places ---
     ("navigate", "where is Wheeler Hall", ["place:wheeler-hall"]),
     ("navigate", "how do I get to Doe library", ["place:doe-memorial-library"]),
@@ -72,9 +90,10 @@ CASES = [
     # confidently wrong — which costs tokens and points Cal at material that has
     # nothing to do with what was asked. These cases are what MAX_DISTANCE is
     # calibrated against, and the reason it moved from 0.85 to 0.82.
-    ("chat", "what should I have for lunch", []),
     ("chat", "can you explain the quadratic formula", []),
     ("navigate", "what is the wifi password", []),
+    ("chat", "who won the world cup in 2022", []),
+    ("chat", "write me a python script to sort a list", []),
 ]
 
 # Mirrors MAX_DISTANCE in supabase/functions/coach/retrieval.ts.
@@ -82,7 +101,7 @@ MAX_DISTANCE = 0.82
 
 # Which chunk kinds each surface may retrieve. Mirrors `KINDS_FOR_SURFACE` in
 # supabase/functions/coach/retrieval.ts — a test pins them together.
-KINDS = {"chat": ["practice", "question"], "navigate": ["place"]}
+KINDS = {"chat": ["practice", "question", "place"], "navigate": ["place"]}
 
 
 def main():
@@ -101,7 +120,18 @@ def main():
             if hit["distance"] <= MAX_DISTANCE
         ]
         ids = [hit["id"] for hit in hits]
-        ok = (not hits) if not expected else any(candidate in ids for candidate in expected)
+        # An expectation is either specific chunk ids, or "kind:<k>" meaning any
+        # chunk of that kind — for queries where several answers are equally
+        # right and naming one would just be fitting the test to the output.
+        if not expected:
+            ok = not hits
+        else:
+            ok = any(
+                any(chunk_id.startswith(candidate[5:] + ":") for chunk_id in ids)
+                if candidate.startswith("kind:")
+                else candidate in ids
+                for candidate in expected
+            )
         passed += ok
 
         if verbose or not ok:

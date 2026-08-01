@@ -28,9 +28,11 @@ function store(): VectorStore {
   return new FakeVectorStore(corpus);
 }
 
-Deno.test("chat sees practices and questions, never places", async () => {
+Deno.test("chat sees practices, questions and places", async () => {
+  // Places are in scope for chat because students ask campus questions in the
+  // chat tab. Ordered by distance, so the place leads here by construction.
   const hits = await retrieve({ surface: "chat", query: "hi", embedder, store: store() });
-  assertEquals(hits.map((h) => h.id), ["practice:a", "question:b"]);
+  assertEquals(hits.map((h) => h.id), ["place:c", "practice:a", "question:b"]);
 });
 
 Deno.test("navigate sees places only", async () => {
@@ -81,6 +83,6 @@ Deno.test("a vector store failure degrades to no retrieval", async () => {
 Deno.test("surface routing matches what the eval measures", () => {
   // tools/eval-retrieval.py hard-codes these. If they drift, the eval is
   // measuring a pipeline the function does not have.
-  assertEquals(KINDS_FOR_SURFACE.chat, ["practice", "question"]);
+  assertEquals(KINDS_FOR_SURFACE.chat, ["practice", "question", "place"]);
   assertEquals(KINDS_FOR_SURFACE.navigate, ["place"]);
 });
