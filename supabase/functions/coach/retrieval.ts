@@ -203,7 +203,23 @@ export async function retrieve(
   try {
     const vector = await embedder.embed(query);
     const hits = await store.query(vector, kinds, input.k ?? TOP_K);
-    return hits.filter((hit) => hit.distance <= (input.maxDistance ?? MAX_DISTANCE));
+    const kept = hits.filter((hit) => hit.distance <= (input.maxDistance ?? MAX_DISTANCE));
+
+    // Log the outcome, not just the failures.
+    //
+    // Retrieval degrades to silence by design, which means a total outage and a
+    // healthy system that found nothing relevant produce the same reply. Without
+    // a line here the difference is invisible, and "retrieval has been off since
+    // the deploy" looks exactly like "Cal is a bit vague lately".
+    //
+    // Ids and distances only. The chunk text is authored content today, but this
+    // same path carries the student's own words at M2, and a log is the last
+    // place that should be the first to hold them.
+    console.log(
+      `retrieval[${surface}] ${kept.length}/${hits.length} kept: ` +
+        (kept.map((h) => `${h.id}@${h.distance.toFixed(3)}`).join(" ") || "none"),
+    );
+    return kept;
   } catch (error) {
     console.error("retrieval failed, continuing without it:", error);
     return [];
