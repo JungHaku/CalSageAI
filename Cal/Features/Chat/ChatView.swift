@@ -242,7 +242,10 @@ private struct MessageBubble: View {
         HStack {
             if message.role == .user { Spacer(minLength: 40) }
 
-            Text(message.text)
+            // Cal writes markdown; SwiftUI does not interpret it for a String
+            // variable. See `CoachMarkdown` for why, and for why the whitespace
+            // option matters to a line-by-line practice script.
+            Text(CoachMarkdown.rendered(message.text))
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
                 .background(background, in: .rect(cornerRadius: 18))
@@ -251,8 +254,12 @@ private struct MessageBubble: View {
                 // token as the label changes. `.updatesFrequently` tells it this
                 // is a live region and to stop interrupting itself.
                 .accessibilityAddTraits(isStreaming ? .updatesFrequently : [])
+                // Spoken from the stripped text, so VoiceOver doesn't read the
+                // markup out as "star star Thursday star star".
                 .accessibilityLabel(
-                    message.role == .user ? "You said: \(message.text)" : "Cal said: \(message.text)"
+                    message.role == .user
+                        ? "You said: \(CoachMarkdown.plain(message.text))"
+                        : "Cal said: \(CoachMarkdown.plain(message.text))"
                 )
 
             if message.role == .assistant { Spacer(minLength: 40) }

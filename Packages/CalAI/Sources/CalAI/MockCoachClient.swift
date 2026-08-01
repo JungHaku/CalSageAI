@@ -17,7 +17,18 @@ public struct MockCoachClient: CoachClient {
     private let behaviour: Behaviour
     private let detector = CrisisDetector()
 
-    public init(behaviour: Behaviour = .reply("Let's take one slow breath together.")) {
+    /// The default reply carries **emphasis** deliberately.
+    ///
+    /// The live model writes markdown, and the mock previously replied in plain
+    /// prose — so every test, preview and demo exercised a rendering path the
+    /// real one never took, and `Text(someString)` silently showing raw asterisks
+    /// got all the way to a live run before anyone saw it. A mock that is tidier
+    /// than production hides exactly the bugs production has.
+    ///
+    /// The wording follows the system prompt's own "offer, don't instruct" rule.
+    public init(
+        behaviour: Behaviour = .reply("That sounds heavy. Would it help to take **one slow breath** together?")
+    ) {
         self.behaviour = behaviour
     }
 
