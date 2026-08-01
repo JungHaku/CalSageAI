@@ -98,6 +98,8 @@ struct SettingsView: View {
         Section {
             NavigationLink("Profile") { ProfileView() }
                 .accessibilityIdentifier("open-profile")
+            NavigationLink("Account and memory") { SignInView() }
+                .accessibilityIdentifier("open-account")
         }
     }
 

@@ -8,13 +8,26 @@ import Foundation
 /// cannot tell them apart and neither can its tests.
 public struct LiveCoachClient: CoachClient {
     private let endpoint: URL
-    private let anonKey: String?
+    /// Supplies the bearer token for each request, or `nil` when the caller must
+    /// stay anonymous.
+    ///
+    /// A closure rather than a stored string because the answer changes: signing
+    /// in produces one, signing out removes it, and — the case that matters —
+    /// a signed-in student who has not consented to memory must still send
+    /// nothing. Withholding the credential is the enforcement point for that
+    /// consent, and it is the only one, so there is a single place it can fail
+    /// rather than a check at every call site (`MemoryConsent`).
+    private let bearerToken: @Sendable () async -> String?
     private let session: URLSession
     private let detector = CrisisDetector()
 
-    public init(endpoint: URL, anonKey: String? = nil, session: URLSession? = nil) {
+    public init(
+        endpoint: URL,
+        bearerToken: @escaping @Sendable () async -> String? = { nil },
+        session: URLSession? = nil
+    ) {
         self.endpoint = endpoint
-        self.anonKey = anonKey
+        self.bearerToken = bearerToken
         self.session = session ?? {
             let configuration = URLSessionConfiguration.ephemeral
             // `timeoutIntervalForRequest` is the gap between *bytes*, not the
@@ -72,9 +85,11 @@ public struct LiveCoachClient: CoachClient {
         var urlRequest = URLRequest(url: endpoint)
         urlRequest.httpMethod = "POST"
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        if let anonKey {
-            urlRequest.setValue("Bearer \(anonKey)", forHTTPHeaderField: "Authorization")
-            urlRequest.setValue(anonKey, forHTTPHeaderField: "apikey")
+        // Nothing at all when there is no token. Never a stand-in: sending the
+        // anon key here would make every unauthenticated device look like one
+        // shared account to the server.
+        if let token = await bearerToken() {
+            urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         // The acute filter is applied again here, at the actual network boundary,
         // even though `ConversationWindow` already did it. Defence in depth is

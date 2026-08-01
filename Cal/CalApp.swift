@@ -33,6 +33,15 @@ final class AppContainer {
     /// Campus place lookup. Substring matching offline, semantic when the local
     /// functions are running — see `-CalLiveCoach`.
     let placeSearch: any PlaceSearching
+    /// Sign-in and the session token. An account on its own changes nothing
+    /// about what leaves the device — that needs `memoryConsent` as well.
+    let auth: AuthSession
+
+    /// Whether Cal may keep what the student types. Defaults to no, is a
+    /// separate decision from signing in, and is the single gate on sending a
+    /// bearer token at all (`MemoryConsent`).
+    private(set) var memoryConsent: MemoryConsent
+
     /// Who the data belongs to. No accounts in the MVP (§2).
     let identity: any IdentityProviding
     /// Inert in the MVP, but real enough to report what exists only on this phone.
@@ -64,6 +73,8 @@ final class AppContainer {
         coach: any CoachClient,
         content: any ContentRepository,
         placeSearch: any PlaceSearching,
+        auth: AuthSession,
+        memoryConsent: MemoryConsent = .notGranted,
         identity: any IdentityProviding,
         sync: any SyncEngine,
         profiles: any ProfileStoring,
@@ -80,6 +91,8 @@ final class AppContainer {
         self.coach = coach
         self.content = content
         self.placeSearch = placeSearch
+        self.auth = auth
+        self.memoryConsent = memoryConsent
         self.identity = identity
         self.sync = sync
         self.profiles = profiles
@@ -90,6 +103,30 @@ final class AppContainer {
         self.premium = premium
         self.isUITesting = isUITesting
         self.storeIsEphemeral = storeIsEphemeral
+    }
+
+    // MARK: Memory consent
+
+    nonisolated private static let consentDefaultsKey = "cal.memoryConsent"
+
+    /// Records the decision, with the timestamp and the disclosure version it was
+    /// given against — see `MemoryConsent` for why the version matters.
+    func setMemoryConsent(_ granted: Bool) {
+        memoryConsent = granted ? .granted(at: dates.now) : .notGranted
+        if let encoded = try? JSONEncoder().encode(memoryConsent) {
+            UserDefaults.standard.set(encoded, forKey: Self.consentDefaultsKey)
+        }
+    }
+
+    /// `nonisolated` so the coach client's token closure can read it off the
+    /// main actor on every request. `UserDefaults` is thread-safe, and reading
+    /// the current value is the whole point — a captured copy would let a
+    /// revoked consent keep sending a token until the app relaunched.
+    nonisolated static func loadMemoryConsent() -> MemoryConsent {
+        guard let data = UserDefaults.standard.data(forKey: consentDefaultsKey),
+              let decoded = try? JSONDecoder().decode(MemoryConsent.self, from: data)
+        else { return .notGranted }
+        return decoded
     }
 
     /// Resolves dependencies from launch arguments, so a UI test can pin the app
@@ -164,6 +201,18 @@ final class AppContainer {
         // the default. Opting in with `-CalLiveCoach 1` is deliberate: a default
         // that reaches a paid model is a default that bills you for running the
         // test suite. Still no API key in this binary; the function holds it.
+        // Local stack for development. A hosted project supplies these through
+        // configuration; they are not secrets — the anon key is a demo constant
+        // compiled into the Supabase CLI (see CalRemote.CalSupabase).
+        let auth = AuthSession(
+            baseURL: URL(string: "http://127.0.0.1:54321")!,
+            anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+                + "eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9."
+                + "CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0",
+            store: isUITesting ? InMemoryTokenStore() : KeychainTokenStore()
+        )
+        let consent = isUITesting ? MemoryConsent.notGranted : loadMemoryConsent()
+
         return AppContainer(
             dates: dates,
             store: store,
@@ -173,7 +222,21 @@ final class AppContainer {
             // here would make the two mutually exclusive. UI tests always pass
             // `-CalUseMockCoach 1`, which still wins.
             coach: value(for: "-CalLiveCoach") == "1" && value(for: "-CalUseMockCoach") != "1"
-                ? LiveCoachClient.local()
+                ? LiveCoachClient(
+                    endpoint: URL(string: "http://127.0.0.1:54321/functions/v1/coach")!,
+                    // The consent gate, and the only one. A signed-in student who
+                    // has not opted in sends no token, so the server sees an
+                    // anonymous request and personal memory never engages —
+                    // enforced by withholding the credential rather than by a
+                    // check somewhere that could be forgotten.
+                    // Consent is re-read on every request rather than captured.
+                    // A student turning it off has to take effect on the next
+                    // message they send, not at the next launch.
+                    bearerToken: { [auth] in
+                        guard loadMemoryConsent().permitsRemoteMemory else { return nil }
+                        return await auth.accessToken()
+                    }
+                  )
                 : MockCoachClient(),
             content: BundledContentRepository(),
             // Same gate as the coach: `-CalLiveCoach 1` means "use the local
@@ -183,6 +246,8 @@ final class AppContainer {
             placeSearch: value(for: "-CalLiveCoach") == "1" && value(for: "-CalUseMockCoach") != "1"
                 ? SemanticPlaceSearch.local()
                 : LocalPlaceSearch(),
+            auth: auth,
+            memoryConsent: consent,
             identity: LocalIdentity(profiles: profiles),
             sync: sync,
             profiles: profiles,
