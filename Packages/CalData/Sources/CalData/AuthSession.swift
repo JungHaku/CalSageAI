@@ -52,13 +52,66 @@ public actor AuthSession {
 
     public func isSignedIn() -> Bool { credentials() != nil }
 
-    /// The bearer token for an authenticated request, or `nil` when signed out.
+    /// The bearer token for an authenticated request, refreshing it if needed.
     ///
     /// Callers must send *nothing* rather than something else when this is nil.
     /// Substituting the anon key here would make every signed-out device look
     /// like one shared account to the server (`identity.ts` rejects it for the
     /// same reason, from the other side).
-    public func accessToken() -> String? { credentials()?.accessToken }
+    ///
+    /// **Refreshing is not optional, and its absence was a real bug.** Supabase
+    /// access tokens expire after an hour. Without this, a student who signed in
+    /// yesterday keeps a token the app happily sends and the auth server answers
+    /// 403 to — so memory silently stops working while every screen still says
+    /// "Signed in". That is exactly what happened during the first end-to-end
+    /// run, and it took server-side logging to see it, because a rejected token
+    /// and no token at all produce the identical user experience.
+    public func accessToken() async -> String? {
+        guard let current = credentials() else { return nil }
+        guard isExpired(current.accessToken) else { return current.accessToken }
+        return try? await refresh(current).accessToken
+    }
+
+    /// Exchanges the refresh token for a new session.
+    @discardableResult
+    public func refresh(_ existing: Credentials) async throws -> Credentials {
+        guard !existing.refreshToken.isEmpty else { throw AuthError.sessionExpired }
+        do {
+            return try await authenticate(
+                path: "/auth/v1/token?grant_type=refresh_token",
+                body: ["refresh_token": existing.refreshToken],
+                fallbackEmail: existing.email
+            )
+        } catch {
+            // A refresh token the server will not honour means the session is
+            // over. Clearing it is what makes the UI tell the truth instead of
+            // showing a signed-in state that cannot do anything.
+            signOut()
+            throw AuthError.sessionExpired
+        }
+    }
+
+    /// Reads `exp` out of the JWT payload without verifying the signature.
+    ///
+    /// Verification is the server's job and duplicating it here would be a
+    /// second implementation to get wrong. All this needs to answer is "is it
+    /// worth sending?", and a 60-second margin covers the round trip.
+    private func isExpired(_ token: String, now: Date = Date()) -> Bool {
+        let parts = token.split(separator: ".")
+        guard parts.count == 3 else { return true }
+
+        var payload = String(parts[1])
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        payload += String(repeating: "=", count: (4 - payload.count % 4) % 4)
+
+        guard let data = Data(base64Encoded: payload),
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let exp = object["exp"] as? Double
+        else { return true }
+
+        return Date(timeIntervalSince1970: exp).timeIntervalSince(now) < 60
+    }
 
     @discardableResult
     public func signUp(email: String, password: String) async throws -> Credentials {
@@ -85,13 +138,17 @@ public actor AuthSession {
     }
 
     private func authenticate(path: String, email: String, password: String) async throws -> Credentials {
+        try await authenticate(path: path, body: ["email": email, "password": password], fallbackEmail: email)
+    }
+
+    private func authenticate(
+        path: String, body: [String: String], fallbackEmail: String
+    ) async throws -> Credentials {
         var request = URLRequest(url: baseURL.appendingPathComponent2(path))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(anonKey, forHTTPHeaderField: "apikey")
-        request.httpBody = try JSONEncoder().encode(
-            ["email": email, "password": password]
-        )
+        request.httpBody = try JSONEncoder().encode(body)
 
         let (data, response) = try await session.data(for: request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? -1
@@ -113,7 +170,7 @@ public actor AuthSession {
             userID: userID,
             accessToken: token,
             refreshToken: decoded.refresh_token ?? "",
-            email: decoded.user?.email ?? email
+            email: decoded.user?.email ?? fallbackEmail
         )
         current = credentials
         store.save(credentials)
@@ -142,11 +199,15 @@ public enum AuthError: Error, Equatable, Sendable {
     case rejected(Int, String)
     /// The account exists but needs an emailed confirmation before it has a session.
     case confirmationRequired
+    /// The refresh token was refused; the person has to sign in again.
+    case sessionExpired
 
     public var userFacingMessage: String {
         switch self {
         case .confirmationRequired:
             "Check your email to confirm the account, then sign in."
+        case .sessionExpired:
+            "Your session expired. Sign in again to keep Cal remembering."
         case .rejected(_, let detail) where !detail.isEmpty:
             detail
         case .rejected:

@@ -43,9 +43,9 @@ struct AuthSessionTests {
 
     @Test("the token is available to the coach client once signed in")
     func tokenIsExposed() async throws {
-        let (auth, _) = session { _ in (stubTokenPayload(), 200) }
+        let (auth, _) = session { _ in (stubTokenPayload(freshJWT), 200) }
         try await auth.signIn(email: "a@b.co", password: "password123")
-        #expect(await auth.accessToken() == "jwt-token")
+        #expect(await auth.accessToken() == freshJWT)
     }
 
     @Test("signed out means no token at all, never a stand-in")
@@ -59,14 +59,16 @@ struct AuthSessionTests {
     func restoresFromStorage() async {
         AuthStubURLProtocol.handler = { _ in (Data(), 500) }
         let seeded = AuthSession.Credentials(
-            userID: userID, accessToken: "stored", refreshToken: "r", email: "a@b.co"
+            // A real-shaped, unexpired JWT: `accessToken()` now inspects `exp`,
+            // so an opaque placeholder reads as expired and triggers a refresh.
+            userID: userID, accessToken: freshJWT, refreshToken: "r", email: "a@b.co"
         )
         let auth = AuthSession(
             baseURL: URL(string: "https://stack.invalid")!,
             anonKey: "anon",
             store: InMemoryTokenStore(seeded)
         )
-        #expect(await auth.accessToken() == "stored")
+        #expect(await auth.accessToken() == freshJWT)
     }
 
     @Test("bad credentials surface the server's reason, not a stack trace")
@@ -106,6 +108,55 @@ struct AuthSessionTests {
         #expect(store.load() == nil)
     }
 
+    /// The bug the first live run exposed: a token minted hours earlier was sent
+    /// unchanged, the auth server answered 403, and the app kept showing "Signed
+    /// in" while memory silently did nothing.
+    @Test("an expired token is refreshed before it is handed out")
+    func expiredTokenRefreshes() async throws {
+        let calls = CapturedURL()
+        let (auth, _) = session { request in
+            calls.set(calls.value + (request.url?.absoluteString.contains("refresh_token") == true ? "R" : "P"))
+            return (stubTokenPayload(calls.value.contains("R") ? freshJWT : expiredJWT), 200)
+        }
+        try await auth.signIn(email: "a@b.co", password: "password123")
+
+        let token = await auth.accessToken()
+
+        #expect(calls.value == "PR", "sign-in then exactly one refresh, got \(calls.value)")
+        #expect(token == freshJWT)
+    }
+
+    @Test("a live token is handed out without a round trip")
+    func liveTokenIsNotRefreshed() async throws {
+        let calls = CapturedURL()
+        let (auth, _) = session { request in
+            calls.set(calls.value + "x")
+            _ = request
+            return (stubTokenPayload(freshJWT), 200)
+        }
+        try await auth.signIn(email: "a@b.co", password: "password123")
+
+        #expect(await auth.accessToken() == freshJWT)
+        #expect(calls.value == "x", "only the sign-in should have hit the network")
+    }
+
+    /// A refresh token the server refuses means the session is over. Keeping a
+    /// signed-in state that cannot do anything is how "it says I am signed in but
+    /// nothing works" happens.
+    @Test("a refused refresh signs the person out rather than pretending")
+    func refusedRefreshSignsOut() async throws {
+        let (auth, store) = session { request in
+            if request.url?.absoluteString.contains("refresh_token") == true {
+                return (Data(#"{"msg":"invalid refresh token"}"#.utf8), 400)
+            }
+            return (stubTokenPayload(expiredJWT), 200)
+        }
+        try await auth.signIn(email: "a@b.co", password: "password123")
+
+        #expect(await auth.accessToken() == nil)
+        #expect(store.load() == nil, "a dead session must not linger in the Keychain")
+    }
+
     @Test("the grant_type query survives URL construction")
     func tokenEndpointKeepsItsQuery() async throws {
         let captured = CapturedURL()
@@ -123,6 +174,21 @@ struct AuthSessionTests {
 }
 
 private let stubUserID = UUID(uuidString: "a623e041-d851-48c3-8aad-76fab1e3fff8")!
+
+/// Real-shaped JWTs: header.payload.signature, where the payload carries `exp`.
+/// The signature is never checked here — that is the server's job, and a second
+/// implementation of it would be a second thing to get wrong.
+private func jwt(expiringAt seconds: Double) -> String {
+    let payload = try! JSONSerialization.data(withJSONObject: ["exp": seconds])
+    let encoded = payload.base64EncodedString()
+        .replacingOccurrences(of: "+", with: "-")
+        .replacingOccurrences(of: "/", with: "_")
+        .replacingOccurrences(of: "=", with: "")
+    return "header.\(encoded).signature"
+}
+
+private let expiredJWT = jwt(expiringAt: Date().timeIntervalSince1970 - 3600)
+private let freshJWT = jwt(expiringAt: Date().timeIntervalSince1970 + 3600)
 
 /// Free function on purpose. A stub handler that captures `self` retains the
 /// test suite past teardown, and the process then dies with signal 11 *after*

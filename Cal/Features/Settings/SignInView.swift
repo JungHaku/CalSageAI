@@ -144,8 +144,19 @@ struct SignInView: View {
         }
     }
 
-    /// The second yes. Defaults to no, and says so in a sentence a person can
-    /// act on rather than a sentence that survives a lawsuit.
+    /// The second yes — two explicit choices, not a switch.
+    ///
+    /// Replaced a `Toggle`, for two reasons. The weaker one is that the toggle
+    /// did not respond to taps in the simulator while a `Button` in the same
+    /// Form did, and a consent control that silently does nothing is the worst
+    /// possible failure for this particular control.
+    ///
+    /// The stronger one is that a toggle is the wrong affordance here. MHMDA and
+    /// CMIA both want a *distinct affirmative act*, and a switch you might have
+    /// brushed past is not obviously one. Two labelled choices, where the current
+    /// answer is visibly ticked and declining has its own words, is what "the
+    /// person chose this" looks like. `MemoryConsentCopy` already carried both
+    /// strings; only one of them was being used.
     private var consentSection: some View {
         Section {
             Text(MemoryConsentCopy.body)
@@ -155,26 +166,45 @@ struct SignInView: View {
                 .font(.footnote)
                 .foregroundStyle(Surface.inkSecondary)
 
-            Toggle(
-                MemoryConsentCopy.acceptTitle,
-                isOn: Binding(
-                    get: { container.memoryConsent.permitsRemoteMemory },
-                    set: { container.setMemoryConsent($0) }
-                )
-            )
-            .accessibilityIdentifier("memory-consent-toggle")
+            choice(MemoryConsentCopy.acceptTitle, isSelected: isRemembering, grants: true)
+                .accessibilityIdentifier("memory-consent-accept")
+            choice(MemoryConsentCopy.declineTitle, isSelected: !isRemembering, grants: false)
+                .accessibilityIdentifier("memory-consent-decline")
         } header: {
             Text(MemoryConsentCopy.title)
         } footer: {
             // States the current position plainly, in both directions. A student
             // should never have to infer whether this is on.
             Text(
-                container.memoryConsent.permitsRemoteMemory
-                    ? "Cal is keeping what you type in Chat. Turn this off to stop."
+                isRemembering
+                    ? "Cal is keeping what you type in Chat. Choose the second option to stop."
                     : "Cal is not keeping anything. Chat still works; it just starts fresh each time."
             )
             .accessibilityIdentifier("memory-consent-state")
         }
+    }
+
+    private var isRemembering: Bool {
+        container.memoryConsent.permitsRemoteMemory
+    }
+
+    private func choice(_ title: String, isSelected: Bool, grants: Bool) -> some View {
+        Button {
+            container.setMemoryConsent(grants)
+        } label: {
+            HStack {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(isSelected ? ChartPalette.primary : Surface.inkSecondary)
+                Text(title)
+                    .foregroundStyle(Surface.inkPrimary)
+                    .multilineTextAlignment(.leading)
+                Spacer(minLength: 0)
+            }
+            // The whole row, so the target is the sentence rather than the circle.
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 }
 
