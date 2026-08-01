@@ -85,6 +85,7 @@ public struct LiveCoachClient: CoachClient {
             Payload(
                 message: request.message,
                 threadId: request.threadID.uuidString,
+                surface: request.surface.rawValue,
                 history: request.history
                     .filter { $0.safety != .acute }
                     .map { Turn(role: $0.role.rawValue, text: $0.text) },
@@ -145,6 +146,9 @@ public struct LiveCoachClient: CoachClient {
     private struct Payload: Encodable {
         let message: String
         let threadId: String
+        /// Selects what retrieval may see. The raw value is the wire format the
+        /// function's `KINDS_FOR_SURFACE` keys off, so it matches `CoachSurface`.
+        let surface: String
         let history: [Turn]
         /// The digest is sent **rendered**, not as a struct.
         ///

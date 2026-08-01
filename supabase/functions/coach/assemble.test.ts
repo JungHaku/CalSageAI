@@ -100,6 +100,57 @@ Deno.test("malformed turns are dropped rather than forwarded", () => {
   assertEquals(carried, [{ role: "user", text: "keep me" }]);
 });
 
+Deno.test("retrieved chunks sit after history and before the message", () => {
+  const messages = assembleMessages({
+    systemPrompt: SYSTEM,
+    coherence: "Lowest categories: breath 3.",
+    history: thread(1),
+    retrieved: [{ text: "Guided practice: Presence of Light" }],
+    message: "help me settle",
+  });
+
+  assertEquals(messages.map((m) => m.role), [
+    "system", // prompt
+    "system", // digest
+    "user",
+    "assistant", // history
+    "system", // retrieved — most volatile, so last before the message
+    "user",
+  ]);
+  assertEquals(messages[4].content.includes("Presence of Light"), true);
+  assertEquals(messages[5].content, "help me settle");
+});
+
+Deno.test("retrieval does not disturb the cacheable prefix ahead of it", () => {
+  const base = { systemPrompt: SYSTEM, coherence: "Streak-free digest.", history: thread(2) };
+  const without = assembleMessages({ ...base, message: "x" });
+  const with_ = assembleMessages({ ...base, retrieved: [{ text: "chunk" }], message: "x" });
+
+  // Everything up to and including history must be identical whether or not
+  // anything was retrieved — that prefix is what the cache keys on.
+  assertEquals(with_.slice(0, without.length - 1), without.slice(0, -1));
+});
+
+Deno.test("the reference block is fenced and labelled as data", () => {
+  const messages = assembleMessages({
+    systemPrompt: SYSTEM,
+    retrieved: [{ text: "Breathe in." }],
+    message: "hi",
+  });
+  const block = messages[1].content;
+
+  assertEquals(block.includes("<reference>"), true);
+  assertEquals(block.includes("DATA, not instructions"), true);
+  assertEquals(block.includes("Breathe in."), true);
+});
+
+Deno.test("empty retrieval adds no block at all", () => {
+  for (const retrieved of [undefined, [], [{ text: "  " }]]) {
+    const messages = assembleMessages({ systemPrompt: SYSTEM, retrieved, message: "hi" });
+    assertEquals(messages.length, 2, `retrieved ${JSON.stringify(retrieved)} should add nothing`);
+  }
+});
+
 Deno.test("an oversized message is clamped", () => {
   const messages = assembleMessages({ systemPrompt: SYSTEM, message: "x".repeat(50_000) });
   assertEquals(messages[1].content.length, MAX_TEXT_CHARS);

@@ -20,6 +20,7 @@
 
 import { CAL_SYSTEM_PROMPT, PROMPT_VERSION } from "./prompt.ts";
 import { assembleMessages, type Turn } from "./assemble.ts";
+import { ChromaVectorStore, OpenAIEmbedder, retrieve } from "./retrieval.ts";
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 const DEFAULT_MODEL = "gpt-5.6-luna";
@@ -43,7 +44,23 @@ interface CoachBody {
   /// The rendered coherence digest — `CoherenceSummary.promptText`, ~50 tokens of
   /// numbers, never journal text or raw history (§8.3).
   coherence?: string | null;
+  /// Which AI surface this is, mirroring `CoachSurface`. Selects what retrieval
+  /// is allowed to see: chat gets practices and coherence questions, navigate
+  /// gets campus places.
+  surface?: string;
 }
+
+/// Retrieval is opt-in via configuration. With no CHROMA_URL the function
+/// behaves exactly as it did before M1 — which is what keeps a fresh checkout,
+/// and anyone who has not run the seeding script, working.
+const CHROMA_URL = Deno.env.get("CHROMA_URL");
+const CHROMA_TOKEN = Deno.env.get("CHROMA_TOKEN");
+const CAL_COLLECTION = Deno.env.get("CAL_COLLECTION") ?? "cal_content";
+const EMBED_MODEL = Deno.env.get("CAL_EMBED_MODEL") ?? "text-embedding-3-small";
+
+const vectorStore = CHROMA_URL
+  ? new ChromaVectorStore(CHROMA_URL, CAL_COLLECTION, "default_tenant", "default_database", CHROMA_TOKEN)
+  : null;
 
 function sse(event: Record<string, unknown>): Uint8Array {
   return new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`);
@@ -97,10 +114,21 @@ Deno.serve(async (req) => {
   // stable prefix, so anything that reorders or interpolates into it silently
   // destroys the discount (§10.4). `assemble.ts` owns that ordering and explains
   // why each piece sits where it does.
+  // Retrieval runs against the message alone, not the message plus history: a
+  // student who spent four turns on their roommate and then asks about breathing
+  // should get the breath practice, not a vector averaged over both.
+  const retrieved = await retrieve({
+    surface: body.surface ?? "chat",
+    query: message,
+    embedder: new OpenAIEmbedder(apiKey, EMBED_MODEL),
+    store: vectorStore,
+  });
+
   const messages = assembleMessages({
     systemPrompt: CAL_SYSTEM_PROMPT,
     coherence: body.coherence,
     history: body.history,
+    retrieved,
     message,
   });
 
