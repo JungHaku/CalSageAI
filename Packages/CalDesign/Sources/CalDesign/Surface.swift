@@ -49,9 +49,9 @@ public enum Surface {
         public var ratio: Double { Contrast.ratio(ink, background) }
     }
 
-    /// Every ink/surface combination the app actually renders. If a new surface is
-    /// introduced, add it here — the test iterates this list, so an unlisted
-    /// pairing is an unmeasured one.
+    /// Every neutral ink/surface combination the app renders. If a new surface is
+    /// introduced, add it here — the test iterates `allTextPairings`, so an
+    /// unlisted pairing is an unmeasured one.
     public static let textPairings: [Pairing] = [
         Pairing(name: "primary ink on app background (light)", ink: inkPrimaryLight, background: appBackgroundLight),
         Pairing(name: "primary ink on card (light)", ink: inkPrimaryLight, background: cardLight),
@@ -64,4 +64,11 @@ public enum Surface {
         Pairing(name: "chart axis label on app background (light)", ink: 0x52514E, background: appBackgroundLight),
         Pairing(name: "chart axis label on app background (dark)", ink: 0xC3C2B7, background: appBackgroundDark),
     ]
+
+    /// What the test actually iterates: the neutral inks above plus the brand
+    /// ones. Two lists rather than one because they are owned by different files
+    /// and have different reasons to change, but a single entry point so there
+    /// is still only one thing to forget to add to — and adding to either is
+    /// enough.
+    public static let allTextPairings: [Pairing] = textPairings + Brand.textPairings
 }

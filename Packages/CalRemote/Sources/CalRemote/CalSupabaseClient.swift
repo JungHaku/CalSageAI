@@ -53,6 +53,7 @@ public enum CalSupabase {
     public static func makeLocalClient() -> SupabaseClient {
         makeClient(url: localURL, anonKey: localAnonKey)
     }
+
 }
 
 /// Identity backed by a real account (ARCHITECTURE.md §15 step 3).

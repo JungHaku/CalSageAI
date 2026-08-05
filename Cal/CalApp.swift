@@ -129,6 +129,34 @@ final class AppContainer {
         return decoded
     }
 
+    /// Who decides what is unlocked.
+    ///
+    /// Three cases, in order:
+    ///
+    /// 1. **`-CalEntitlement` was passed** — honour it exactly. This is how a demo
+    ///    shows the paid app, and how a UI test asserts both sides of the paywall
+    ///    without a sandbox account and a system sheet XCUITest cannot drive.
+    /// 2. **A UI test with no tier pinned** — free, deterministically.
+    /// 3. **Anything else** — real StoreKit.
+    ///
+    /// In `DEBUG` the third case defaults to `plus` instead. Running from Xcode is
+    /// nearly always either development or a demonstration, and in both the
+    /// interesting screens are the paid ones. **Release is untouched**, so a
+    /// TestFlight build still shows the free tier and still has to be bought —
+    /// giving away the subscription in a shipped binary is not a default anyone
+    /// should be able to reach by accident.
+    private static func entitlementProvider(
+        pinned: Entitlement?, isUITesting: Bool
+    ) -> any EntitlementProviding {
+        if let pinned { return MockEntitlementProvider(entitlement: pinned) }
+        if isUITesting { return MockEntitlementProvider(entitlement: .free) }
+        #if DEBUG
+        return MockEntitlementProvider(entitlement: .plus)
+        #else
+        return StoreKitEntitlementProvider()
+        #endif
+    }
+
     /// Resolves dependencies from launch arguments, so a UI test can pin the app
     /// to a deterministic state instead of driving five screens to reach one (§11.4).
     ///
@@ -138,7 +166,7 @@ final class AppContainer {
     ///   `-CalFixedDate <iso>`   freeze the clock so streak assertions are stable
     ///   `-CalEntitlement <tier>` `free` or `plus`, so a UI test can assert both
     ///                            sides of the paywall without a sandbox account
-    ///   `-CalLiveCoach 1`       use the local Edge Functions (`supabase functions
+    ///   `-CalLiveCoach 1`       point at the LOCAL Edge Functions (`supabase functions
     ///                            serve`) — both the coach and semantic place
     ///                            search. Opt-in, because the default must never
     ///                            spend money, or depend on a server, by accident.
@@ -152,8 +180,17 @@ final class AppContainer {
 
         let scenarioName = value(for: "-CalScenario")
         let pinnedTier = value(for: "-CalEntitlement").flatMap(Entitlement.init(rawValue:))
+        // `-CalEntitlement` deliberately does NOT imply test mode.
+        //
+        // It used to, and that made it useless for the thing it is most wanted
+        // for: showing the paid app to someone. Test mode swaps in the in-memory
+        // store and the *local* backend, so a demo pinned to `plus` lost its data
+        // on every launch and its chat pointed at a stack that was not running.
+        //
+        // Every UI test passes `-CalScenario` and `-CalUseMockCoach 1` as well, so
+        // dropping the tier from this expression changes nothing for them.
         let isUITesting =
-            value(for: "-CalUseMockCoach") == "1" || scenarioName != nil || pinnedTier != nil
+            value(for: "-CalUseMockCoach") == "1" || scenarioName != nil
 
         let dates: any DateProvider =
             if let iso = value(for: "-CalFixedDate"), let day = LocalDate(iso: iso) {
@@ -197,33 +234,56 @@ final class AppContainer {
             return try await tracked.pendingSyncCount()
         }
 
-        // The proxy now exists, so a real client is possible — but the mock stays
-        // the default. Opting in with `-CalLiveCoach 1` is deliberate: a default
-        // that reaches a paid model is a default that bills you for running the
-        // test suite. Still no API key in this binary; the function holds it.
-        // Local stack for development. A hosted project supplies these through
-        // configuration; they are not secrets — the anon key is a demo constant
-        // compiled into the Supabase CLI (see CalRemote.CalSupabase).
+        // The hosted project when `Info.plist` names one, the local stack when it
+        // does not. Neither value is a secret: the publishable key identifies the
+        // project and every row it can reach is governed by RLS. The key that *is*
+        // secret is the OpenAI one, and it is not in this binary at all — it lives
+        // in the Edge Function (§8.1).
+        //
+        // UI tests stay on the local stack whatever the plist says. A test suite
+        // that creates accounts against the real project would fill it with
+        // rubbish and cost money on every run.
+        let backend = BackendConfiguration.resolve(isUITesting: isUITesting)
         let auth = AuthSession(
-            baseURL: URL(string: "http://127.0.0.1:54321")!,
-            anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
-                + "eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9."
-                + "CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0",
+            baseURL: backend.url,
+            anonKey: backend.anonKey,
             store: isUITesting ? InMemoryTokenStore() : KeychainTokenStore()
         )
         let consent = isUITesting ? MemoryConsent.notGranted : loadMemoryConsent()
 
+        // Cal now talks to the real model by default.
+        //
+        // The old default was the mock, opted out of with `-CalLiveCoach 1`. That
+        // was right while the proxy was unproven — a default that reaches a paid
+        // model is a default that bills you for running the test suite. It is
+        // wrong once the app ships, because it means every student gets canned
+        // replies from a fixture.
+        //
+        // So the polarity is inverted, and the protection moves to the one flag
+        // that was always the real guard: `-CalUseMockCoach 1`. Every UI test and
+        // every preview already passes it, so nothing automated can reach the
+        // network or spend money.
+        //
+        // Deliberately NOT keyed on `isUITesting`: `-CalScenario` sets that to get
+        // the seeded in-memory store, and a demo wants exactly that *plus* a real
+        // model. Keying off it would make the two mutually exclusive.
+        //
+        // There is still no API key in this binary. The function holds it (§8.1).
+        let useMockCoach = value(for: "-CalUseMockCoach") == "1"
+
+        // `-CalLiveCoach 1` no longer means "use a real model" — it now means
+        // "point at the LOCAL Edge Functions" for development against
+        // `supabase functions serve`.
+        let useLocalFunctions = value(for: "-CalLiveCoach") == "1"
+        let functionsBackend = useLocalFunctions ? BackendConfiguration.local : backend
+
         return AppContainer(
             dates: dates,
             store: store,
-            // Gated on the explicit mock flag rather than on `isUITesting`.
-            // `-CalScenario` sets `isUITesting` to get the seeded in-memory store,
-            // and a demo wants exactly that *plus* a real model — so keying off it
-            // here would make the two mutually exclusive. UI tests always pass
-            // `-CalUseMockCoach 1`, which still wins.
-            coach: value(for: "-CalLiveCoach") == "1" && value(for: "-CalUseMockCoach") != "1"
-                ? LiveCoachClient(
-                    endpoint: URL(string: "http://127.0.0.1:54321/functions/v1/coach")!,
+            coach: useMockCoach
+                ? MockCoachClient()
+                : LiveCoachClient(
+                    endpoint: functionsBackend.coachEndpoint,
                     // The consent gate, and the only one. A signed-in student who
                     // has not opted in sends no token, so the server sees an
                     // anonymous request and personal memory never engages —
@@ -236,14 +296,15 @@ final class AppContainer {
                         guard loadMemoryConsent().permitsRemoteMemory else { return nil }
                         return await auth.accessToken()
                     }
-                  )
-                : MockCoachClient(),
+                  ),
             content: BundledContentRepository(),
-            // Same gate as the coach: `-CalLiveCoach 1` means "use the local
-            // Edge Functions". Semantic search costs one embedding rather than a
-            // completion, but the default still must not reach the network —
-            // a UI test that searches should not depend on a server being up.
-            placeSearch: value(for: "-CalLiveCoach") == "1" && value(for: "-CalUseMockCoach") != "1"
+            // Semantic place search stays OPT-IN, unlike the coach, and the reason
+            // is not caution — it is that the `places` function is not deployed and
+            // its retrieval needs a `CHROMA_URL` the hosted project does not set.
+            // Turning it on by default would trade working offline substring search
+            // for a 404. Navigate finds places by name without it; only phrasing a
+            // question needs the endpoint.
+            placeSearch: useLocalFunctions && !useMockCoach
                 ? SemanticPlaceSearch.local()
                 : LocalPlaceSearch(),
             auth: auth,
@@ -260,11 +321,7 @@ final class AppContainer {
             // A real StoreKit purchase needs a sandbox account and a system sheet
             // XCUITest can't drive, so tests pin the tier instead and assert the
             // app's own behaviour on each side of it (§11.2).
-            premium: PremiumStore(
-                provider: isUITesting
-                    ? MockEntitlementProvider(entitlement: pinnedTier ?? .free)
-                    : StoreKitEntitlementProvider()
-            ),
+            premium: PremiumStore(provider: Self.entitlementProvider(pinned: pinnedTier, isUITesting: isUITesting)),
             isUITesting: isUITesting,
             storeIsEphemeral: ephemeral
         )

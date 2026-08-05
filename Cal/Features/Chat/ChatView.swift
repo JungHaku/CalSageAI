@@ -12,11 +12,25 @@ struct ChatView: View {
     @Environment(AppContainer.self) private var container
     @State private var model: ChatViewModel?
     @State private var showingEmergency = false
+    @State private var moderation = ModerationStore()
+    /// The reply being reported, if any. Guideline 1.2 wants reporting reachable
+    /// from every piece of generated content, not from a settings screen.
+    @State private var reporting: CoachMessage?
     @FocusState private var composerFocused: Bool
+    /// Collapsed by default.
+    ///
+    /// The *headline* is what SB 243 and guideline 1.4.1 actually require, and it
+    /// stays permanently visible at the top of every thread — collapsing only
+    /// moves the elaboration behind one tap. It was a full grey card, which is
+    /// what a person learns to scroll past; a single line they can open is read
+    /// more often than a paragraph they cannot avoid.
+    @State private var disclosureExpanded = false
 
     var body: some View {
         Group {
-            if let model {
+            if moderation.isBlocked {
+                blocked
+            } else if let model {
                 conversation(model)
             } else {
                 ProgressView()
@@ -31,6 +45,39 @@ struct ChatView: View {
             }
         }
         .sheet(isPresented: $showingEmergency) { EmergencyView() }
+        .sheet(item: $reporting) { message in
+            ReportSheet(message: message) { reason, note in
+                moderation.report(message, reason: reason, note: note)
+            }
+        }
+    }
+
+    /// What the chat looks like once Cal is blocked (§1.2, the block affordance).
+    ///
+    /// Not an error and not a dead end: it says plainly what the person chose,
+    /// and the way back is one tap. A block nobody can undo is a broken feature
+    /// rather than a safe one.
+    private var blocked: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "hand.raised.slash")
+                .font(.largeTitle)
+                .foregroundStyle(Surface.inkSecondary)
+            Text("Cal is blocked")
+                .font(.title3.weight(.semibold))
+            Text("You won't get replies until you unblock. Everything else in the app still works.")
+                .font(.subheadline)
+                .foregroundStyle(Surface.inkSecondary)
+                .multilineTextAlignment(.center)
+            Button("Unblock Cal") { moderation.setBlocked(false) }
+                .buttonStyle(.borderedProminent)
+                .accessibilityIdentifier("chat-unblock")
+            if let url = Support.mailtoURL {
+                Link("Contact us", destination: url).font(.footnote)
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityIdentifier("chat-blocked")
     }
 
     private func conversation(_ model: ChatViewModel) -> some View {
@@ -39,9 +86,16 @@ struct ChatView: View {
                 LazyVStack(alignment: .leading, spacing: 16) {
                     disclosure
 
+                    if model.messages.isEmpty && !model.isStreaming {
+                        greeting
+                    }
+
                     ForEach(model.messages) { message in
-                        MessageBubble(message: message)
-                            .id(message.id)
+                        MessageBubble(
+                            message: message,
+                            onReport: message.role == .assistant ? { reporting = message } : nil
+                        )
+                        .id(message.id)
                     }
 
                     if !model.streamingText.isEmpty {
@@ -111,24 +165,76 @@ struct ChatView: View {
     /// saying so plainly and permanently at the top of the thread rather than in a
     /// one-time alert somebody dismisses and forgets.
     private var disclosure: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Label("Cal is AI, not a person", systemImage: "sparkles")
-                .font(.subheadline.weight(.medium))
-            Text(
-                """
-                It can help you notice patterns and settle your nervous system. It \
-                is not therapy or medical care. If something is urgent, use \
-                Emergency help — it works offline.
-                """
-            )
-            .font(.footnote)
-            .foregroundStyle(Surface.inkSecondary)
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                withAnimation(.snappy) { disclosureExpanded.toggle() }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "sparkles")
+                    Text("Cal is AI, not a person")
+                    Image(systemName: disclosureExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption2)
+                    Spacer(minLength: 0)
+                }
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(Surface.inkSecondary)
+                // The row is thin, so the tap target is padded back out to 44pt
+                // rather than left at the height of the text.
+                .frame(minHeight: 44)
+                .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Cal is AI, not a person. What that means.")
+            .accessibilityHint(disclosureExpanded ? "Collapses the detail" : "Expands the detail")
+
+            if disclosureExpanded {
+                Text(
+                    """
+                    It can help you notice patterns and settle your nervous system. It \
+                    is not therapy or medical care, and it cannot diagnose or treat \
+                    anything. Talk to a doctor or a licensed professional before making \
+                    any decision about your health, and don't delay seeking care \
+                    because of something Cal said. If something is urgent, use \
+                    Emergency help — it works offline.
+                    """
+                )
+                .font(.footnote)
+                .foregroundStyle(Surface.inkSecondary)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
-        .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Surface.card, in: .rect(cornerRadius: 14))
-        .accessibilityElement(children: .combine)
         .accessibilityIdentifier("chat-ai-disclosure")
+    }
+
+    // MARK: Empty state
+
+    /// What an untouched thread looks like.
+    ///
+    /// Before this the screen opened as a disclosure notice above a blank
+    /// expanse, which reads as something failing to load rather than as an
+    /// invitation. Cal sitting there says who you are about to talk to, in one
+    /// picture, above one question.
+    ///
+    /// The avatar stays decorative — the text below carries the whole meaning, so
+    /// labelling the image would only make VoiceOver say it twice.
+    private var greeting: some View {
+        VStack(spacing: 14) {
+            CalAvatar(.card, halo: .sageAndGold)
+
+            Text("I'm Cal.")
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(Surface.inkPrimary)
+
+            Text("Tell me what's going on, and we'll take it a breath at a time.")
+                .font(.subheadline)
+                .foregroundStyle(Surface.inkSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 28)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("chat-empty-state")
     }
 
     // MARK: Crisis
@@ -190,8 +296,11 @@ struct ChatView: View {
             .accessibilityIdentifier("chat-failed")
     }
 
+    /// Aligned to the same left gutter as an assistant bubble — avatar, then
+    /// content — so the reply does not jump sideways when it starts arriving.
     private var thinking: some View {
-        HStack(spacing: 8) {
+        HStack(alignment: .center, spacing: 8) {
+            CalAvatar(.bubble)
             ProgressView().controlSize(.small)
             Text("Cal is thinking…").font(.footnote).foregroundStyle(Surface.inkSecondary)
         }
@@ -237,19 +346,36 @@ struct ChatView: View {
 private struct MessageBubble: View {
     let message: CoachMessage
     var isStreaming = false
+    /// Non-nil only for Cal's replies — there is nothing to report about your own
+    /// words. Guideline 1.2 wants this on the content itself, so it sits on every
+    /// bubble rather than behind a menu somewhere else.
+    var onReport: (() -> Void)?
+
+    /// The last-resort filter (§1.2 item 1). Applied at the point of display, so
+    /// it also covers text that arrived before the check existed.
+    private var displayText: String {
+        ModerationStore.Filter.isObjectionable(message.text)
+            ? ModerationStore.Filter.replacement
+            : message.text
+    }
 
     var body: some View {
-        HStack {
+        // `.top` so the avatar sits level with the reply's first line rather than
+        // drifting to the middle of a long one. Decorative, because it repeats
+        // once per reply and a labelled one would have VoiceOver announce Cal
+        // between every message in the thread.
+        HStack(alignment: .top, spacing: 8) {
             if message.role == .user { Spacer(minLength: 40) }
+            if message.role == .assistant { CalAvatar(.bubble) }
 
             // Cal writes markdown; SwiftUI does not interpret it for a String
             // variable. See `CoachMarkdown` for why, and for why the whitespace
             // option matters to a line-by-line practice script.
-            Text(CoachMarkdown.rendered(message.text))
+            Text(CoachMarkdown.rendered(displayText))
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
                 .background(background, in: .rect(cornerRadius: 18))
-                .foregroundStyle(message.role == .user ? Color.white : Surface.inkPrimary)
+                .foregroundStyle(message.role == .user ? Brand.onAction : Surface.inkPrimary)
                 // VoiceOver would otherwise re-announce the whole reply on every
                 // token as the label changes. `.updatesFrequently` tells it this
                 // is a live region and to stop interrupting itself.
@@ -259,16 +385,42 @@ private struct MessageBubble: View {
                 .accessibilityLabel(
                     message.role == .user
                         ? "You said: \(CoachMarkdown.plain(message.text))"
-                        : "Cal said: \(CoachMarkdown.plain(message.text))"
+                        : "Cal said: \(CoachMarkdown.plain(displayText))"
                 )
+                // Long-press as well as the visible button: the button is the
+                // discoverable path, the menu is the one people reach for.
+                .contextMenu {
+                    if let onReport {
+                        Button("Report this reply", systemImage: "flag") { onReport() }
+                    }
+                }
 
-            if message.role == .assistant { Spacer(minLength: 40) }
+            if message.role == .assistant {
+                if let onReport, !isStreaming {
+                    Button(action: onReport) {
+                        Image(systemName: "flag")
+                            .font(.caption)
+                            .foregroundStyle(Surface.inkSecondary)
+                            // 44pt, or it fails the hit-region audit that already
+                            // runs over every screen.
+                            .frame(width: 44, height: 44)
+                    }
+                    .accessibilityLabel("Report this reply")
+                    .accessibilityIdentifier("chat-report")
+                }
+                Spacer(minLength: 8)
+            }
         }
         .accessibilityIdentifier(message.role == .user ? "chat-user-message" : "chat-cal-message")
     }
 
+    /// The person's own words take the brand's interactive colour; Cal's take the
+    /// neutral card. This was `ChartPalette.primary` — a *chart* token, one step
+    /// of the blue ramp the analytics screen uses to encode magnitude. Borrowing
+    /// it for chrome meant the same blue said "this is your data" in one place and
+    /// "this is you" in another.
     private var background: Color {
-        message.role == .user ? ChartPalette.primary : Surface.card
+        message.role == .user ? Brand.action : Surface.card
     }
 }
 

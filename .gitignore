@@ -46,3 +46,9 @@ supabase/.temp
 # Demo launcher's build output. The launcher keeps its own DerivedData so a demo
 # build never fights the one Xcode is using.
 .demo-build/
+
+# Generated for pasting into the Supabase SQL editor when a direct Postgres
+# connection is not available (IPv6-only db host, blocked 5432). Not committed:
+# it is a copy of supabase/migrations/, and a committed copy is one that drifts.
+# Regenerate by concatenating that directory.
+supabase/all-migrations.sql

@@ -232,7 +232,7 @@ public protocol TokenStoring: Sendable {
 /// off backups entirely, which matters here: guideline 5.1.3(ii) prohibits
 /// storing personal health information in iCloud, and a token is the key to it.
 public struct KeychainTokenStore: TokenStoring {
-    private let account = "com.breathehealthcenter.cal.session"
+    private let account = "org.wholelifeministries.cal.session"
 
     public init() {}
 

@@ -194,7 +194,7 @@ struct SignInView: View {
         } label: {
             HStack {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(isSelected ? ChartPalette.primary : Surface.inkSecondary)
+                    .foregroundStyle(isSelected ? Brand.action : Surface.inkSecondary)
                 Text(title)
                     .foregroundStyle(Surface.inkPrimary)
                     .multilineTextAlignment(.leading)

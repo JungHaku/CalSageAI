@@ -22,6 +22,22 @@ struct HomeView: View {
             }
             .padding()
         }
+        // Cal sits behind the whole screen rather than inside a card — present,
+        // not competing. Anchored bottom-trailing and allowed to run off both
+        // edges, because a watermark that fits neatly reads as a small picture
+        // someone forgot to finish.
+        //
+        // `.background` rather than a `ZStack` layer, so it never participates in
+        // layout and cannot push content around at large text sizes.
+        .background(alignment: .top) {
+            // Anchored to the TOP, not the bottom. Home's cards are opaque, so
+            // anything behind them is invisible except in the gaps — a watermark
+            // low down showed two ears and read as a glitch. The open space on
+            // this screen is the greeting, so that is where Cal goes.
+            CalWatermark(opacity: 0.10)
+                .frame(width: 300)
+                .offset(x: 90, y: -30)
+        }
         .navigationTitle("Cal")
         .task { await load() }
         .refreshable { await load() }
@@ -33,6 +49,9 @@ struct HomeView: View {
     private var todayCard: some View {
         let done = insights?.hasCheckedInToday ?? false
         VStack(alignment: .leading, spacing: 12) {
+            // Just the greeting. Cal is behind it now, as a watermark — a small
+            // bear in a circle *and* a large faded one on the same screen read
+            // as two attempts at the same idea.
             Text(greeting)
                 .font(.largeTitle.weight(.semibold))
 

@@ -88,8 +88,8 @@ struct NavigateView: View {
                         Image(systemName: place.category.symbolName)
                             .font(.caption2)
                             .padding(6)
-                            .background(ChartPalette.primary, in: .circle)
-                            .foregroundStyle(.white)
+                            .background(Brand.action, in: .circle)
+                            .foregroundStyle(Brand.onAction)
                     }
                     .accessibilityLabel(place.name)
                 }
@@ -231,8 +231,8 @@ private struct FilterChip: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 7)
-            .background(isOn ? ChartPalette.primary : Color.secondary.opacity(0.18), in: .capsule)
-            .foregroundStyle(isOn ? .white : .primary)
+            .background(isOn ? Brand.action : Color.secondary.opacity(0.18), in: .capsule)
+            .foregroundStyle(isOn ? Brand.onAction : Surface.inkPrimary)
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isOn ? [.isSelected] : [])

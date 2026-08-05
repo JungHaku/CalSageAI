@@ -14,7 +14,7 @@ set -uo pipefail
 
 PROJECT="/Users/becka/Desktop/CalAI"
 SCHEME="Cal"
-BUNDLE_ID="com.breathehealthcenter.cal.dev"
+BUNDLE_ID="org.wholelifeministries.cal"
 DEVICE="iPhone 17 Pro"
 LOG="${TMPDIR:-/tmp}/cal-demo-$(date +%Y%m%d-%H%M%S).log"
 

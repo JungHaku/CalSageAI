@@ -5,6 +5,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(AppContainer.self) private var container
+    @State private var moderation = ModerationStore()
     @Environment(\.scenePhase) private var scenePhase
     @State private var model: SettingsViewModel?
 
@@ -218,10 +219,41 @@ struct SettingsView: View {
         }
     }
 
+    /// Two sections, so this needs the builder.
+    @ViewBuilder
     private var aboutSection: some View {
         Section("About") {
             LabeledContent("Cal", value: "MVP")
             NavigationLink("Emergency help") { EmergencyView() }
+        }
+
+        // Guideline 1.2 asks for published contact information and a way to
+        // block. Both live here rather than only inside the chat, because
+        // someone who has already blocked Cal cannot reach a control that only
+        // exists on the chat screen.
+        Section {
+            Toggle(
+                "Block Cal",
+                isOn: Binding(
+                    get: { moderation.isBlocked },
+                    set: { moderation.setBlocked($0) }
+                )
+            )
+            .accessibilityIdentifier("settings-block-cal")
+
+            if let url = Support.mailtoURL {
+                Link("Contact support", destination: url)
+                    .accessibilityIdentifier("settings-contact")
+            } else {
+                LabeledContent("Contact support", value: Support.contactEmail)
+            }
+        } header: {
+            Text("Chat and safety")
+        } footer: {
+            Text(
+                "Blocking stops Cal replying. You can report any reply from the "
+                + "chat itself. We aim to respond to reports within two business days."
+            )
         }
     }
 

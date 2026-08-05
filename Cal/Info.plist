@@ -58,5 +58,13 @@
 	-->
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>Cal shows today's classes and deadlines from the calendars already on your phone. It only reads them and never adds, edits, or deletes anything.</string>
+	<key>CalSupabaseURL</key>
+	<string>https://woudmxksrkrzjnmlfven.supabase.co</string>
+	<key>CalSupabaseAnonKey</key>
+	<string>sb_publishable_YjybSnfDgUvhTHCmBNFEDQ_0yb3N0cd</string>
+	<key>CalSupportEmail</key>
+	<string>beck.alexmlg@gmail.com</string>
+	<key>UIUserInterfaceStyle</key>
+	<string>Light</string>
 </dict>
 </plist>

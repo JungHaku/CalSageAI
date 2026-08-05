@@ -179,15 +179,31 @@ struct ExercisePlayerView: View {
         }
     }
 
+    /// Cal sits **inside** the ring, and deliberately does not breathe with it.
+    ///
+    /// The ring's scale is the instruction — it is how the exercise is followed
+    /// without reading — so it has to stay the only thing on screen that moves.
+    /// Scaling Cal too would give the eye a second moving target and blur which
+    /// one is the pacing signal. He is a still point at the centre instead, which
+    /// is also what the pose is of.
+    ///
+    /// Nothing here touches the timing: the `scaleEffect` and its animation are
+    /// unchanged and still apply only to the circle.
     private var breathRing: some View {
         let phase = model.beat?.phase ?? .cue
-        return Circle()
-            .fill(CoherenceScale.tint(for: .high).opacity(0.18))
-            .overlay(Circle().strokeBorder(CoherenceScale.tint(for: .high), lineWidth: 3))
-            .frame(width: 220, height: 220)
-            .scaleEffect(reduceMotion ? 0.85 : scale(for: phase))
-            .animation(reduceMotion ? nil : .linear(duration: 0.05), value: model.elapsed)
-            .accessibilityHidden(true)
+        return ZStack {
+            Circle()
+                .fill(CoherenceScale.tint(for: .high).opacity(0.18))
+                .overlay(Circle().strokeBorder(CoherenceScale.tint(for: .high), lineWidth: 3))
+                .frame(width: 220, height: 220)
+                .scaleEffect(reduceMotion ? 0.85 : scale(for: phase))
+                .animation(reduceMotion ? nil : .linear(duration: 0.05), value: model.elapsed)
+
+            // Fixed at 96pt, so he stays clear of the ring even at its smallest
+            // (0.6 x 220 = 132pt).
+            CalAvatar(.card)
+        }
+        .accessibilityHidden(true)
     }
 
     /// The ring is the visual half of the pacing: it grows through the inhale,

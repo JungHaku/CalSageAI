@@ -11,7 +11,15 @@ let package = Package(
         .package(path: "../CalKit")
     ],
     targets: [
-        .target(name: "CalDesign", dependencies: ["CalKit"]),
+        .target(
+            name: "CalDesign",
+            dependencies: ["CalKit"],
+            // The Cal artwork. `.process` so the catalogue is compiled by
+            // `actool` rather than copied — a copied `.xcassets` is a folder in
+            // the bundle, and `Image(_:bundle:)` resolves names only against a
+            // compiled one.
+            resources: [.process("Resources")]
+        ),
         .testTarget(name: "CalDesignTests", dependencies: ["CalDesign"]),
     ]
 )

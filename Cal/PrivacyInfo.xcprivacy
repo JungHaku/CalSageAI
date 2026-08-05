@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Privacy manifest. Mandatory since 1 May 2024 — a missing or incomplete one is
+  rejected at upload, before review ever sees the app.
+
+  Two halves, and they answer different questions:
+
+  * NSPrivacyAccessedAPITypes — "why do you call this API?" Only APIs on Apple's
+    required-reason list need an entry. This app touches exactly one: UserDefaults
+    (memory consent, the reminder settings, the launch flags). CA92.1 is the
+    correct reason — access limited to the app itself and its own group.
+    Keychain, URLSession and SwiftData are not on the list and must not be
+    declared; over-declaring is its own kind of inaccurate.
+
+  * NSPrivacyCollectedDataTypes — "what leaves the device?" Apple defines
+    collection as transmitting data off the device in a way that lets you access
+    it beyond servicing the request in real time.
+
+  What is declared below reflects the app WITH accounts and the coach proxy live.
+  Before those, the honest answer was "Data Not Collected" — see
+  LAUNCH-REQUIREMENTS §18.4. That flipped the moment sign-in shipped, and the
+  App Privacy nutrition label in App Store Connect has to be updated to match:
+  this file and that questionnaire are two separate declarations of the same
+  facts, and Apple compares them.
+
+  Nothing here is used for tracking. There are no third-party analytics or ad
+  SDKs in the binary at all, so NSPrivacyTracking is false and the tracking
+  domains list is empty — an empty list plus false is the correct, checkable
+  answer, not an omission.
+-->
+<plist version="1.0">
+<dict>
+    <key>NSPrivacyTracking</key>
+    <false/>
+
+    <key>NSPrivacyTrackingDomains</key>
+    <array/>
+
+    <key>NSPrivacyAccessedAPITypes</key>
+    <array>
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <!-- CA92.1 — read/write only to defaults belonging to this app. -->
+                <string>CA92.1</string>
+            </array>
+        </dict>
+    </array>
+
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array>
+        <!-- Email address, for the account. Linked to the person by definition:
+             it IS the identifier they sign in with. -->
+        <dict>
+            <key>NSPrivacyCollectedDataType</key>
+            <string>NSPrivacyCollectedDataTypeEmailAddress</string>
+            <key>NSPrivacyCollectedDataTypeLinked</key>
+            <true/>
+            <key>NSPrivacyCollectedDataTypeTracking</key>
+            <false/>
+            <key>NSPrivacyCollectedDataTypePurposes</key>
+            <array>
+                <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+            </array>
+        </dict>
+
+        <!-- The account's user ID. -->
+        <dict>
+            <key>NSPrivacyCollectedDataType</key>
+            <string>NSPrivacyCollectedDataTypeUserID</string>
+            <key>NSPrivacyCollectedDataTypeLinked</key>
+            <true/>
+            <key>NSPrivacyCollectedDataTypeTracking</key>
+            <false/>
+            <key>NSPrivacyCollectedDataTypePurposes</key>
+            <array>
+                <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+            </array>
+        </dict>
+
+        <!-- What the person types to Cal. Goes to our Edge Function and from
+             there to the model provider. -->
+        <dict>
+            <key>NSPrivacyCollectedDataType</key>
+            <string>NSPrivacyCollectedDataTypeOtherUserContent</string>
+            <key>NSPrivacyCollectedDataTypeLinked</key>
+            <true/>
+            <key>NSPrivacyCollectedDataTypeTracking</key>
+            <false/>
+            <key>NSPrivacyCollectedDataTypePurposes</key>
+            <array>
+                <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+            </array>
+        </dict>
+
+        <!-- The coherence digest — a compact set of numbers about how the person
+             reports feeling — travels with a chat request so Cal can reason from
+             it (§8.3). Self-reported wellbeing scores are health data, and
+             declaring them as such is the honest answer even though no clinical
+             measurement is involved. Check-ins themselves stay on the device;
+             the sync engine is still inert. -->
+        <dict>
+            <key>NSPrivacyCollectedDataType</key>
+            <string>NSPrivacyCollectedDataTypeHealth</string>
+            <key>NSPrivacyCollectedDataTypeLinked</key>
+            <true/>
+            <key>NSPrivacyCollectedDataTypeTracking</key>
+            <false/>
+            <key>NSPrivacyCollectedDataTypePurposes</key>
+            <array>
+                <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>

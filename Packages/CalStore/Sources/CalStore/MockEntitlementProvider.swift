@@ -103,5 +103,5 @@ extension SubscriptionProduct {
 
     /// The App Store Connect product identifier. Reverse-DNS, matching the bundle
     /// ID, so it is unambiguous which app it belongs to.
-    public static let calPlusMonthlyID = "com.breathehealthcenter.cal.plus.monthly"
+    public static let calPlusMonthlyID = "org.wholelifeministries.cal.plus.monthly"
 }

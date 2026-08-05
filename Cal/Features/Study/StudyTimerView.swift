@@ -114,7 +114,7 @@ struct StudyTimerView: View {
                     .stroke(ChartPalette.gridline, lineWidth: 10)
                 Circle()
                     .trim(from: 0, to: session.focusProgress(at: now))
-                    .stroke(ChartPalette.primary, style: StrokeStyle(lineWidth: 10, lineCap: .round))
+                    .stroke(Brand.action, style: StrokeStyle(lineWidth: 10, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                     .animation(.linear(duration: 1), value: session.focusProgress(at: now))
 
