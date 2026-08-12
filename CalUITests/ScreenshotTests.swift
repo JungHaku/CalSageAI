@@ -10,7 +10,7 @@ import XCTest
 /// App Store Connect still requires, and everything else is auto-scaled from it
 /// (`docs/APP-STORE.md` §3).
 ///
-///     xcodebuild test -project Cal.xcodeproj -scheme Cal \
+///     xcodebuild test -project CalSageAI.xcodeproj -scheme Cal \
 ///       -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' \
 ///       -only-testing:CalUITests/ScreenshotTests
 ///
@@ -40,7 +40,7 @@ final class ScreenshotTests: XCTestCase {
     }
 
     private func element(_ app: XCUIApplication, _ identifier: String) -> XCUIElement {
-        app.descendants(matching: .any).matching(identifier: identifier).firstMatch
+        SageUI.element(app, identifier)
     }
 
     private func capture(_ app: XCUIApplication, _ name: String) {
@@ -53,23 +53,22 @@ final class ScreenshotTests: XCTestCase {
     func testCaptureStoreScreenshots() {
         let app = launch()
 
-        // 1 — Home, the daily loop in one glance.
-        XCTAssertTrue(element(app, "dest-history").waitForExistence(timeout: 20))
-        capture(app, "01-home")
+        // 1 — Today, the daily loop in one glance.
+        SageUI.openTab(app, .today, timeout: 20)
+        capture(app, "01-today")
 
-        // 2 — The check-in question and the scale.
-        app.tabBars.buttons["Check-In"].tap()
-        XCTAssertTrue(element(app, "question-prompt").waitForExistence(timeout: 15))
-        capture(app, "02-checkin")
-
-        // 3 — Progress.
-        app.tabBars.buttons["Home"].tap()
+        // 2 — Progress (YOU).
+        SageUI.openTab(app, .you, timeout: 20)
         let progress = element(app, "dest-progress")
         XCTAssertTrue(progress.waitForExistence(timeout: 15))
         progress.tap()
         _ = app.navigationBars.firstMatch.waitForExistence(timeout: 15)
-        capture(app, "03-progress")
+        capture(app, "02-progress")
         app.navigationBars.buttons.element(boundBy: 0).tap()
+
+        // 3 — Tools hub.
+        SageUI.openTab(app, .tools, timeout: 20)
+        capture(app, "03-tools")
 
         // 4 — The practice library.
         let practices = element(app, "dest-practices")
@@ -87,7 +86,8 @@ final class ScreenshotTests: XCTestCase {
         capture(app, "05-study")
         app.navigationBars.buttons.element(boundBy: 0).tap()
 
-        // 6 — Settings. The export/delete story is a selling point, not fine print.
+        // 6 — Settings.
+        SageUI.openTab(app, .you, timeout: 20)
         let settings = element(app, "dest-settings")
         XCTAssertTrue(settings.waitForExistence(timeout: 15))
         settings.tap()
@@ -99,6 +99,7 @@ final class ScreenshotTests: XCTestCase {
     /// Useful for review notes even though it is not a store screenshot.
     func testCapturePaywall() {
         let app = launch(entitlement: "free")
+        SageUI.openTab(app, .you, timeout: 20)
         let upgrade = element(app, "dest-premium")
         XCTAssertTrue(upgrade.waitForExistence(timeout: 20))
         upgrade.tap()

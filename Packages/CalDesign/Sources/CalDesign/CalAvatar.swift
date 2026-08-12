@@ -38,9 +38,13 @@ public struct CalAvatar: View {
 
         var points: CGFloat {
             switch self {
-            case .bubble: 28
+            // Was 28, which read as a favicon beside a three-line reply. At 44
+            // Cal is actually legible as a character — the face carries, rather
+            // than being a brown smudge — and it still aligns with the first
+            // line of the bubble rather than towering over it.
+            case .bubble: 44
             case .inline: 44
-            case .card: 96
+            case .card: 120
             case .hero: 180
             }
         }

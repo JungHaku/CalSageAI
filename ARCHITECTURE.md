@@ -205,7 +205,7 @@ Unchanged from Phase 0. The package split is what makes the fast test loop
 possible, and it is also what makes §2's seams natural rather than bolted on.
 
 ```
-Cal.xcodeproj                 five packages wired as local references
+CalSageAI.xcodeproj           local packages wired as references
 ├── Cal/                      app target
 │   ├── CalApp.swift          entry + AppContainer (DI, launch args)
 │   ├── RootView.swift        the five-tab shell

@@ -43,7 +43,7 @@ for p in CalKit CalDesign CalData CalAI CalContent; do (cd "Packages/$p" && swif
 ## The app
 
 ```bash
-open Cal.xcodeproj
+open "CalSageAI.xcodeproj"
 ```
 
 The five local packages are wired as `XCLocalSwiftPackageReference`s, so they open
@@ -52,7 +52,7 @@ inside the project and edit live — no separate workspace needed.
 Build and test on a simulator:
 
 ```bash
-xcodebuild test -project Cal.xcodeproj -scheme Cal -destination 'platform=iOS Simulator,name=iPhone 17'
+xcodebuild test -project CalSageAI.xcodeproj -scheme Cal -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
 
 ### Seeded launch states

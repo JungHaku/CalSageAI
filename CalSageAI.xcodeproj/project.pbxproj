@@ -24,9 +24,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		8CBF4DE2301AEE0F00AE31EB /* Cal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = "Cal.app"; path = "/Users/becka/Desktop/CalAI/Cal/build/Debug-iphoneos/Cal.app"; sourceTree = "<absolute>"; };
-		8CBF4DF3301AEE1000AE31EB /* CalTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = "CalTests.xctest"; path = "/Users/becka/Desktop/CalAI/Cal/build/Debug-iphoneos/Cal.app/PlugIns/CalTests.xctest"; sourceTree = "<absolute>"; };
-		8CBF4DFD301AEE1000AE31EB /* CalUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = "CalUITests.xctest"; path = "/Users/becka/Desktop/CalAI/Cal/build/Debug-iphoneos/CalUITests-Runner.app/PlugIns/CalUITests.xctest"; sourceTree = "<absolute>"; };
+		8CBF4DE2301AEE0F00AE31EB /* Cal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Cal.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		8CBF4DF3301AEE1000AE31EB /* CalTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CalTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		8CBF4DFD301AEE1000AE31EB /* CalUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CalUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -71,6 +71,9 @@
 				CA3000000000000000000004 /* CalAI in Frameworks */,
 				CA3000000000000000000005 /* CalContent in Frameworks */,
 				CA3000000000000000000006 /* CalStore in Frameworks */,
+				CA3000000000000000000007 /* CalRemote in Frameworks */,
+				CA3000000000000000000008 /* CalVoice in Frameworks */,
+				CA3000000000000000000009 /* ElevenLabs in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -126,6 +129,9 @@
 				CA2000000000000000000004 /* CalAI */,
 				CA2000000000000000000005 /* CalContent */,
 				CA2000000000000000000006 /* CalStore */,
+				CA2000000000000000000007 /* CalRemote */,
+				CA2000000000000000000008 /* CalVoice */,
+				CA2000000000000000000009 /* ElevenLabs */,
 			);
 			productName = "Cal";
 			productReference = 8CBF4DE2301AEE0F00AE31EB /* Cal.app */;
@@ -216,7 +222,10 @@
 				CA1000000000000000000003 /* XCLocalSwiftPackageReference "Packages/CalData" */,
 				CA1000000000000000000004 /* XCLocalSwiftPackageReference "Packages/CalAI" */,
 				CA1000000000000000000005 /* XCLocalSwiftPackageReference "Packages/CalContent" */,
-				CA1000000000000000000006 /* XCLocalSwiftPackageReference \"Packages/CalStore\" */,
+				CA1000000000000000000006 /* XCLocalSwiftPackageReference "Packages/CalStore" */,
+				CA1000000000000000000007 /* XCLocalSwiftPackageReference "Packages/CalRemote" */,
+				CA1000000000000000000008 /* XCLocalSwiftPackageReference "Packages/CalVoice" */,
+				CA1000000000000000000009 /* XCRemoteSwiftPackageReference "elevenlabs-swift-sdk" */,
 			);
 			productRefGroup = 8CBF4DD9301AEE0F00AE31EB;
 			projectDirPath = "";
@@ -298,11 +307,13 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "Cal/Cal.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = TC59SLLRF4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Cal/Info.plist";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Cal does not use your camera. This permission is only declared because a voice library includes camera support.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Cal listens so you can talk to him out loud. You can type instead anytime.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -332,11 +343,13 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "Cal/Cal.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = TC59SLLRF4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Cal/Info.plist";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Cal does not use your camera. This permission is only declared because a voice library includes camera support.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Cal listens so you can talk to him out loud. You can type instead anytime.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -412,7 +425,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -470,7 +483,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -488,7 +501,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = TC59SLLRF4;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.wholelifeministries.cal.tests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -510,7 +523,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = TC59SLLRF4;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.wholelifeministries.cal.tests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -611,6 +624,9 @@
 		CA3000000000000000000004 /* CalAI in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000004 /* CalAI */; };
 		CA3000000000000000000005 /* CalContent in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000005 /* CalContent */; };
 		CA3000000000000000000006 /* CalStore in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000006 /* CalStore */; };
+		CA3000000000000000000007 /* CalRemote in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000007 /* CalRemote */; };
+		CA3000000000000000000008 /* CalVoice in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000008 /* CalVoice */; };
+		CA3000000000000000000009 /* ElevenLabs in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000009 /* ElevenLabs */; };
 /* End PBXBuildFile section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -634,36 +650,76 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/CalContent;
 		};
-		CA1000000000000000000006 /* XCLocalSwiftPackageReference \"Packages/CalStore\" */ = {
+		CA1000000000000000000006 /* XCLocalSwiftPackageReference "Packages/CalStore" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/CalStore;
 		};
+		CA1000000000000000000007 /* XCLocalSwiftPackageReference "Packages/CalRemote" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/CalRemote;
+		};
+		CA1000000000000000000008 /* XCLocalSwiftPackageReference "Packages/CalVoice" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/CalVoice;
+		};
 /* End XCLocalSwiftPackageReference section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		CA1000000000000000000009 /* XCRemoteSwiftPackageReference "elevenlabs-swift-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/elevenlabs/elevenlabs-swift-sdk.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.2.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		CA2000000000000000000001 /* CalKit */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = CA1000000000000000000001 /* XCLocalSwiftPackageReference "Packages/CalKit" */;
 			productName = CalKit;
 		};
 		CA2000000000000000000002 /* CalDesign */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = CA1000000000000000000002 /* XCLocalSwiftPackageReference "Packages/CalDesign" */;
 			productName = CalDesign;
 		};
 		CA2000000000000000000003 /* CalData */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = CA1000000000000000000003 /* XCLocalSwiftPackageReference "Packages/CalData" */;
 			productName = CalData;
 		};
 		CA2000000000000000000004 /* CalAI */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = CA1000000000000000000004 /* XCLocalSwiftPackageReference "Packages/CalAI" */;
 			productName = CalAI;
 		};
 		CA2000000000000000000005 /* CalContent */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = CA1000000000000000000005 /* XCLocalSwiftPackageReference "Packages/CalContent" */;
 			productName = CalContent;
 		};
 		CA2000000000000000000006 /* CalStore */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = CA1000000000000000000006 /* XCLocalSwiftPackageReference "Packages/CalStore" */;
 			productName = CalStore;
+		};
+		CA2000000000000000000007 /* CalRemote */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CA1000000000000000000007 /* XCLocalSwiftPackageReference "Packages/CalRemote" */;
+			productName = CalRemote;
+		};
+		CA2000000000000000000008 /* CalVoice */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CA1000000000000000000008 /* XCLocalSwiftPackageReference "Packages/CalVoice" */;
+			productName = CalVoice;
+		};
+		CA2000000000000000000009 /* ElevenLabs */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CA1000000000000000000009 /* XCRemoteSwiftPackageReference "elevenlabs-swift-sdk" */;
+			productName = ElevenLabs;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

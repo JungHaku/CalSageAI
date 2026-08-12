@@ -15,7 +15,16 @@ struct RootView: View {
     @State private var showingEmergency = false
 
     enum Tab: String, Hashable, CaseIterable {
-        case home, checkIn, navigate, planner, chat
+        /// Declaration order **is** the tab bar's order — `allCases` drives the
+        /// `ForEach` below.
+        ///
+        /// Check-In sits in the middle of the five deliberately: it is the thing
+        /// the app is for, and the centre of a five-tab bar is the easiest target
+        /// to hit with either thumb. Navigate takes second, where Check-In was.
+        ///
+        /// Note this is not the order in Dr. Mia's spec (§1). The *set* of five is
+        /// hers; the arrangement is ours, and she should be told it moved.
+        case home, navigate, checkIn, planner, chat
 
         var title: String {
             switch self {

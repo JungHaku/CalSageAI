@@ -12,7 +12,7 @@
 
 set -uo pipefail
 
-PROJECT="/Users/becka/Desktop/CalAI"
+PROJECT="/Users/becka/Desktop/CalSageAI"
 SCHEME="Cal"
 BUNDLE_ID="org.wholelifeministries.cal"
 DEVICE="iPhone 17 Pro"
@@ -90,7 +90,7 @@ notify "Building… this takes a minute the first time."
 cd "$PROJECT" || fail "Couldn't enter $PROJECT."
 
 if ! /usr/bin/xcrun xcodebuild \
-        -project Cal.xcodeproj \
+        -project "CalSageAI.xcodeproj" \
         -scheme "$SCHEME" \
         -destination "id=$UDID" \
         -derivedDataPath "$PROJECT/.demo-build" \
