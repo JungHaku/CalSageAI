@@ -3,7 +3,7 @@ import CalDesign
 import CalKit
 import SwiftUI
 
-/// "Chat with Cal".
+/// "Chat with C.A.L".
 ///
 /// Works today against `MockCoachClient` — no API key, no backend, no network.
 /// The real client is an Edge Function behind the same `CoachClient` protocol
@@ -36,11 +36,11 @@ struct ChatView: View {
                 ProgressView()
             }
         }
-        .navigationTitle("Chat with Cal")
+        .navigationTitle("Chat with C.A.L")
         .task {
             if model == nil {
                 model = ChatViewModel(
-                    coach: container.coach, store: container.store, dates: container.dates
+                    coach: container.coach
                 )
             }
         }
@@ -62,13 +62,13 @@ struct ChatView: View {
             Image(systemName: "hand.raised.slash")
                 .font(.largeTitle)
                 .foregroundStyle(Surface.inkSecondary)
-            Text("Cal is blocked")
+            Text("C.A.L is blocked")
                 .font(.title3.weight(.semibold))
             Text("You won't get replies until you unblock. Everything else in the app still works.")
                 .font(.subheadline)
                 .foregroundStyle(Surface.inkSecondary)
                 .multilineTextAlignment(.center)
-            Button("Unblock Cal") { moderation.setBlocked(false) }
+            Button("Unblock C.A.L") { moderation.setBlocked(false) }
                 .buttonStyle(.borderedProminent)
                 .accessibilityIdentifier("chat-unblock")
             if let url = Support.mailtoURL {
@@ -171,7 +171,7 @@ struct ChatView: View {
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "sparkles")
-                    Text("Cal is AI, not a person")
+                    Text("C.A.L is AI, not a person")
                     Image(systemName: disclosureExpanded ? "chevron.up" : "chevron.down")
                         .font(.caption2)
                     Spacer(minLength: 0)
@@ -184,7 +184,7 @@ struct ChatView: View {
                 .contentShape(.rect)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Cal is AI, not a person. What that means.")
+            .accessibilityLabel("C.A.L is AI, not a person. What that means.")
             .accessibilityHint(disclosureExpanded ? "Collapses the detail" : "Expands the detail")
 
             if disclosureExpanded {
@@ -194,7 +194,7 @@ struct ChatView: View {
                     is not therapy or medical care, and it cannot diagnose or treat \
                     anything. Talk to a doctor or a licensed professional before making \
                     any decision about your health, and don't delay seeking care \
-                    because of something Cal said. If something is urgent, use \
+                    because of something C.A.L said. If something is urgent, use \
                     Emergency help — it works offline.
                     """
                 )
@@ -222,7 +222,7 @@ struct ChatView: View {
         VStack(spacing: 14) {
             CalAvatar(.card, halo: .sageAndGold)
 
-            Text("I'm Cal.")
+            Text("I'm C.A.L.")
                 .font(.title2.weight(.semibold))
                 .foregroundStyle(Surface.inkPrimary)
 
@@ -257,7 +257,7 @@ struct ChatView: View {
 
             Text(
                 """
-                It sounds like this is really heavy. Cal isn't the right help for \
+                It sounds like this is really heavy. C.A.L isn't the right help for \
                 this — a person is. Talking to someone is free, confidential, and \
                 available any hour.
                 """
@@ -302,7 +302,7 @@ struct ChatView: View {
         HStack(alignment: .center, spacing: 8) {
             CalAvatar(.bubble)
             ProgressView().controlSize(.small)
-            Text("Cal is thinking…").font(.footnote).foregroundStyle(Surface.inkSecondary)
+            Text("C.A.L is thinking…").font(.footnote).foregroundStyle(Surface.inkSecondary)
         }
         .accessibilityIdentifier("chat-thinking")
     }
@@ -385,7 +385,7 @@ private struct MessageBubble: View {
                 .accessibilityLabel(
                     message.role == .user
                         ? "You said: \(CoachMarkdown.plain(message.text))"
-                        : "Cal said: \(CoachMarkdown.plain(displayText))"
+                        : "C.A.L said: \(CoachMarkdown.plain(displayText))"
                 )
                 // Long-press as well as the visible button: the button is the
                 // discoverable path, the menu is the one people reach for.

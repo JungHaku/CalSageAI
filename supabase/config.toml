@@ -233,15 +233,24 @@ otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
 otp_expiry = 3600
 
-# Use a production-ready SMTP server
+# Use a production-ready SMTP server (hosted project: dashboard or
+# ./tools/configure-resend-smtp.sh). Local `supabase start` still uses
+# Inbucket ([local_smtp] above) unless you enable this and set RESEND_API_KEY.
+#
+# Resend: https://resend.com/docs/send-with-supabase-smtp
+# Host smtp.resend.com, port 465, user `resend`, password = API key.
+# Sender must be a domain you verified in Resend. `onboarding@resend.dev`
+# only delivers to the Resend account owner — that is why testers never
+# got the confirmation mail (docs/TESTFLIGHT.md).
+#
 # [auth.email.smtp]
 # enabled = true
-# host = "smtp.sendgrid.net"
-# port = 587
-# user = "apikey"
-# pass = "env(SENDGRID_API_KEY)"
-# admin_email = "admin@email.com"
-# sender_name = "Admin"
+# host = "smtp.resend.com"
+# port = 465
+# user = "resend"
+# pass = "env(RESEND_API_KEY)"
+# admin_email = "cal@YOUR_VERIFIED_DOMAIN"
+# sender_name = "C.A.L"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

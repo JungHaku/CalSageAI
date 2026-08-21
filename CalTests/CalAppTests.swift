@@ -35,9 +35,43 @@ struct AppContainerTests {
         let container = AppContainer.live(arguments: ["-CalUseMockCoach", "1"])
         #expect(container.isUITesting)
         #expect(container.storeIsEphemeral)
+        #expect(container.hasSession, "tests seed a session; they do not skip the gate")
+        #expect(
+            try await container.profiles.current()?.isOnboarded == true,
+            "seeded test sessions skip the first-run welcome"
+        )
 
         let today = container.dates.today
         #expect(try await container.store.checkIns(from: today, to: today).isEmpty)
+    }
+
+    @Test("-CalForceLogin leaves no session so the login screen is what launches")
+    func forceLoginHasNoSession() {
+        let container = AppContainer.live(
+            arguments: ["-CalUseMockCoach", "1", "-CalForceLogin", "1"]
+        )
+        #expect(!container.hasSession)
+    }
+
+    @Test("-CalShowWelcome seeds a session that still needs the first-run page")
+    func showWelcomeIsNotOnboarded() async throws {
+        let container = AppContainer.live(
+            arguments: ["-CalUseMockCoach", "1", "-CalShowWelcome", "1"]
+        )
+        #expect(container.hasSession)
+        #expect(try await container.profiles.current()?.isOnboarded != true)
+    }
+
+    @Test("Meet Cal writes onboardedAt so the welcome does not return")
+    func completeOnboardingMarksProfile() async throws {
+        let container = AppContainer.live(
+            arguments: ["-CalUseMockCoach", "1", "-CalShowWelcome", "1"]
+        )
+        await container.completeOnboarding()
+        #expect(try await container.profiles.current()?.isOnboarded == true)
+        let first = try await container.profiles.current()?.onboardedAt
+        await container.completeOnboarding()
+        #expect(try await container.profiles.current()?.onboardedAt == first)
     }
 
     @Test("-CalFixedDate freezes the clock so streak assertions are stable")
@@ -87,7 +121,7 @@ struct AppContainerTests {
 
         #expect(history.count == 1)
         #expect(history.first?.regulatedCount == 0)
-        #expect(history.first?.awaitingReRating.count == 10)
+        #expect(history.first?.awaitingReRating.count == 5)
     }
 
     @Test("an unknown scenario name seeds nothing instead of failing to launch")

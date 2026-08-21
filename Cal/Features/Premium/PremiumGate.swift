@@ -62,7 +62,7 @@ struct PremiumLockedView: View {
                     .foregroundStyle(.secondary)
             }
         } actions: {
-            Button("See Cal+") { onUpgrade() }
+            Button("See C.A.L+") { onUpgrade() }
                 .buttonStyle(.borderedProminent)
                 .accessibilityIdentifier("locked-upgrade")
         }
@@ -75,26 +75,22 @@ extension PremiumFeature {
     /// locked state is a signpost rather than a dead end.
     var freeAlternative: String {
         switch self {
-        case .fullCheckIn:
-            "The daily check-in is still yours, with guided breathing whenever you need it."
-        case .coherenceAnalytics:
-            "Home still shows your streak and recent average, and History has every check-in you've made."
         case .practiceLibrary:
-            "Guided breathing is still there inside every check-in."
+            "Guided breathing is still there whenever you want it — talk to Cal, or open Breathwork."
         }
     }
 }
 
 #Preview("locked") {
     NavigationStack {
-        PremiumGate(feature: .coherenceAnalytics) { Text("secret analytics") }
+        PremiumGate(feature: .practiceLibrary) { Text("secret library") }
     }
     .environment(AppContainer.live(arguments: ["-CalEntitlement", "free"]))
 }
 
 #Preview("unlocked") {
     NavigationStack {
-        PremiumGate(feature: .coherenceAnalytics) { Text("secret analytics") }
+        PremiumGate(feature: .practiceLibrary) { Text("secret library") }
     }
     .environment(AppContainer.live(arguments: ["-CalEntitlement", "plus"]))
 }

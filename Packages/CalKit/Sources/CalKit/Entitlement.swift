@@ -7,9 +7,9 @@ import Foundation
 /// StoreKit resolves which case applies; nothing in this file knows StoreKit
 /// exists (ARCHITECTURE.md §2 — the seam is `EntitlementProviding` in `CalStore`).
 public enum Entitlement: String, Codable, Sendable, CaseIterable, Hashable {
-    /// "Free Cal" — the tier from `SPEC-free.md`.
+    /// "Free C.A.L" — the tier from `SPEC-free.md`.
     case free
-    /// "Cal+ Coherence" — the paid tier from `SPEC-premium.md`.
+    /// "C.A.L+ Coherence" — the paid tier from `SPEC-premium.md`.
     case plus
 
     /// The default. A fresh install, a lapsed subscription, and a StoreKit lookup
@@ -20,16 +20,6 @@ public enum Entitlement: String, Codable, Sendable, CaseIterable, Hashable {
         switch self {
         case .plus: true
         case .free: false
-        }
-    }
-
-    /// Which check-in the person gets. This is the one place the tier turns into
-    /// a flow, and both flows are Dr. Mia's — the free single question from
-    /// `SPEC-free.md` §1 and the ten-category framework from `SPEC-premium.md`.
-    public var checkInKind: CheckInKind {
-        switch self {
-        case .free: .quick
-        case .plus: .full
         }
     }
 }
@@ -45,13 +35,7 @@ public enum Entitlement: String, Codable, Sendable, CaseIterable, Hashable {
 /// `docs/LAUNCH-REQUIREMENTS.md` §18.4 on guideline 2.3.1. Add a case here when
 /// the feature ships, not when it is planned.
 public enum PremiumFeature: String, CaseIterable, Codable, Sendable, Hashable {
-    /// The ten-category framework, versus the free tier's single question.
-    case fullCheckIn
-    /// The Progress screen: coherence over time, per-category before/after,
-    /// daily/weekly/monthly bucketing.
-    case coherenceAnalytics
-    /// The browsable guided library. Regulation *inside* a check-in is not this —
-    /// see `neverGated`.
+    /// The browsable guided library.
     case practiceLibrary
 }
 
@@ -62,21 +46,14 @@ extension PremiumFeature {
     /// survives someone later looking for another thing to gate. Each entry earns
     /// its place:
     ///
-    /// - **Regulation during a check-in.** The free check-in routes a low score
-    ///   into guided breathing (`SPEC-free.md` §1). A student in distress reaches
-    ///   the exercise whether or not they pay. Putting a price on the calming-down
-    ///   step of a wellness app is the version of this product I won't build.
     /// - **Emergency help.** One tap from every screen (§9.2). Obvious, and
     ///   obvious things get broken by refactors, so it is asserted in a test.
-    /// - **Their own history, and the export of it.** Gating what someone can
+    /// - **Their own journal, and the export of it.** Gating what someone can
     ///   *create* is a product decision. Hiding what they already created is
-    ///   taking their data hostage, and it would undercut the deletion and
-    ///   portability posture in §18 besides. A lapsed subscriber still sees every
-    ///   check-in they made and can still export the lot.
+    ///   taking their data hostage.
     public static let neverGated: Set<String> = [
-        "regulation-exercise-in-check-in",
         "emergency-help",
-        "own-history",
+        "own-journal",
         "data-export",
     ]
 }

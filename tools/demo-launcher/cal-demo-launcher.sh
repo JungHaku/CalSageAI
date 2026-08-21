@@ -20,13 +20,13 @@ LOG="${TMPDIR:-/tmp}/cal-demo-$(date +%Y%m%d-%H%M%S).log"
 
 export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/homebrew/bin"
 
-notify() { /usr/bin/osascript -e "display notification \"$1\" with title \"Cal demo\"" >/dev/null 2>&1; }
+notify() { /usr/bin/osascript -e "display notification \"$1\" with title \"C.A.L demo\"" >/dev/null 2>&1; }
 
 fail() {
     /usr/bin/osascript <<APPLESCRIPT >/dev/null 2>&1
     set theLog to "$LOG"
     display dialog "$1" & return & return & "Log: " & theLog ¬
-        with title "Cal demo" buttons {"Show log", "OK"} default button "OK" with icon stop
+        with title "C.A.L demo" buttons {"Show log", "OK"} default button "OK" with icon stop
     if button returned of result is "Show log" then
         tell application "Console" to activate
         do shell script "open -a Console " & quoted form of theLog
@@ -127,5 +127,5 @@ fi
     -CalUseMockCoach 1 >>"$LOG" 2>&1 || fail "Installed, but the app wouldn't launch."
 
 /usr/bin/open -a Simulator
-notify "Cal is running."
+notify "C.A.L is running."
 exit 0

@@ -57,10 +57,7 @@ nonisolated struct NotificationReminderScheduler: ReminderScheduling {
         guard schedule.isEnabled, await authorization().allowsScheduling else { return }
 
         let content = UNMutableNotificationContent()
-        content.title = "Check in with Cal"
-        // Dr. Mia's own free-tier question rather than copy I invented. It's an
-        // invitation, not a reprimand — no streak count, no "don't break your
-        // run", nothing that makes a missed day feel like a failure.
+        content.title = "A moment with C.A.L"
         content.body = "How do you feel right here in the moment?"
         content.sound = .default
         // Default (.active) interruption level on purpose. `.timeSensitive` would

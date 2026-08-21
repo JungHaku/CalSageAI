@@ -169,6 +169,24 @@ struct ExerciseScriptTests {
         #expect(BreathPhase.inhale.isBreath)
     }
 
+    @Test("spokenGuide names empty breath beats and collapses repeats")
+    func spokenGuide() {
+        let script = ExerciseScript(steps: [
+            .timed(phase: .cue, text: "Close your eyes.", seconds: 4),
+            .timed(phase: .inhale, text: "", seconds: 4),
+            .timed(phase: .exhale, text: "", seconds: 6),
+            .repeatCycle(times: 3),
+            .timed(phase: .cue, text: "Rest.", seconds: 3),
+        ])
+        let guide = script.spokenGuide
+        #expect(guide.contains("Close your eyes. Wait 4 seconds."))
+        #expect(guide.contains("Inhale. Wait 4 seconds."))
+        #expect(guide.contains("Exhale. Wait 6 seconds."))
+        #expect(guide.contains("Repeat that same breath cycle 2 more times"))
+        #expect(guide.contains("Rest. Wait 3 seconds."))
+        #expect(!guide.contains("Inhale. Wait 4 seconds.\nInhale."))
+    }
+
     @Test("the bundled placeholder exercise is playable")
     func placeholderIsPlayable() throws {
         let timeline = try Exercise.placeholder.script.timeline()

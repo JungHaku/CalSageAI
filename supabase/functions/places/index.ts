@@ -16,21 +16,21 @@
 // Run it:
 //   supabase functions serve --env-file supabase/functions/.env --no-verify-jwt
 
-import { ChromaVectorStore, KINDS_FOR_SURFACE, OpenAIEmbedder, retrieve } from "../coach/retrieval.ts";
+import {
+  DEFAULT_EMBED_MODEL,
+  OpenAIEmbedder,
+  postgresVectorStoreFromEnv,
+  retrieve,
+} from "../coach/retrieval.ts";
 
-const CHROMA_URL = Deno.env.get("CHROMA_URL");
-const CHROMA_TOKEN = Deno.env.get("CHROMA_TOKEN");
-const CAL_COLLECTION = Deno.env.get("CAL_COLLECTION") ?? "cal_content";
-const EMBED_MODEL = Deno.env.get("CAL_EMBED_MODEL") ?? "text-embedding-3-small";
+const EMBED_MODEL = Deno.env.get("CAL_EMBED_MODEL") ?? DEFAULT_EMBED_MODEL;
 
 /// More than a phone screen shows at once, and few enough that the tail is still
 /// plausibly relevant.
 const DEFAULT_LIMIT = 8;
 const MAX_LIMIT = 20;
 
-const vectorStore = CHROMA_URL
-  ? new ChromaVectorStore(CHROMA_URL, CAL_COLLECTION, "default_tenant", "default_database", CHROMA_TOKEN)
-  : null;
+const vectorStore = postgresVectorStoreFromEnv();
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -78,7 +78,6 @@ Deno.serve(async (req) => {
     places: hits
       // Ids are "place:<slug>"; the client keys off the bare slug.
       .filter((hit) => hit.id.startsWith("place:"))
-      .map((hit) => ({ slug: hit.id.slice("place:".length), distance: hit.distance })),
-    kinds: KINDS_FOR_SURFACE.navigate,
+      .map((hit) => hit.id.slice("place:".length)),
   });
 });

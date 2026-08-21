@@ -53,57 +53,44 @@ final class ScreenshotTests: XCTestCase {
     func testCaptureStoreScreenshots() {
         let app = launch()
 
-        // 1 — Today, the daily loop in one glance.
-        SageUI.openTab(app, .today, timeout: 20)
-        capture(app, "01-today")
+        SageUI.waitForHome(app, timeout: 20)
+        capture(app, "01-home")
 
-        // 2 — Progress (YOU).
-        SageUI.openTab(app, .you, timeout: 20)
-        let progress = element(app, "dest-progress")
-        XCTAssertTrue(progress.waitForExistence(timeout: 15))
-        progress.tap()
+        SageUI.open(app, "dest-map", timeout: 20)
         _ = app.navigationBars.firstMatch.waitForExistence(timeout: 15)
-        capture(app, "02-progress")
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        capture(app, "02-map")
+        SageUI.pop(app)
 
-        // 3 — Tools hub.
-        SageUI.openTab(app, .tools, timeout: 20)
-        capture(app, "03-tools")
-
-        // 4 — The practice library.
-        let practices = element(app, "dest-practices")
-        XCTAssertTrue(practices.waitForExistence(timeout: 15))
-        practices.tap()
+        SageUI.open(app, "dest-practices", timeout: 20)
         _ = app.navigationBars.firstMatch.waitForExistence(timeout: 15)
-        capture(app, "04-practices")
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        capture(app, "03-practices")
+        SageUI.pop(app)
 
-        // 5 — Study Mode.
-        let study = element(app, "dest-study")
-        XCTAssertTrue(study.waitForExistence(timeout: 15))
-        study.tap()
+        SageUI.open(app, "dest-study", timeout: 20)
         _ = app.navigationBars.firstMatch.waitForExistence(timeout: 15)
-        capture(app, "05-study")
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        capture(app, "04-study")
+        SageUI.pop(app)
 
-        // 6 — Settings.
-        SageUI.openTab(app, .you, timeout: 20)
-        let settings = element(app, "dest-settings")
-        XCTAssertTrue(settings.waitForExistence(timeout: 15))
-        settings.tap()
+        SageUI.open(app, "dest-practices", timeout: 20)
+        _ = app.navigationBars.firstMatch.waitForExistence(timeout: 15)
+        capture(app, "05-practices-again")
+        SageUI.pop(app)
+
+        SageUI.openMenu(app)
+        if app.buttons["start-checkin"].waitForExistence(timeout: 5) {
+            SageUI.tap(app.buttons["start-checkin"])
+            _ = SageUI.element(app, "question-prompt").waitForExistence(timeout: 10)
+            capture(app, "05-checkin")
+        }
+
+        SageUI.open(app, "dest-settings", timeout: 20)
         _ = app.navigationBars.firstMatch.waitForExistence(timeout: 15)
         capture(app, "06-settings")
     }
 
     /// The paywall, captured separately because it needs the free tier to render.
     /// Useful for review notes even though it is not a store screenshot.
-    func testCapturePaywall() {
-        let app = launch(entitlement: "free")
-        SageUI.openTab(app, .you, timeout: 20)
-        let upgrade = element(app, "dest-premium")
-        XCTAssertTrue(upgrade.waitForExistence(timeout: 20))
-        upgrade.tap()
-        XCTAssertTrue(element(app, "paywall-header").waitForExistence(timeout: 15))
-        capture(app, "07-paywall")
+    func testCapturePaywall() throws {
+        throw XCTSkip("Paywall is unreachable while the demo has no premium gating.")
     }
 }

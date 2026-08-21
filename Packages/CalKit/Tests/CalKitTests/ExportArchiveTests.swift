@@ -16,7 +16,8 @@ struct ExportArchiveTests {
     private func archive(
         profile: Profile? = Profile(displayName: "Cal Tester"),
         checkIns: [CheckIn]? = nil,
-        sessions: [PracticeSession]? = nil
+        sessions: [PracticeSession]? = nil,
+        journal: [JournalEntry]? = nil
     ) -> ExportArchive {
         ExportArchive(
             generatedAt: generatedAt,
@@ -26,6 +27,14 @@ struct ExportArchiveTests {
                 PracticeSession(
                     exerciseSlug: "presence-of-light", localDate: today, startedAt: generatedAt
                 )
+            ],
+            journalEntries: journal ?? [
+                JournalEntry(
+                    localDate: today,
+                    body: "A quiet day.",
+                    createdAt: generatedAt,
+                    updatedAt: generatedAt
+                )
             ]
         )
     }
@@ -33,7 +42,11 @@ struct ExportArchiveTests {
     @Test("an empty archive is recognisable as empty")
     func emptyArchive() {
         let empty = ExportArchive(
-            generatedAt: generatedAt, profile: nil, checkIns: [], practiceSessions: []
+            generatedAt: generatedAt,
+            profile: nil,
+            checkIns: [],
+            practiceSessions: [],
+            journalEntries: []
         )
         #expect(empty.isEmpty)
         #expect(!archive().isEmpty)
@@ -50,6 +63,8 @@ struct ExportArchiveTests {
         #expect(abs(decoded.generatedAt.timeIntervalSince(original.generatedAt)) < 0.001)
         #expect(decoded.checkIns == original.checkIns)
         #expect(decoded.practiceSessions == original.practiceSessions)
+        #expect(decoded.journalEntries.count == original.journalEntries.count)
+        #expect(decoded.journalEntries.first?.body == "A quiet day.")
 
         let profile = try #require(decoded.profile)
         let source = try #require(original.profile)
@@ -65,7 +80,11 @@ struct ExportArchiveTests {
         let precise = Date(timeIntervalSince1970: 1_785_000_000.123_456_7)
         let decoded = try ExportArchive.decode(
             from: try ExportArchive(
-                generatedAt: precise, profile: nil, checkIns: [], practiceSessions: []
+                generatedAt: precise,
+                profile: nil,
+                checkIns: [],
+                practiceSessions: [],
+                journalEntries: []
             ).jsonData()
         )
         let drift = abs(decoded.generatedAt.timeIntervalSince(precise))
@@ -81,9 +100,25 @@ struct ExportArchiveTests {
             try JSONSerialization.jsonObject(with: json) as? [String: Any]
         )
         #expect(
-            Set(object.keys) == ["formatVersion", "generatedAt", "app", "profile", "checkIns", "practiceSessions"],
+            Set(object.keys) == [
+                "formatVersion", "generatedAt", "app", "profile",
+                "checkIns", "practiceSessions", "journalEntries",
+            ],
             "archive keys changed: \(object.keys.sorted())"
         )
+    }
+
+    @Test("a v1 archive without journalEntries still decodes")
+    func decodesLegacyWithoutJournal() throws {
+        var json = String(decoding: try archive(journal: []).jsonData(), as: UTF8.self)
+        // Strip the journalEntries key to mimic a v1 file.
+        if let range = json.range(of: #""journalEntries" : \[\],"#) {
+            json.removeSubrange(range)
+        } else if let range = json.range(of: #""journalEntries" : \[\]"#) {
+            json.removeSubrange(range)
+        }
+        let decoded = try ExportArchive.decode(from: Data(json.utf8))
+        #expect(decoded.journalEntries.isEmpty)
     }
 
     @Test("scores survive the round trip, including the unmeasured-vs-zero distinction")
@@ -139,9 +174,10 @@ struct ExportArchiveTests {
         let text = archive().summary
         #expect(text.contains("5 check-ins"))
         #expect(text.contains("1 practice session"))
+        #expect(text.contains("1 journal entry"))
         #expect(text.contains("your profile"))
 
-        let noProfile = archive(profile: nil, checkIns: [], sessions: []).summary
+        let noProfile = archive(profile: nil, checkIns: [], sessions: [], journal: []).summary
         #expect(noProfile.contains("0 check-ins"))
         #expect(!noProfile.contains("your profile"))
     }
@@ -149,8 +185,29 @@ struct ExportArchiveTests {
     @Test("a future format version still decodes, so an old app can read a new file")
     func forwardCompatibleVersion() throws {
         var json = String(decoding: try archive().jsonData(), as: UTF8.self)
-        json = json.replacingOccurrences(of: "\"formatVersion\" : 1", with: "\"formatVersion\" : 99")
+        json = json.replacingOccurrences(
+            of: "\"formatVersion\" : 2",
+            with: "\"formatVersion\" : 99"
+        )
         let decoded = try ExportArchive.decode(from: Data(json.utf8))
         #expect(decoded.formatVersion == 99)
+    }
+}
+
+@Suite("Journal")
+struct JournalTests {
+    @Test("preview prefers the first line")
+    func previewFirstLine() {
+        let entry = JournalEntry(
+            localDate: LocalDate(iso: "2026-07-30")!,
+            body: "First line\nSecond line"
+        )
+        #expect(entry.preview == "First line")
+    }
+
+    @Test("seed prompts include the daily question")
+    func seedHasDaily() {
+        #expect(JournalPrompt.seed.contains { $0.id == "what-happened" })
+        #expect(JournalPrompt.seed(id: "what-happened")?.title.contains("happened") == true)
     }
 }

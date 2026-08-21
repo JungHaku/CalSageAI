@@ -23,6 +23,26 @@ public actor AuthSession {
         public let accessToken: String
         public let refreshToken: String
         public let email: String
+
+        /// Unsigned JWT with a far-future `exp`, so `accessToken()` will not
+        /// refresh. Seeds the in-memory store for tests and previews — not a
+        /// real session, and never written to the Keychain.
+        public static func previewSession(
+            email: String = "preview@cal.local"
+        ) -> Credentials {
+            let exp = Date().timeIntervalSince1970 + 86_400 * 365
+            let payload = (try? JSONSerialization.data(withJSONObject: ["exp": exp])) ?? Data()
+            let encoded = payload.base64EncodedString()
+                .replacingOccurrences(of: "+", with: "-")
+                .replacingOccurrences(of: "/", with: "_")
+                .replacingOccurrences(of: "=", with: "")
+            return Credentials(
+                userID: UUID(uuidString: "00000000-0000-4000-a000-000000000001")!,
+                accessToken: "header.\(encoded).preview",
+                refreshToken: "preview",
+                email: email
+            )
+        }
     }
 
     private let baseURL: URL
@@ -125,6 +145,23 @@ public actor AuthSession {
         )
     }
 
+    /// Asks Supabase to email a reset link. A 200 does not confirm the address
+    /// exists — the server will not say — so the UI always tells the person to
+    /// check their inbox.
+    public func recover(email: String) async throws {
+        var request = URLRequest(url: baseURL.appendingPathComponent2("/auth/v1/recover"))
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(anonKey, forHTTPHeaderField: "apikey")
+        request.httpBody = try JSONEncoder().encode(["email": email])
+
+        let (data, response) = try await session.data(for: request)
+        let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+        guard (200..<300).contains(status) else {
+            throw AuthError.rejected(status, Self.message(from: data))
+        }
+    }
+
     /// Forgets the session on this device.
     ///
     /// Local only, deliberately. Revoking server-side and erasing what the
@@ -207,7 +244,7 @@ public enum AuthError: Error, Equatable, Sendable {
         case .confirmationRequired:
             "Check your email to confirm the account, then sign in."
         case .sessionExpired:
-            "Your session expired. Sign in again to keep Cal remembering."
+            "Your session expired. Sign in again to keep C.A.L remembering."
         case .rejected(_, let detail) where !detail.isEmpty:
             detail
         case .rejected:

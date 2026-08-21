@@ -52,3 +52,7 @@ supabase/.temp
 # it is a copy of supabase/migrations/, and a committed copy is one that drifts.
 # Regenerate by concatenating that directory.
 supabase/all-migrations.sql
+
+## Python
+__pycache__/
+*.pyc

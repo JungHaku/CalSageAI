@@ -10,7 +10,7 @@ import PackageDescription
 // compiled out elsewhere, which is exactly why the seam is worth having.
 let package = Package(
     name: "CalStore",
-    platforms: [.iOS(.v18), .macOS(.v14)],
+    platforms: [.iOS(.v17), .macOS(.v14)],
     products: [
         .library(name: "CalStore", targets: ["CalStore"])
     ],

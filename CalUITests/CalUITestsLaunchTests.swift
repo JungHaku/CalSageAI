@@ -27,7 +27,10 @@ final class CalUITestsLaunchTests: XCTestCase {
         ]
         app.launch()
 
-        XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 10), "app did not reach the tab shell")
+        XCTAssertTrue(
+            SageUI.waitForHome(app, timeout: 10),
+            "app did not reach the voice home"
+        )
 
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = "Launch"

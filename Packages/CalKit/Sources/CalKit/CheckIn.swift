@@ -1,9 +1,13 @@
 import Foundation
 
 /// Which check-in flow was taken. Mirrors the `checkin_kind` Postgres enum.
-public enum CheckInKind: String, Codable, Sendable {
+///
+/// `CaseIterable` so `CalToolDescriptor` can derive the values it offers the
+/// voice agent from the type rather than restating them — a hand-written copy of
+/// this list is one that goes stale the day a third kind is added.
+public enum CheckInKind: String, Codable, Sendable, CaseIterable {
     case quick   // free: one `.overall` question
-    case full    // premium: the ten categories
+    case full    // daily: the first five of Dr. Mia's categories
 
     public var categories: [CoherenceCategory] {
         switch self {

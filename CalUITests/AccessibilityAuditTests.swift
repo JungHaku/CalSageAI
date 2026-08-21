@@ -28,7 +28,7 @@ final class AccessibilityAuditTests: XCTestCase {
     }
 
     private func element(_ app: XCUIApplication, _ identifier: String) -> XCUIElement {
-        app.descendants(matching: .any).matching(identifier: identifier).firstMatch
+        SageUI.element(app, identifier)
     }
 
     /// Audits the current screen and returns a readable list of what it found.
@@ -42,10 +42,6 @@ final class AccessibilityAuditTests: XCTestCase {
         _ screen: String,
         types: XCUIAccessibilityAuditType = .all
     ) -> [String] {
-        // A reference-type collector rather than capturing a local `var`: the
-        // handler is `@Sendable` under Swift 6, so an inout capture of a local
-        // array is a data-race error even though the callback is synchronous and
-        // non-escaping.
         let found = IssueCollector()
         do {
             try app.performAccessibilityAudit(for: types) { issue in
@@ -67,40 +63,24 @@ final class AccessibilityAuditTests: XCTestCase {
         let app = launch()
         var all: [String] = []
 
-        // Home
-        XCTAssertTrue(element(app, "dest-history").waitForExistence(timeout: 15))
-        all += survey(app, "Home")
+        SageUI.waitForHome(app)
+        all += survey(app, "Cal")
 
-        // Each destination off Home.
         let destinations = [
-            ("dest-progress", "Progress"),
-            ("dest-practices", "Practices"),
-            ("dest-history", "History"),
-            ("dest-study", "Study"),
             ("dest-settings", "Settings"),
+            ("dest-practices", "Practices"),
+            ("dest-study", "Study"),
+            ("dest-map", "Campus map"),
         ]
         for (identifier, name) in destinations {
-            let row = element(app, identifier)
-            guard row.waitForExistence(timeout: 10) else {
-                all.append("[\(name)] could not reach screen")
-                continue
-            }
-            row.tap()
+            SageUI.open(app, identifier)
             _ = app.navigationBars.firstMatch.waitForExistence(timeout: 10)
             all += survey(app, name)
-            app.navigationBars.buttons.element(boundBy: 0).tap()
+            SageUI.pop(app)
         }
 
-        // The other tabs.
-        for tab in ["Check-In", "Navigate", "Planner"] {
-            app.tabBars.buttons[tab].tap()
-            _ = app.navigationBars.firstMatch.waitForExistence(timeout: 10)
-            all += survey(app, tab)
-        }
-
-        // Emergency — the screen that matters most and is reached by sheet.
-        app.tabBars.buttons["Home"].tap()
-        let emergency = app.buttons["emergency-button"]
+        SageUI.waitForHome(app)
+        let emergency = SageUI.emergency(app)
         if emergency.waitForExistence(timeout: 10) {
             emergency.tap()
             _ = app.buttons["emergency-988-call"].waitForExistence(timeout: 10)
@@ -121,20 +101,18 @@ final class AccessibilityAuditTests: XCTestCase {
     /// The audit types this project trusts enough to fail a build on.
     ///
     /// **Contrast is deliberately excluded, and not because it is inconvenient.**
-    /// It was measured and found unreliable here: with the Home destination
-    /// subtitles set to pure black on the light card — 18.57:1, an order of
-    /// magnitude above the 4.5:1 requirement — the audit still reported "Contrast
-    /// failed" for them. It cannot resolve the effective background behind these
-    /// rows, so its verdict does not track the colours actually drawn. Contrast is
-    /// instead verified by computation in `CalDesign`'s `ContrastTests`, which
-    /// measures the exact values the app renders and is strictly more trustworthy.
+    /// It was measured and found unreliable here: with destination subtitles set
+    /// to pure black on the light card — 18.57:1, an order of magnitude above the
+    /// 4.5:1 requirement — the audit still reported "Contrast failed" for them. It
+    /// cannot resolve the effective background behind these rows, so its verdict
+    /// does not track the colours actually drawn. Contrast is instead verified by
+    /// computation in `CalDesign`'s `ContrastTests`.
     ///
     /// **Dynamic Type and text clipping are excluded** for a duller reason: what
     /// remains is system chrome — a `List` section footer, a toolbar "Done", the
     /// `.searchable` field — where the font is Apple's, not ours. The behavioural
     /// question those audits are proxies for is answered directly by
-    /// `DynamicTypeTests`, which drives the app at AX5 and asserts the controls are
-    /// still hittable.
+    /// `DynamicTypeTests`.
     private static let enforced: XCUIAccessibilityAuditType = [
         .hitRegion,
         .sufficientElementDescription,
@@ -145,24 +123,18 @@ final class AccessibilityAuditTests: XCTestCase {
     /// own code, and currently clean — so a new failure means someone broke it.
     func testNoRegressionsInTheEnforcedAuditCategories() {
         let app = launch()
-        XCTAssertTrue(element(app, "dest-history").waitForExistence(timeout: 15))
+        SageUI.waitForHome(app)
 
-        var found = survey(app, "Home", types: Self.enforced)
+        var found = survey(app, "Cal", types: Self.enforced)
 
-        for (identifier, name) in [("dest-progress", "Progress"), ("dest-practices", "Practices"),
-                                   ("dest-history", "History"), ("dest-settings", "Settings")] {
-            let row = element(app, identifier)
-            guard row.waitForExistence(timeout: 10) else { continue }
-            row.tap()
+        for (identifier, name) in [
+            ("dest-settings", "Settings"), ("dest-practices", "Practices"),
+            ("dest-map", "Campus map"),
+        ] {
+            SageUI.open(app, identifier)
             _ = app.navigationBars.firstMatch.waitForExistence(timeout: 10)
             found += survey(app, name, types: Self.enforced)
-            app.navigationBars.buttons.element(boundBy: 0).tap()
-        }
-
-        for tab in ["Check-In", "Navigate", "Planner"] {
-            app.tabBars.buttons[tab].tap()
-            _ = app.navigationBars.firstMatch.waitForExistence(timeout: 10)
-            found += survey(app, tab, types: Self.enforced)
+            SageUI.pop(app)
         }
 
         XCTAssertTrue(
@@ -172,33 +144,12 @@ final class AccessibilityAuditTests: XCTestCase {
     }
 
     /// The paywall's controls, where the undersized hit targets were found.
-    func testPaywallHasNoEnforcedAuditIssues() {
-        let app = launch(entitlement: "free")
-        let upgrade = element(app, "dest-premium")
-        XCTAssertTrue(upgrade.waitForExistence(timeout: 15))
-        upgrade.tap()
-        XCTAssertTrue(element(app, "paywall-header").waitForExistence(timeout: 10))
-
-        let found = survey(app, "Paywall", types: Self.enforced)
-        XCTAssertTrue(found.isEmpty, found.joined(separator: "\n"))
+    func testPaywallHasNoEnforcedAuditIssues() throws {
+        throw XCTSkip("Paywall is unreachable while the demo has no premium gating.")
     }
 
-    /// The paywall, audited on the free tier where it is actually reachable.
-    func testAccessibilitySurveyOfThePaywall() {
-        let app = launch(entitlement: "free")
-        let upgrade = element(app, "dest-premium")
-        XCTAssertTrue(upgrade.waitForExistence(timeout: 15))
-        upgrade.tap()
-        XCTAssertTrue(element(app, "paywall-header").waitForExistence(timeout: 10))
-
-        let issues = survey(app, "Paywall")
-        let report = issues.isEmpty ? "No accessibility issues found." : issues.joined(separator: "\n")
-        print("\n===== PAYWALL AUDIT =====\n\(report)\n===== END =====\n")
-
-        let attachment = XCTAttachment(string: report)
-        attachment.name = "paywall-accessibility"
-        attachment.lifetime = .keepAlways
-        add(attachment)
+    func testAccessibilitySurveyOfThePaywall() throws {
+        throw XCTSkip("Paywall is unreachable while the demo has no premium gating.")
     }
 }
 

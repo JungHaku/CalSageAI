@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "CalAI",
-    platforms: [.iOS(.v18), .macOS(.v14)],
+    platforms: [.iOS(.v17), .macOS(.v14)],
     products: [
         .library(name: "CalAI", targets: ["CalAI"])
     ],

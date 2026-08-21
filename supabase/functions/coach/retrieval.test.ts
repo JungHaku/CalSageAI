@@ -11,6 +11,7 @@ import {
   FakeVectorStore,
   KINDS_FOR_SURFACE,
   MAX_DISTANCE,
+  PostgresVectorStore,
   retrieve,
   type VectorStore,
 } from "./retrieval.ts";
@@ -68,6 +69,57 @@ Deno.test("no store configured means no retrieval, not an error", async () => {
 
 Deno.test("no embedder configured means no retrieval, not an error", async () => {
   assertEquals(await retrieve({ surface: "chat", query: "hi", embedder: null, store: store() }), []);
+});
+
+Deno.test("a precomputed vector skips the embedder", async () => {
+  let embedded = 0;
+  const counting: Embedder = {
+    embed: () => {
+      embedded += 1;
+      return Promise.resolve([0, 1, 0]);
+    },
+  };
+  const hits = await retrieve({
+    surface: "navigate",
+    query: "where is x",
+    embedder: counting,
+    store: store(),
+    vector: [1, 0, 0],
+  });
+  assertEquals(hits.map((h) => h.id), ["place:c"]);
+  assertEquals(embedded, 0);
+});
+
+Deno.test("PostgresVectorStore maps RPC rows and sends kinds to the match function", async () => {
+  let body: unknown;
+  const store = new PostgresVectorStore({
+    restUrl: "https://stack.invalid/rest/v1",
+    serviceRoleKey: "service",
+    fetchImpl: (input, init) => {
+      assertEquals(String(input), "https://stack.invalid/rest/v1/rpc/match_content_chunks");
+      body = JSON.parse(String(init?.body));
+      return Promise.resolve(
+        new Response(
+          JSON.stringify([
+            { id: "practice:a", body: "practice A", distance: 0.3 },
+            { id: "place:c", body: "place C", distance: 0.2 },
+          ]),
+          { status: 200 },
+        ),
+      );
+    },
+  });
+
+  const hits = await store.query([0.1, 0.2], ["practice", "place"], 3);
+  assertEquals(body, {
+    query_embedding: [0.1, 0.2],
+    match_kinds: ["practice", "place"],
+    match_count: 3,
+  });
+  assertEquals(hits, [
+    { id: "practice:a", text: "practice A", distance: 0.3 },
+    { id: "place:c", text: "place C", distance: 0.2 },
+  ]);
 });
 
 Deno.test("an embeddings failure degrades to no retrieval", async () => {

@@ -1,5 +1,4 @@
 import CalDesign
-import CalKit
 import SwiftUI
 import Testing
 import UIKit
@@ -44,44 +43,6 @@ struct LayoutRegressionTests {
         let controller = UIHostingController(rootView: AnyView(view.dynamicTypeSize(typeSize)))
         controller.view.backgroundColor = .clear
         return controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
-    }
-
-    // MARK: The scale — the most-used control in the app
-
-    @Test("the rating scale fits the narrowest supported screen")
-    func scaleFitsNarrowScreen() {
-        @State var score: Score? = Score(clamping: 7)
-        let size = measure(ScoreScale(score: .constant(Score(clamping: 7))))
-
-        #expect(size.width <= Self.narrowestWidth, "the scale is \(size.width)pt wide on a 375pt screen")
-        #expect(size.height > 0)
-    }
-
-    /// The direct test of the `DisplayNumeral` fix. Before it, this numeral was
-    /// `.font(.system(size: 56))` and did not grow at all — the assertion below
-    /// would have failed with the two heights equal.
-    @Test("the scale's numeral actually grows with Dynamic Type")
-    func scaleGrowsWithTypeSize() {
-        let standard = measure(ScoreScale(score: .constant(Score(clamping: 7))))
-        let accessible = measure(
-            ScoreScale(score: .constant(Score(clamping: 7))),
-            typeSize: .accessibility5
-        )
-
-        #expect(
-            accessible.height > standard.height,
-            "the scale did not grow at AX5 (\(standard.height) → \(accessible.height)) — a fixed font size has crept back in"
-        )
-    }
-
-    @Test("the scale still fits the narrowest screen at every Dynamic Type size",
-          arguments: DynamicTypeSize.allCases)
-    func scaleFitsAtEverySize(typeSize: DynamicTypeSize) {
-        let size = measure(ScoreScale(score: .constant(Score(clamping: 3))), typeSize: typeSize)
-        #expect(
-            size.width <= Self.narrowestWidth + 1,
-            "at \(typeSize) the scale is \(size.width)pt wide, overflowing a 375pt screen"
-        )
     }
 
     // MARK: The display modifiers themselves

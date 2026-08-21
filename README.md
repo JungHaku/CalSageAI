@@ -1,4 +1,4 @@
-# Cal Coherence
+# C.A.L Coherence
 
 A coherence coach for UC Berkeley students, built with Breathe Health Center.
 

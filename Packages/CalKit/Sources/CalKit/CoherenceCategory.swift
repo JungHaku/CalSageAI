@@ -5,7 +5,7 @@ import Foundation
 /// migration, they are the wire format.
 ///
 /// `.overall` is the free tier's single daily question; the other ten are
-/// Dr. Mia's premium framework, in her stated order.
+/// Dr. Mia's framework. The daily check-in asks the first five of those.
 public enum CoherenceCategory: String, CaseIterable, Codable, Sendable, Identifiable {
     case overall
     case safety
@@ -21,10 +21,9 @@ public enum CoherenceCategory: String, CaseIterable, Codable, Sendable, Identifi
 
     public var id: String { rawValue }
 
-    /// The ten premium questions, in the order Dr. Mia specified.
+    /// The daily check-in: the first five of Dr. Mia's ten, in her order.
     public static let fullCheckIn: [CoherenceCategory] = [
         .safety, .breath, .presence, .emotionalFlow, .bodyAwareness,
-        .choice, .connection, .energy, .innerKnowing, .authenticExpression,
     ]
 }
 

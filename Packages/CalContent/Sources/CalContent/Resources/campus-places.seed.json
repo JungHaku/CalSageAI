@@ -1476,6 +1476,13 @@
   "lng": -122.25642,
   "category": "building"
  },
+  {
+  "slug": "breathe-health-center",
+  "name": "Breathe Health Center - University of California, Berkeley",
+  "lat": 37.8678,
+  "lng": -122.2655,
+  "category": "health"
+ },
  {
   "slug": "tang-center",
   "name": "Tang Center - University of California, Berkeley",

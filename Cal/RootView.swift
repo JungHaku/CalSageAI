@@ -1,66 +1,136 @@
+import CalData
 import CalDesign
 import CalKit
 import CalStore
 import SwiftUI
 
-/// The five tabs from Dr. Mia's spec, plus the Emergency affordance that must be
-/// reachable in one tap from every screen (ARCHITECTURE.md §1, §9.2 Layer D).
+/// Hosts the voice home once there is a session. Until then, the login gate.
 ///
-/// Phase 0 ships the shell and the navigation contract; the tabs themselves are
-/// built in Phases 1–4 (§19). Each placeholder names its phase so nobody mistakes
-/// it for something that's finished.
+/// Same rule everywhere: stored session → Cal, else login. `isUITesting` does
+/// not bypass this. Tests that need the orb seed a dummy session in the token
+/// store the same way a returning student restores from the Keychain.
+///
+/// Sage is created only after sign-in so ElevenLabs does not connect on the
+/// login screen. Sign-out hangs up and returns here.
 struct RootView: View {
     @Environment(AppContainer.self) private var container
-    @State private var selection: Tab = .home
-    @State private var showingEmergency = false
+    @Environment(\.scenePhase) private var scenePhase
 
-    enum Tab: String, Hashable, CaseIterable {
-        /// Declaration order **is** the tab bar's order — `allCases` drives the
-        /// `ForEach` below.
-        ///
-        /// Check-In sits in the middle of the five deliberately: it is the thing
-        /// the app is for, and the centre of a five-tab bar is the easiest target
-        /// to hit with either thumb. Navigate takes second, where Check-In was.
-        ///
-        /// Note this is not the order in Dr. Mia's spec (§1). The *set* of five is
-        /// hers; the arrangement is ours, and she should be told it moved.
-        case home, navigate, checkIn, planner, chat
+    @State private var router: SageRouter?
+    @State private var session: SageSession?
+    @State private var welcome: WelcomeState = .unknown
 
-        var title: String {
-            switch self {
-            case .home: "Home"
-            case .checkIn: "Check-In"
-            case .navigate: "Navigate"
-            case .planner: "Planner"
-            case .chat: "Chat with Cal"
-            }
-        }
-
-        var systemImage: String {
-            switch self {
-            case .home: "house"
-            case .checkIn: "brain.head.profile"
-            case .navigate: "map"
-            case .planner: "calendar"
-            case .chat: "bubble.left.and.bubble.right"
-            }
-        }
+    private enum WelcomeState {
+        case unknown
+        case needed
+        case done
     }
 
     var body: some View {
-        TabView(selection: $selection) {
-            ForEach(Tab.allCases, id: \.self) { tab in
-                NavigationStack {
-                    content(for: tab)
-                        .navigationTitle(tab.title)
+        Group {
+            if !container.hasSession {
+                LoginGateView()
+            } else if welcome == .needed {
+                WelcomeView(kind: .firstSession) {
+                    Task { await finishWelcome() }
+                }
+            } else if welcome == .done, let router, let session {
+                RootNavigation(router: router, session: session)
+                    .environment(router)
+                    .environment(router.practices)
+            } else {
+                ProgressView()
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Surface.appBackground.ignoresSafeArea())
+        .task(id: container.hasSession) {
+            if container.hasSession {
+                await resolveWelcome()
+            } else {
+                welcome = .unknown
+                await stopSage()
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .background, let session else { return }
+            Task { await session.stop() }
+        }
+    }
+
+    private func resolveWelcome() async {
+        let onboarded = (try? await container.profiles.current())?.isOnboarded ?? false
+        if onboarded {
+            welcome = .done
+            startSageIfNeeded()
+        } else {
+            welcome = .needed
+        }
+    }
+
+    private func finishWelcome() async {
+        await container.completeOnboarding()
+        welcome = .done
+        startSageIfNeeded()
+    }
+
+    private func startSageIfNeeded() {
+        guard session == nil else { return }
+        let created = SageRouter(
+            content: container.content,
+            placeSearch: container.placeSearch,
+            store: container.store,
+            dates: container.dates,
+            remember: { text in
+                Task {
+                    guard AppContainer.loadMemoryConsent().permitsRemoteMemory else { return }
+                    await container.remoteMemory.remember(text: text, severity: "none")
+                }
+            }
+        )
+        let sage = SageSession(
+            makeSession: container.makeVoiceSession,
+            router: created,
+            remember: { text, severity in
+                Task {
+                    guard AppContainer.loadMemoryConsent().permitsRemoteMemory else { return }
+                    await container.remoteMemory.remember(text: text, severity: severity)
+                }
+            }
+        )
+        router = created
+        session = sage
+        sage.connectIfNeeded()
+    }
+
+    private func stopSage() async {
+        await session?.stop()
+        session = nil
+        router = nil
+    }
+}
+
+private struct RootNavigation: View {
+    @Bindable var router: SageRouter
+    @Bindable var session: SageSession
+    @State private var showingEmergency = false
+
+    var body: some View {
+        NavigationStack(path: $router.path) {
+            CalSageView(session: session, router: router)
+                .navigationBarTitleDisplayMode(.inline)
+                .navigationDestination(for: VoiceRoute.self) { route in
+                    VoiceRouteDestination(route: route)
                         .toolbar { emergencyToolbarItem }
                 }
-                .tabItem { Label(tab.title, systemImage: tab.systemImage) }
-                .tag(tab)
-            }
         }
         .sheet(isPresented: $showingEmergency) {
             EmergencyView()
+                .onDisappear { session.acknowledgeCrisis() }
+        }
+        .onChange(of: session.crisis) { _, severity in
+            guard severity == .acute, !router.path.isEmpty else { return }
+            showingEmergency = true
         }
     }
 
@@ -76,44 +146,41 @@ struct RootView: View {
             .accessibilityIdentifier("emergency-button")
         }
     }
-
-    @ViewBuilder
-    private func content(for tab: Tab) -> some View {
-        switch tab {
-        // Not gated — *routed*. Free gets Dr. Mia's single-question check-in from
-        // `SPEC-free.md` §1, premium the ten-category framework. Both regulate a
-        // low score into guided breathing, so nobody is locked out of the part
-        // that helps (`PremiumFeature.neverGated`).
-        case .checkIn: CheckInView(kind: container.premium.checkInKind)
-        case .home:
-            HomeView()
-                .navigationDestination(for: HomeRoute.self) { route in
-                    switch route {
-                    case .checkIn: CheckInView(kind: container.premium.checkInKind)
-                    case .practices:
-                        PremiumGate(feature: .practiceLibrary) { PracticesLibraryView() }
-                    case .progress:
-                        PremiumGate(feature: .coherenceAnalytics) { AnalyticsView() }
-                    case .study: StudyTimerView()
-                    // Never gated: this is the person's own data (§ Entitlement).
-                    case .history: HistoryView()
-                    case .settings: SettingsView()
-                    case .premium: PaywallView()
-                    }
-                }
-        case .navigate: NavigateView()
-        case .planner:  PlannerView()
-        case .chat:     ChatView()
-        }
-    }
 }
 
-#Preview("shell") {
-    RootView().environment(AppContainer.live(arguments: []))
+#Preview("voice home") {
+    RootView().environment(AppContainer.live(arguments: ["-CalUseMockCoach", "1"]))
 }
 
-#Preview("seeded 30-day streak") {
+#Preview("login") {
     RootView().environment(
-        AppContainer.live(arguments: ["-CalScenario", "day30Streak", "-CalFixedDate", "2026-07-29"])
+        AppContainer.live(arguments: ["-CalUseMockCoach", "1", "-CalForceLogin", "1"])
+    )
+}
+
+#Preview("welcome") {
+    RootView().environment(
+        AppContainer.live(arguments: ["-CalUseMockCoach", "1", "-CalShowWelcome", "1"])
+    )
+}
+
+#Preview("practice") {
+    RootView().environment(
+        AppContainer.live(arguments: [
+            "-CalUseMockCoach", "1", "-CalVoiceScript", "greeting",
+            "-CalScenario", "empty", "-CalFixedDate", "2026-07-29",
+        ])
+    )
+}
+
+#Preview("crisis") {
+    RootView().environment(
+        AppContainer.live(arguments: ["-CalUseMockCoach", "1", "-CalVoiceScript", "crisis"])
+    )
+}
+
+#Preview("microphone denied") {
+    RootView().environment(
+        AppContainer.live(arguments: ["-CalUseMockCoach", "1", "-CalVoiceScript", "micDenied"])
     )
 }

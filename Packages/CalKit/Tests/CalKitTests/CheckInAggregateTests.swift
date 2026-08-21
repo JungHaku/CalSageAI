@@ -43,19 +43,19 @@ struct CheckInTests {
         return c
     }()
 
-    @Test("a quick check-in asks one question; a full check-in asks ten")
+    @Test("a quick check-in asks one question; a full check-in asks five")
     func shapeByKind() {
         #expect(CheckInKind.quick.categories == [.overall])
-        #expect(CheckInKind.full.categories.count == 10)
+        #expect(CheckInKind.full.categories.count == 5)
     }
 
     @Test("remaining categories shrink as scores are recorded")
     func remainingCategories() {
         var checkIn = CheckIn(kind: .full, localDate: LocalDate(iso: "2026-07-29")!, timeZoneIdentifier: "America/Los_Angeles")
-        #expect(checkIn.remainingCategories.count == 10)
+        #expect(checkIn.remainingCategories.count == 5)
 
         checkIn.scores.append(CategoryScore(category: .safety, before: Score(clamping: 8)))
-        #expect(checkIn.remainingCategories.count == 9)
+        #expect(checkIn.remainingCategories.count == 4)
         #expect(!checkIn.remainingCategories.contains(.safety))
     }
 
@@ -175,10 +175,10 @@ struct CoherenceSummaryTests {
         let checkIn = CheckIn.fixture(band: .low, on: today, regulated: true)
         let summary = CoherenceSummary.build(history: [checkIn], today: today, calendar: pacific)
 
-        #expect(summary.todayCategoryCount == 10)
-        #expect(summary.todayRegulatedCount == 10)
+        #expect(summary.todayCategoryCount == 5)
+        #expect(summary.todayRegulatedCount == 5)
         #expect(summary.todayAverageDelta == 3.0)
-        #expect(summary.promptText.contains("regulated 10 of 10 categories"))
+        #expect(summary.promptText.contains("regulated 5 of 5 categories"))
         #expect(summary.promptText.contains("avg improvement +3.0"))
     }
 

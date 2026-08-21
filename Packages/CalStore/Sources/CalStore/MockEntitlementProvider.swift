@@ -95,7 +95,7 @@ extension SubscriptionProduct {
     /// a formatted price is how apps end up lying about what they charge.
     public static let calPlusPreview = SubscriptionProduct(
         id: Self.calPlusMonthlyID,
-        displayName: "Cal+ Coherence",
+        displayName: "C.A.L+ Coherence",
         description: "The ten-question coherence framework, your full progress, and the guided library.",
         displayPrice: "$11.00",
         period: "month"

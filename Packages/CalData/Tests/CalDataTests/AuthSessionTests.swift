@@ -171,6 +171,43 @@ struct AuthSessionTests {
         #expect(captured.value.contains("grant_type=password"), "got \(captured.value)")
         #expect(!captured.value.contains("%3F"))
     }
+
+    @Test("recover posts the email to the reset endpoint")
+    func recoverPostsEmail() async throws {
+        let captured = CapturedURL()
+        let (auth, _) = session { request in
+            captured.set("\(request.httpMethod ?? "") \(request.url?.absoluteString ?? "")")
+            return (Data(), 200)
+        }
+        try await auth.recover(email: "a@b.co")
+        #expect(captured.value.contains("POST"), "got \(captured.value)")
+        #expect(captured.value.contains("/auth/v1/recover"), "got \(captured.value)")
+    }
+
+    @Test("a failed recover surfaces the server's reason")
+    func recoverRejection() async {
+        let (auth, _) = session { _ in
+            (Data(#"{"msg":"rate limit"}"#.utf8), 429)
+        }
+        await #expect(throws: AuthError.rejected(429, "rate limit")) {
+            try await auth.recover(email: "a@b.co")
+        }
+    }
+
+    @Test("a preview session is signed in without a network call")
+    func previewSessionDoesNotRefresh() async {
+        AuthStubURLProtocol.handler = { _ in
+            Issue.record("preview session must not hit the network")
+            return (Data(), 500)
+        }
+        let auth = AuthSession(
+            baseURL: URL(string: "https://stack.invalid")!,
+            anonKey: "anon",
+            store: InMemoryTokenStore(.previewSession())
+        )
+        #expect(await auth.isSignedIn())
+        #expect(await auth.accessToken() != nil)
+    }
 }
 
 private let stubUserID = UUID(uuidString: "a623e041-d851-48c3-8aad-76fab1e3fff8")!

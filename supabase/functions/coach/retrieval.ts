@@ -8,8 +8,7 @@
 //
 // The corpus holds no personal data. It is her practices, the ten coherence
 // questions, and 231 campus buildings — identical for every student. Per-user
-// memory is a separate collection with different rules and is blocked on real
-// authentication; see the M2 notes in the plan.
+// memory is a separate table (`memories`) with different rules.
 
 export interface RetrievedChunk {
   id: string;
@@ -19,7 +18,8 @@ export interface RetrievedChunk {
 }
 
 /// Swapped for a fake in tests, and the reason a different vector database is a
-/// file rather than a rewrite. Chroma is the implementation, not the contract.
+/// file rather than a rewrite. Postgres/pgvector is the implementation, not the
+/// contract.
 export interface VectorStore {
   query(vector: number[], kinds: string[], k: number): Promise<RetrievedChunk[]>;
 }
@@ -66,10 +66,12 @@ export const TOP_K = 3;
 /// student messages. It is a floor on obvious noise, not a precision instrument.
 export const MAX_DISTANCE = 0.82;
 
+export const DEFAULT_EMBED_MODEL = "text-embedding-3-small";
+
 export class OpenAIEmbedder implements Embedder {
   constructor(
     private readonly apiKey: string,
-    private readonly model = "text-embedding-3-small",
+    private readonly model = DEFAULT_EMBED_MODEL,
   ) {}
 
   async embed(text: string): Promise<number[]> {
@@ -89,81 +91,67 @@ export class OpenAIEmbedder implements Embedder {
   }
 }
 
-export class ChromaVectorStore implements VectorStore {
-  /// Resolved once and cached: the id is stable for the life of the collection,
-  /// and looking it up on every turn would add a round trip to every reply.
-  private collectionId: string | null = null;
+export interface PostgresStoreOptions {
+  restUrl: string;
+  serviceRoleKey: string;
+  fetchImpl?: typeof fetch;
+}
 
-  constructor(
-    private readonly baseUrl: string,
-    private readonly collection = "cal_content",
-    private readonly tenant = "default_tenant",
-    private readonly database = "default_database",
-    private readonly token?: string,
-  ) {}
+/// PostgREST-backed pgvector store. The RPC is service_role only; this client
+/// always uses the function's key, never a user JWT.
+export class PostgresVectorStore implements VectorStore {
+  constructor(private readonly options: PostgresStoreOptions) {}
 
-  private get collectionsUrl(): string {
-    return `${this.baseUrl.replace(/\/$/, "")}/api/v2/tenants/${this.tenant}` +
-      `/databases/${this.database}/collections`;
-  }
-
-  private headers(): HeadersInit {
-    return {
-      "Content-Type": "application/json",
-      ...(this.token ? { "Authorization": `Bearer ${this.token}` } : {}),
-    };
-  }
-
-  private async resolveCollection(): Promise<string> {
-    if (this.collectionId) return this.collectionId;
-
-    // `get_or_create` rather than a lookup: a function that starts before the
-    // seeding script has run should describe an empty collection, not crash.
-    const response = await fetch(this.collectionsUrl, {
-      method: "POST",
-      headers: this.headers(),
-      body: JSON.stringify({ name: this.collection, get_or_create: true }),
-    });
-    if (!response.ok) {
-      throw new Error(`chroma collection ${response.status}`);
-    }
-    const json = await response.json();
-    this.collectionId = json.id;
-    return json.id;
+  private get fetchImpl(): typeof fetch {
+    return this.options.fetchImpl ?? fetch;
   }
 
   async query(vector: number[], kinds: string[], k: number): Promise<RetrievedChunk[]> {
-    const id = await this.resolveCollection();
-    const where = kinds.length === 1
-      ? { kind: { $eq: kinds[0] } }
-      : { $or: kinds.map((kind) => ({ kind: { $eq: kind } })) };
-
-    const response = await fetch(`${this.collectionsUrl}/${id}/query`, {
-      method: "POST",
-      headers: this.headers(),
-      body: JSON.stringify({
-        query_embeddings: [vector],
-        n_results: k,
-        where,
-        include: ["documents", "distances"],
-      }),
-    });
+    const response = await this.fetchImpl(
+      `${this.options.restUrl}/rpc/match_content_chunks`,
+      {
+        method: "POST",
+        headers: {
+          apikey: this.options.serviceRoleKey,
+          Authorization: `Bearer ${this.options.serviceRoleKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query_embedding: vector,
+          match_kinds: kinds,
+          match_count: k,
+        }),
+      },
+    );
     if (!response.ok) {
-      throw new Error(`chroma query ${response.status}`);
+      throw new Error(`match_content_chunks ${response.status}`);
     }
-
-    const json = await response.json();
-    // Chroma nests one result array per query embedding; we always send one.
-    const ids: string[] = json.ids?.[0] ?? [];
-    const documents: string[] = json.documents?.[0] ?? [];
-    const distances: number[] = json.distances?.[0] ?? [];
-
-    return ids.map((chunkId, index) => ({
-      id: chunkId,
-      text: documents[index] ?? "",
-      distance: distances[index] ?? 1,
+    const rows: { id: string; body: string; distance: number }[] = await response.json();
+    return rows.map((row) => ({
+      id: row.id,
+      text: row.body ?? "",
+      distance: row.distance ?? 1,
     }));
   }
+}
+
+export function postgresVectorStoreFromEnv(
+  env: { get(key: string): string | undefined } = Deno.env,
+  fetchImpl?: typeof fetch,
+): PostgresVectorStore | null {
+  const supabaseUrl = env.get("SUPABASE_URL") ?? "";
+  const serviceRoleKey = env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.error(
+      "retrieval: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is unset — content RAG is off",
+    );
+    return null;
+  }
+  return new PostgresVectorStore({
+    restUrl: `${supabaseUrl.replace(/\/$/, "")}/rest/v1`,
+    serviceRoleKey,
+    fetchImpl,
+  });
 }
 
 /// Deterministic store for tests. Returns what it was given, nearest first.
@@ -183,7 +171,7 @@ export class FakeVectorStore implements VectorStore {
 
 /// Retrieve for one turn, or return nothing.
 ///
-/// **Fails open, always.** Chroma being unreachable, an embeddings call timing
+/// **Fails open, always.** Postgres being unreachable, an embeddings call timing
 /// out, or an unknown surface all produce an empty array rather than an error.
 /// Retrieval makes a reply better grounded; it is not what makes a reply
 /// possible, and a student at 1am should not lose their coach because a vector
@@ -195,18 +183,27 @@ export async function retrieve(
     query: string;
     embedder: Embedder | null;
     store: VectorStore | null;
+    /// Precomputed query embedding. When set, the embedder is not called — chat
+    /// reuses one OpenAI request for content RAG and personal k-NN.
+    vector?: number[] | null;
     k?: number;
     maxDistance?: number;
   },
 ): Promise<RetrievedChunk[]> {
   const { surface, query, embedder, store } = input;
-  if (!embedder || !store) return [];
+  if (!store) return [];
 
   const kinds = KINDS_FOR_SURFACE[surface];
   if (!kinds || !query.trim()) return [];
 
   try {
-    const vector = await embedder.embed(query);
+    const vector = input.vector?.length
+      ? input.vector
+      : embedder
+      ? await embedder.embed(query)
+      : null;
+    if (!vector) return [];
+
     const hits = await store.query(vector, kinds, input.k ?? TOP_K);
     const kept = hits.filter((hit) => hit.distance <= (input.maxDistance ?? MAX_DISTANCE));
 
@@ -217,9 +214,8 @@ export async function retrieve(
     // a line here the difference is invisible, and "retrieval has been off since
     // the deploy" looks exactly like "Cal is a bit vague lately".
     //
-    // Ids and distances only. The chunk text is authored content today, but this
-    // same path carries the student's own words at M2, and a log is the last
-    // place that should be the first to hold them.
+    // Ids and distances only. Chunk text is authored content; personal words
+    // never travel this path.
     console.log(
       `retrieval[${surface}] ${kept.length}/${hits.length} kept: ` +
         (kept.map((h) => `${h.id}@${h.distance.toFixed(3)}`).join(" ") || "none"),

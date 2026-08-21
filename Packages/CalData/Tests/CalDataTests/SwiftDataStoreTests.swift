@@ -101,7 +101,7 @@ struct SwiftDataStoreTests {
         }
 
         let loaded = try #require(try await store.checkIn(id: checkIn.id))
-        #expect(loaded.scores.count == 10)
+        #expect(loaded.scores.count == 5)
     }
 
     @Test("range queries are inclusive and exclude days outside the window")

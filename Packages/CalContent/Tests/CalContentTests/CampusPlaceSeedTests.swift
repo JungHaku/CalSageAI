@@ -5,10 +5,10 @@ import Testing
 
 @Suite("Campus place seed")
 struct CampusPlaceSeedTests {
-    @Test("the bundled seed decodes to 231 distinct locations (235 raw, 4 duplicates collapsed)")
+    @Test("the bundled seed decodes to 232 distinct locations (236 raw, 4 duplicates collapsed)")
     func decodes() throws {
         let places = try CampusPlaceSeed.load()
-        #expect(places.count == 231)
+        #expect(places.count == 232)
     }
 
     @Test("the UCB suffix is stripped from display names")

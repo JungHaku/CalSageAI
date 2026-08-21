@@ -20,6 +20,9 @@ struct CheckInView: View {
                 ProgressView()
             }
         }
+        .navigationTitle("Check-in")
+        .navigationBarTitleDisplayMode(.inline)
+        .accessibilityIdentifier("checkin-root")
         .task {
             guard model == nil else { return }
             let created = CheckInViewModel(
@@ -47,7 +50,7 @@ struct CheckInView: View {
                     prompt: question.prompt,
                     score: Binding(get: { model.draftScore }, set: { model.draftScore = $0 }),
                     // Only the free quick check-in shows the band response inline;
-                    // on the ten-question flow it would fire ten times and become
+                    // on the five-question flow it would fire five times and become
                     // noise. It also only appears once a score exists.
                     showsBandResponse: kind == .quick,
                     canSubmit: model.canSubmit,
@@ -120,6 +123,7 @@ struct CheckInView: View {
         .padding(.horizontal)
         .accessibilityElement()
         .accessibilityLabel("Question \(min(answered + 1, total)) of \(total)")
+        .accessibilityIdentifier("checkin-progress")
     }
 }
 
@@ -256,7 +260,7 @@ private struct ScoreRow: View {
     }
 }
 
-#Preview("full · 10 questions") {
+#Preview("full · 5 questions") {
     NavigationStack { CheckInView(kind: .full) }
         .environment(AppContainer.live(arguments: ["-CalFixedDate", "2026-07-29"]))
 }

@@ -31,9 +31,9 @@ public enum CoherenceBand: String, CaseIterable, Codable, Sendable {
 /// ⚠️ The two specs use **different thresholds**, and this is not a
 /// simplification — it's what the documents say:
 ///
-/// - Free ("Free Cal" §1): the guided-breathing branch is the `0–4` band. A
+/// - Free ("Free C.A.L" §1): the guided-breathing branch is the `0–4` band. A
 ///   score of **5** gets "let's stay aware" and *no* exercise.
-/// - Premium ("Cal+ Coherence"): "If a score is **5 or below**, Cal immediately
+/// - Premium ("C.A.L+ Coherence"): "If a score is **5 or below**, C.A.L immediately
 ///   guides the user through a brief regulation exercise."
 ///
 /// So a 5 regulates on premium but not on free. Both are implemented faithfully
@@ -42,7 +42,7 @@ public enum CoherenceBand: String, CaseIterable, Codable, Sendable {
 public enum RegulationPolicy: String, CaseIterable, Sendable {
     /// Free tier, single `.overall` question.
     case quick
-    /// Premium tier, ten categories.
+    /// Daily check-in, five categories.
     case full
 
     public var triggersAtOrBelow: Int {

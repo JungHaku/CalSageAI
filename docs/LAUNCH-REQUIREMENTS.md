@@ -1,4 +1,4 @@
-# Cal Coherence — Launch Requirements
+# C.A.L Coherence — Launch Requirements
 
 Everything that gates **shipping to real students**: privacy law, App Store review,
 payments and commission, AI vendor terms and pricing, and campus data sources.

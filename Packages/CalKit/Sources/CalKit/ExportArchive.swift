@@ -21,16 +21,19 @@ public struct ExportArchive: Codable, Sendable, Equatable {
     public let profile: Profile?
     public let checkIns: [CheckIn]
     public let practiceSessions: [PracticeSession]
+    public let journalEntries: [JournalEntry]
 
-    public static let currentFormatVersion = 1
+    /// v2 adds `journalEntries`. Readers must tolerate missing keys from v1 files.
+    public static let currentFormatVersion = 2
 
     public init(
         generatedAt: Date,
         profile: Profile?,
         checkIns: [CheckIn],
         practiceSessions: [PracticeSession],
+        journalEntries: [JournalEntry] = [],
         formatVersion: Int = ExportArchive.currentFormatVersion,
-        app: String = "Cal Coherence"
+        app: String = "C.A.L Coherence"
     ) {
         self.formatVersion = formatVersion
         self.generatedAt = generatedAt
@@ -40,10 +43,14 @@ public struct ExportArchive: Codable, Sendable, Equatable {
         // whatever order the store happened to return.
         self.checkIns = checkIns.sorted { $0.localDate < $1.localDate }
         self.practiceSessions = practiceSessions.sorted { $0.startedAt < $1.startedAt }
+        self.journalEntries = journalEntries.sorted { $0.createdAt < $1.createdAt }
     }
 
     public var isEmpty: Bool {
-        profile == nil && checkIns.isEmpty && practiceSessions.isEmpty
+        profile == nil
+            && checkIns.isEmpty
+            && practiceSessions.isEmpty
+            && journalEntries.isEmpty
     }
 
     /// ISO-8601 **with fractional seconds** — millisecond precision.
@@ -108,7 +115,25 @@ public struct ExportArchive: Codable, Sendable, Equatable {
         var parts: [String] = []
         parts.append("\(checkIns.count) check-in\(checkIns.count == 1 ? "" : "s")")
         parts.append("\(practiceSessions.count) practice session\(practiceSessions.count == 1 ? "" : "s")")
+        parts.append("\(journalEntries.count) journal entr\(journalEntries.count == 1 ? "y" : "ies")")
         if profile != nil { parts.append("your profile") }
         return parts.formatted(.list(type: .and))
+    }
+
+    // v1 archives omit `journalEntries`. Treat a missing key as empty so an old
+    // export still opens rather than failing the whole read.
+    private enum CodingKeys: String, CodingKey {
+        case formatVersion, generatedAt, app, profile, checkIns, practiceSessions, journalEntries
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        formatVersion = try container.decode(Int.self, forKey: .formatVersion)
+        generatedAt = try container.decode(Date.self, forKey: .generatedAt)
+        app = try container.decode(String.self, forKey: .app)
+        profile = try container.decodeIfPresent(Profile.self, forKey: .profile)
+        checkIns = try container.decode([CheckIn].self, forKey: .checkIns)
+        practiceSessions = try container.decode([PracticeSession].self, forKey: .practiceSessions)
+        journalEntries = try container.decodeIfPresent([JournalEntry].self, forKey: .journalEntries) ?? []
     }
 }

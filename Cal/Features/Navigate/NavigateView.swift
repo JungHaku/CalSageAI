@@ -14,7 +14,14 @@ struct NavigateView: View {
     @Environment(AppContainer.self) private var container
 
     @State private var places: [CampusPlace] = []
-    @State private var query = ""
+    @State private var query: String
+
+    /// Opens with a search already run — how `show_place` lands the student on
+    /// what they asked Cal for rather than on an empty search box.
+    init(initialQuery: String = "") {
+        _query = State(initialValue: initialQuery)
+    }
+
     @State private var category: CampusPlaceCategory?
     @State private var selected: CampusPlace?
     @State private var camera: MapCameraPosition = .region(Self.campusRegion)
@@ -188,7 +195,12 @@ struct NavigateView: View {
     }
 
     private func load() async {
-        places = ((try? CampusPlaceSeed.load()) ?? []).sorted { $0.name < $1.name }
+        places = ((try? CampusPlaceSeed.load()) ?? []).sorted { lhs, rhs in
+            // Breathe Health Center stays first in the list for clinic routing.
+            if lhs.slug == "breathe-health-center" { return true }
+            if rhs.slug == "breathe-health-center" { return false }
+            return lhs.name < rhs.name
+        }
     }
 
     /// Asks the endpoint only when substring matching has already failed.

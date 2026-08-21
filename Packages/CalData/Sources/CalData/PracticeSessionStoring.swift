@@ -12,7 +12,6 @@ public protocol PracticeSessionStoring: Sendable {
 
 @Model
 public final class StoredPracticeSession {
-    #Unique<StoredPracticeSession>([\.id])
     public var id: UUID = UUID()
 
     public var exerciseSlug: String = ""

@@ -5,7 +5,7 @@ import Observation
 /// The entitlement, as the UI observes it.
 ///
 /// Wraps any `EntitlementProviding` and turns it into observable state, so views
-/// ask `store.unlocks(.coherenceAnalytics)` and re-render when a purchase lands,
+/// ask `store.unlocks(.practiceLibrary)` and re-render when a purchase lands,
 /// a renewal happens, or a subscription lapses.
 @Observable
 @MainActor
@@ -76,11 +76,6 @@ public final class PremiumStore {
     public func unlocks(_ feature: PremiumFeature) -> Bool {
         entitlement.unlocks(feature)
     }
-
-    /// The check-in flow this person gets. While unresolved, the free flow — the
-    /// alternative is starting someone on the ten-question framework and yanking
-    /// it away mid-flow when StoreKit answers.
-    public var checkInKind: CheckInKind { entitlement.checkInKind }
 
     public func loadProducts() async {
         isLoadingProducts = true

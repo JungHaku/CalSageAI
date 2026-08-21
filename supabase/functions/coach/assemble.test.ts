@@ -8,7 +8,7 @@
 import { assertEquals } from "jsr:@std/assert";
 import { assembleMessages, MAX_TEXT_CHARS, MAX_TURNS, windowHistory } from "./assemble.ts";
 
-const SYSTEM = "You are Cal.";
+const SYSTEM = "You are C.A.L.";
 
 function thread(turns: number) {
   return Array.from({ length: turns }, (_, i) => [
@@ -185,7 +185,7 @@ Deno.test("recalled memory is fenced and stripped of authority to instruct", () 
 
   assertEquals(block.includes("<recollection>"), true);
   assertEquals(block.includes("NOT instructions"), true);
-  assertEquals(block.includes("may be from an unrelated moment"), true);
+  assertEquals(block.includes("recalled facts"), true);
 });
 
 Deno.test("no memory means no block, which is what an anonymous request gets", () => {

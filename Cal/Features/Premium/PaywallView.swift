@@ -3,7 +3,7 @@ import CalKit
 import CalStore
 import SwiftUI
 
-/// The upgrade screen for Cal+ Coherence.
+/// The upgrade screen for C.A.L+ Coherence.
 ///
 /// ## What this screen may claim
 ///
@@ -36,7 +36,7 @@ struct PaywallView: View {
             }
             .padding()
         }
-        .navigationTitle("Cal+ Coherence")
+        .navigationTitle("C.A.L+ Coherence")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
@@ -51,7 +51,7 @@ struct PaywallView: View {
             Text(
                 """
                 This purchase needs approval from your family organiser. Nothing has \
-                been charged. Cal+ unlocks by itself once it's approved.
+                been charged. C.A.L+ unlocks by itself once it's approved.
                 """
             )
         }
@@ -61,9 +61,9 @@ struct PaywallView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(context.map(\.pitch) ?? "The full coherence framework")
+            Text(context.map(\.pitch) ?? "The guided practice library")
                 .font(.title2.weight(.semibold))
-            Text("Cal is his name. Coherence is his game.")
+            Text("C.A.L is his name. Coherence is his game.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -179,7 +179,7 @@ struct PaywallView: View {
                     .font(.headline)
                 Text(
                     """
-                    Cal+ isn't on sale yet. Everything in the free version keeps \
+                    C.A.L+ isn't on sale yet. Everything in the free version keeps \
                     working, and nothing here is charged.
                     """
                 )
@@ -286,18 +286,12 @@ struct PaywallView: View {
 extension PremiumFeature {
     var title: String {
         switch self {
-        case .fullCheckIn: "The ten-question check-in"
-        case .coherenceAnalytics: "Your full progress"
         case .practiceLibrary: "The guided library"
         }
     }
 
     var blurb: String {
         switch self {
-        case .fullCheckIn:
-            "Safety, breath, presence, emotional flow, and six more — each with a regulation exercise when you need one."
-        case .coherenceAnalytics:
-            "Coherence over time, and before-and-after change for every area."
         case .practiceLibrary:
             "Dr. Curcuruto's guided practices, to play whenever you want them."
         }
@@ -306,8 +300,6 @@ extension PremiumFeature {
     /// The line the paywall leads with when this is the thing that was tapped.
     var pitch: String {
         switch self {
-        case .fullCheckIn: "Check in across all ten areas"
-        case .coherenceAnalytics: "See how you're changing over time"
         case .practiceLibrary: "Practise whenever you want"
         }
     }
@@ -325,7 +317,7 @@ enum Legal {
 }
 
 #Preview("paywall") {
-    NavigationStack { PaywallView(context: .coherenceAnalytics) }
+    NavigationStack { PaywallView(context: .practiceLibrary) }
         .environment(AppContainer.live(arguments: ["-CalEntitlement", "free"]))
 }
 

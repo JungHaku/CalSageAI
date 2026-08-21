@@ -1,8 +1,11 @@
 import CalAI
 import CalContent
 import CalData
+import CalDesign
 import CalKit
+import CalRemote
 import CalStore
+import CalVoice
 import SwiftUI
 
 @main
@@ -13,6 +16,22 @@ struct CalApp: App {
         WindowGroup {
             RootView()
                 .environment(container)
+                // Soft grey-white is the product look, not a light-mode variant.
+                // Force light chrome so system materials (`.bar`, etc.) match the
+                // field; Surface/Brand tokens already converge on the same greys.
+                .preferredColorScheme(.light)
+                .background {
+                    LinearGradient(
+                        colors: [
+                            Surface.appBackground,
+                            Color(red: 232 / 255, green: 223 / 255, blue: 208 / 255),
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .ignoresSafeArea()
+                }
+                .tint(Brand.action)
                 // At the root, not inside a gated screen: the transaction listener
                 // has to be running whether or not anyone visits the paywall.
                 .task { await container.premium.start() }
@@ -28,6 +47,13 @@ final class AppContainer {
     let dates: any DateProvider
     let store: any CoherenceStoring
     let coach: any CoachClient
+    /// Opens a live conversation with Cal.
+    ///
+    /// A factory rather than an instance: `VoiceSession` is one stream per
+    /// session, so reconnecting after a drop has to build a new one. Live by
+    /// default via `ElevenLabsVoiceSession`; `-CalUseMockCoach 1` selects the
+    /// mock so tests and previews never open a microphone or a billing line.
+    let makeVoiceSession: @MainActor @Sendable () -> any VoiceSession
     /// Authored content — bundled in the MVP, remote at Phase B (§2, §6).
     let content: any ContentRepository
     /// Campus place lookup. Substring matching offline, semantic when the local
@@ -49,6 +75,8 @@ final class AppContainer {
     let profiles: any ProfileStoring
     /// Guided-practice runs, including abandoned ones (§ PracticeSession).
     let practiceSessions: any PracticeSessionStoring
+    /// Local journal entries (`PLAN-journal.md`). Free write — not AI reflection.
+    let journal: any JournalStoring
     /// Local notification scheduling. Mocked under test so a system permission
     /// alert can never block a UI-test run.
     let reminders: any ReminderScheduling
@@ -58,11 +86,17 @@ final class AppContainer {
     /// Export and delete. One type owns both so they can't disagree about what
     /// "everything" means.
     let personalData: PersonalDataService
+    /// Server-side consent row and `forget_memories`. No-op when unsigned / tests.
+    let remoteMemory: any RemoteMemoryControlling
+    /// Ambassador interest list. No-op in UI tests.
+    let ambassadorSignup: any AmbassadorSigning
     /// What the person has paid for, and the only thing any view should ask about
     /// gating (§2). Observable, so a purchase or a lapse re-renders the app.
     let premium: PremiumStore
     /// True when launched by XCUITest with seeded state (§11.4).
     let isUITesting: Bool
+    /// Whether `auth` currently holds a session. RootView gates on this alone.
+    private(set) var hasSession: Bool
     /// True when nothing written this session survives relaunch — either a UI-test
     /// run, or the on-disk container failed to open.
     let storeIsEphemeral: Bool
@@ -71,6 +105,9 @@ final class AppContainer {
         dates: any DateProvider,
         store: any CoherenceStoring,
         coach: any CoachClient,
+        makeVoiceSession: @escaping @MainActor @Sendable () -> any VoiceSession = {
+            MockVoiceSession(script: MockVoiceSession.greeting)
+        },
         content: any ContentRepository,
         placeSearch: any PlaceSearching,
         auth: AuthSession,
@@ -79,16 +116,21 @@ final class AppContainer {
         sync: any SyncEngine,
         profiles: any ProfileStoring,
         practiceSessions: any PracticeSessionStoring,
+        journal: any JournalStoring,
         reminders: any ReminderScheduling,
         calendars: any CalendarAccess,
         personalData: PersonalDataService,
+        remoteMemory: any RemoteMemoryControlling = NoOpRemoteMemory(),
+        ambassadorSignup: any AmbassadorSigning = NoOpAmbassadorSignup(),
         premium: PremiumStore,
         isUITesting: Bool = false,
-        storeIsEphemeral: Bool = true
+        storeIsEphemeral: Bool = true,
+        hasSession: Bool = false
     ) {
         self.dates = dates
         self.store = store
         self.coach = coach
+        self.makeVoiceSession = makeVoiceSession
         self.content = content
         self.placeSearch = placeSearch
         self.auth = auth
@@ -97,12 +139,38 @@ final class AppContainer {
         self.sync = sync
         self.profiles = profiles
         self.practiceSessions = practiceSessions
+        self.journal = journal
         self.reminders = reminders
         self.calendars = calendars
         self.personalData = personalData
+        self.remoteMemory = remoteMemory
+        self.ambassadorSignup = ambassadorSignup
         self.premium = premium
         self.isUITesting = isUITesting
         self.storeIsEphemeral = storeIsEphemeral
+        self.hasSession = hasSession
+    }
+
+    func noteSignedIn() {
+        hasSession = true
+    }
+
+    /// First-run welcome has been seen. Voice starts after this, not before.
+    func completeOnboarding() async {
+        let userID = await auth.credentials()?.userID
+        var profile = (try? await profiles.current())
+            ?? Profile(id: userID ?? UUID())
+        guard !profile.isOnboarded else { return }
+        profile.onboardedAt = dates.now
+        try? await profiles.save(profile)
+    }
+
+    /// Drops the session on this device. Local data stays. RootView returns to
+    /// the login screen and hangs up Cal.
+    func signOut() {
+        hasSession = false
+        let auth = auth
+        Task { await auth.signOut() }
     }
 
     // MARK: Memory consent
@@ -115,6 +183,10 @@ final class AppContainer {
         memoryConsent = granted ? .granted(at: dates.now) : .notGranted
         if let encoded = try? JSONEncoder().encode(memoryConsent) {
             UserDefaults.standard.set(encoded, forKey: Self.consentDefaultsKey)
+        }
+        let remote = remoteMemory
+        Task {
+            try? await remote.persistConsent(granted: granted)
         }
     }
 
@@ -131,30 +203,12 @@ final class AppContainer {
 
     /// Who decides what is unlocked.
     ///
-    /// Three cases, in order:
-    ///
-    /// 1. **`-CalEntitlement` was passed** — honour it exactly. This is how a demo
-    ///    shows the paid app, and how a UI test asserts both sides of the paywall
-    ///    without a sandbox account and a system sheet XCUITest cannot drive.
-    /// 2. **A UI test with no tier pinned** — free, deterministically.
-    /// 3. **Anything else** — real StoreKit.
-    ///
-    /// In `DEBUG` the third case defaults to `plus` instead. Running from Xcode is
-    /// nearly always either development or a demonstration, and in both the
-    /// interesting screens are the paid ones. **Release is untouched**, so a
-    /// TestFlight build still shows the free tier and still has to be bought —
-    /// giving away the subscription in a shipped binary is not a default anyone
-    /// should be able to reach by accident.
+    /// Guided practices stay locked until payment is live. Pin with
+    /// `-CalEntitlement plus` for demos and UI tests that need the full library.
     private static func entitlementProvider(
-        pinned: Entitlement?, isUITesting: Bool
+        pinned: Entitlement?, isUITesting _: Bool
     ) -> any EntitlementProviding {
-        if let pinned { return MockEntitlementProvider(entitlement: pinned) }
-        if isUITesting { return MockEntitlementProvider(entitlement: .free) }
-        #if DEBUG
-        return MockEntitlementProvider(entitlement: .plus)
-        #else
-        return StoreKitEntitlementProvider()
-        #endif
+        MockEntitlementProvider(entitlement: pinned ?? .free)
     }
 
     /// Resolves dependencies from launch arguments, so a UI test can pin the app
@@ -164,8 +218,15 @@ final class AppContainer {
     ///   `-CalScenario <name>`   seeded history: `empty`, `lowCoherenceDay`, `day30Streak`
     ///   `-CalUseMockCoach 1`    never reach a real model — no cost, no network, no flake
     ///   `-CalFixedDate <iso>`   freeze the clock so streak assertions are stable
-    ///   `-CalEntitlement <tier>` `free` or `plus`, so a UI test can assert both
-    ///                            sides of the paywall without a sandbox account
+    ///   `-CalEntitlement <tier>` ignored in the demo — every surface is unlocked
+    ///   `-CalVoiceScript <name>` which scripted conversation the voice root plays:
+    ///                            `greeting` (default), `checkIn`, `crisis`,
+    ///                            `toolError`, `micDenied`, `offline`,
+    ///                            `dropAndRecover`, `dropAndFail`. There is no
+    ///                            unscripted option yet — every session is the
+    ///                            mock until §9 step 4.
+    ///   `-CalForceLogin 1`     do not seed a preview session; show the login gate
+    ///   `-CalShowWelcome 1`    seed a session but skip onboardedAt — first-run welcome
     ///   `-CalLiveCoach 1`       point at the LOCAL Edge Functions (`supabase functions
     ///                            serve`) — both the coach and semantic place
     ///                            search. Opt-in, because the default must never
@@ -212,6 +273,7 @@ final class AppContainer {
         var store: any CoherenceStoring = InMemoryCoherenceStore(seeded)
         var profiles: any ProfileStoring = InMemoryProfileStore()
         var practiceSessions: any PracticeSessionStoring = InMemoryPracticeSessionStore()
+        var journal: any JournalStoring = InMemoryJournalStore()
         var ephemeral = true
         if !isUITesting {
             if let container = try? SwiftDataCoherenceStore.container() {
@@ -220,19 +282,20 @@ final class AppContainer {
                 store = SwiftDataCoherenceStore(modelContainer: container)
                 profiles = SwiftDataProfileStore(modelContainer: container)
                 practiceSessions = SwiftDataPracticeSessionStore(modelContainer: container)
+                journal = SwiftDataJournalStore(modelContainer: container)
                 ephemeral = false
+            }
+        } else if value(for: "-CalForceLogin") != "1" {
+            // Seeded sessions skip the first-run welcome so UI tests still land
+            // on Cal. `-CalShowWelcome 1` is the exception: session, not yet
+            // onboarded. Real sign-ups write onboardedAt when they tap Meet Cal.
+            if value(for: "-CalShowWelcome") == "1" {
+                profiles = InMemoryProfileStore()
+            } else {
+                profiles = InMemoryProfileStore(Profile(onboardedAt: dates.now))
             }
         }
 
-        // The three Phase B seams (§2), wired inert. They exist now so callers are
-        // written against them from day one — retrofitting is what turns a swap
-        // into a rewrite.
-        let sync = NoOpSyncEngine { [store] in
-            // Only the SwiftData store tracks an outbox; the in-memory one has
-            // nothing to sync by definition.
-            guard let tracked = store as? SwiftDataCoherenceStore else { return 0 }
-            return try await tracked.pendingSyncCount()
-        }
 
         // The hosted project when `Info.plist` names one, the local stack when it
         // does not. Neither value is a secret: the publishable key identifies the
@@ -244,12 +307,48 @@ final class AppContainer {
         // that creates accounts against the real project would fill it with
         // rubbish and cost money on every run.
         let backend = BackendConfiguration.resolve(isUITesting: isUITesting)
+        let forceLogin = value(for: "-CalForceLogin") == "1"
+        let tokenStore: any TokenStoring = isUITesting
+            ? InMemoryTokenStore()
+            : KeychainTokenStore()
+        // Same gate as production: a stored session opens the orb. Tests and
+        // previews use the in-memory store, so seed a dummy session unless the
+        // launch asked to see the login screen.
+        if isUITesting && !forceLogin {
+            tokenStore.save(.previewSession())
+        }
         let auth = AuthSession(
             baseURL: backend.url,
             anonKey: backend.anonKey,
-            store: isUITesting ? InMemoryTokenStore() : KeychainTokenStore()
+            store: tokenStore
         )
+        let hasSession = tokenStore.load() != nil
         let consent = isUITesting ? MemoryConsent.notGranted : loadMemoryConsent()
+        // Sync (§15 step 5). Real when there is a persistent store to sync *from*
+        // and a project to sync *to*; inert otherwise, and inert is not a failure
+        // — the app has always worked without an account and still does.
+        //
+        // Note what is NOT gated on being signed in: the engine is constructed
+        // either way and asks for the user id per call. Signing in therefore takes
+        // effect on the next sync rather than at the next launch, which matters
+        // because the first sync after signing in IS the claim migration (§15
+        // step 4) — every local row is still dirty, so the person's whole history
+        // pushes under the new account with no id remapping.
+        let sync: any SyncEngine
+        if let tracked = store as? SwiftDataCoherenceStore, !isUITesting {
+            sync = SupabaseSyncEngine(
+                client: CalSupabase.makeClient(url: backend.url, anonKey: backend.anonKey),
+                store: tracked,
+                auth: auth
+            )
+        } else {
+            sync = NoOpSyncEngine { [store] in
+                // Only the SwiftData store tracks an outbox; the in-memory one has
+                // nothing to sync by definition.
+                guard let tracked = store as? SwiftDataCoherenceStore else { return 0 }
+                return try await tracked.pendingSyncCount()
+            }
+        }
 
         // Cal now talks to the real model by default.
         //
@@ -276,6 +375,49 @@ final class AppContainer {
         // `supabase functions serve`.
         let useLocalFunctions = value(for: "-CalLiveCoach") == "1"
         let functionsBackend = useLocalFunctions ? BackendConfiguration.local : backend
+        let remoteMemory: any RemoteMemoryControlling = isUITesting
+            ? NoOpRemoteMemory()
+            : RestMemoryClient(
+                baseURL: backend.url,
+                anonKey: backend.anonKey,
+                auth: auth,
+                memoryFunctionURL: functionsBackend.memoryEndpoint
+            )
+        let ambassadorSignup: any AmbassadorSigning = isUITesting
+            ? NoOpAmbassadorSignup()
+            : RestAmbassadorSignup(
+                baseURL: backend.url,
+                anonKey: backend.anonKey,
+                auth: auth
+            )
+
+        // Voice inherits the coach's polarity: live by default, mocked under
+        // `-CalUseMockCoach 1` so UI tests and previews never open a mic or
+        // spend ElevenLabs minutes (`PLAN-voice-implementation.md` §4).
+        // `-CalLiveCoach 1` still means "point Edge Functions at local serve".
+        let voiceScript = VoiceScript(rawValue: value(for: "-CalVoiceScript") ?? "") ?? .greeting
+        // Instant under test so the suite doesn't wait on scripted pauses; paced
+        // otherwise, because the point of the mock is to judge how it feels.
+        let beatDelay: Duration = isUITesting ? .zero : .milliseconds(90)
+        let coherenceStore = store
+        let dateProvider = dates
+        let makeVoiceSession: @MainActor @Sendable () -> any VoiceSession = {
+            if useMockCoach {
+                return MockVoiceSession(script: voiceScript.beats, beatDelay: beatDelay)
+            }
+            return ElevenLabsVoiceSession(
+                tokenClient: VoiceTokenClient(endpoint: functionsBackend.voiceTokenEndpoint),
+                loadMemoryDigest: {
+                    guard loadMemoryConsent().permitsRemoteMemory else {
+                        return MemoryDigest.noneSentinel
+                    }
+                    return MemoryDigest.fence(await remoteMemory.digest())
+                },
+                loadSessionOpener: {
+                    await SessionOpener.line(store: coherenceStore, dates: dateProvider)
+                }
+            )
+        }
 
         return AppContainer(
             dates: dates,
@@ -297,10 +439,10 @@ final class AppContainer {
                         return await auth.accessToken()
                     }
                   ),
+            makeVoiceSession: makeVoiceSession,
             content: BundledContentRepository(),
             // Semantic place search stays OPT-IN, unlike the coach, and the reason
-            // is not caution — it is that the `places` function is not deployed and
-            // its retrieval needs a `CHROMA_URL` the hosted project does not set.
+            // is not caution — it is that the `places` function is not deployed.
             // Turning it on by default would trade working offline substring search
             // for a 404. Navigate finds places by name without it; only phrasing a
             // question needs the endpoint.
@@ -313,18 +455,72 @@ final class AppContainer {
             sync: sync,
             profiles: profiles,
             practiceSessions: practiceSessions,
+            journal: journal,
             reminders: isUITesting ? MockReminderScheduler() : NotificationReminderScheduler(),
             calendars: isUITesting ? MockCalendarAccess() : EventKitCalendarAccess(),
             personalData: PersonalDataService(
-                checkIns: store, profiles: profiles, sessions: practiceSessions
+                checkIns: store,
+                profiles: profiles,
+                sessions: practiceSessions,
+                journal: journal,
+                remoteMemory: remoteMemory
             ),
+            remoteMemory: remoteMemory,
+            ambassadorSignup: ambassadorSignup,
             // A real StoreKit purchase needs a sandbox account and a system sheet
             // XCUITest can't drive, so tests pin the tier instead and assert the
             // app's own behaviour on each side of it (§11.2).
             premium: PremiumStore(provider: Self.entitlementProvider(pinned: pinnedTier, isUITesting: isUITesting)),
             isUITesting: isUITesting,
-            storeIsEphemeral: ephemeral
+            storeIsEphemeral: ephemeral,
+            hasSession: hasSession
         )
+    }
+}
+
+/// Scripted conversations, shared by UI tests, previews and demos so they can't
+/// disagree about what Cal says.
+enum VoiceScript: String, CaseIterable {
+    case greeting
+    case crisis
+    case toolError
+    case micDenied
+    case offline
+    case dropAndRecover
+    case dropAndFail
+
+    var beats: [MockVoiceSession.Beat] {
+        switch self {
+        case .greeting:       MockVoiceSession.greeting
+        case .crisis:         MockVoiceSession.crisis
+        case .toolError:      MockVoiceSession.toolError
+        case .micDenied:      MockVoiceSession.micDenied
+        case .offline:        MockVoiceSession.offline
+        case .dropAndRecover: MockVoiceSession.dropAndRecover
+        case .dropAndFail:    MockVoiceSession.dropAndFail
+        }
+    }
+}
+
+/// First spoken line for a live session, from today's check-in (or the invite).
+enum SessionOpener {
+    static func line(
+        store: any CoherenceStoring,
+        dates: any DateProvider
+    ) async -> String {
+        let today = dates.today
+        let todays = ((try? await store.checkIns(from: today, to: today)) ?? [])
+            .filter(\.isComplete)
+        guard let checkIn = todays.last, let avg = checkIn.averageAfter else {
+            return "Check in today."
+        }
+        if avg >= 8 {
+            return "Seems like you're having a great day. What's on your mind?"
+        }
+        if avg >= 5 {
+            return "How's the rest of today feeling?"
+        }
+        return "I'm here with you. What's been the hardest part today?"
     }
 }
 

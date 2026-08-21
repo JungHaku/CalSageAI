@@ -6,27 +6,39 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		CA3000000000000000000001 /* CalKit in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000001 /* CalKit */; };
+		CA3000000000000000000002 /* CalDesign in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000002 /* CalDesign */; };
+		CA3000000000000000000003 /* CalData in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000003 /* CalData */; };
+		CA3000000000000000000004 /* CalAI in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000004 /* CalAI */; };
+		CA3000000000000000000005 /* CalContent in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000005 /* CalContent */; };
+		CA3000000000000000000006 /* CalStore in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000006 /* CalStore */; };
+		CA3000000000000000000007 /* CalRemote in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000007 /* CalRemote */; };
+		CA3000000000000000000008 /* CalVoice in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000008 /* CalVoice */; };
+		CA3000000000000000000009 /* ElevenLabs in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000009 /* ElevenLabs */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		8CBF4DF4301AEE1000AE31EB /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 8CBF4DDA301AEE0F00AE31EB /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 8CBF4DE1301AEE0F00AE31EB;
-			remoteInfo = "Cal";
+			remoteInfo = Cal;
 		};
 		8CBF4DFE301AEE1000AE31EB /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 8CBF4DDA301AEE0F00AE31EB /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 8CBF4DE1301AEE0F00AE31EB;
-			remoteInfo = "Cal";
+			remoteInfo = Cal;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		8CBF4DE2301AEE0F00AE31EB /* Cal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Cal.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		8CBF4DF3301AEE1000AE31EB /* CalTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CalTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		8CBF4DFD301AEE1000AE31EB /* CalUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CalUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		8CF5B54530366C8500F8313B /* Cal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Cal.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		8CF5B54630366C8500F8313B /* CalTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CalTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		8CF5B54730366C8500F8313B /* CalUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CalUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -45,17 +57,17 @@
 			exceptions = (
 				8CBF4E05301AEE1000AE31EB /* Exceptions for "Cal" folder in "Cal" target */,
 			);
-			path = "Cal";
+			path = Cal;
 			sourceTree = "<group>";
 		};
 		8CBF4DF6301AEE1000AE31EB /* CalTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "CalTests";
+			path = CalTests;
 			sourceTree = "<group>";
 		};
 		8CBF4E00301AEE1000AE31EB /* CalUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "CalUITests";
+			path = CalUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -100,6 +112,9 @@
 				8CBF4DE4301AEE0F00AE31EB /* Cal */,
 				8CBF4DF6301AEE1000AE31EB /* CalTests */,
 				8CBF4E00301AEE1000AE31EB /* CalUITests */,
+				8CF5B54530366C8500F8313B /* Cal.app */,
+				8CF5B54630366C8500F8313B /* CalTests.xctest */,
+				8CF5B54730366C8500F8313B /* CalUITests.xctest */,
 			);
 			sourceTree = "<group>";
 		};
@@ -121,7 +136,7 @@
 			fileSystemSynchronizedGroups = (
 				8CBF4DE4301AEE0F00AE31EB /* Cal */,
 			);
-			name = "Cal";
+			name = Cal;
 			packageProductDependencies = (
 				CA2000000000000000000001 /* CalKit */,
 				CA2000000000000000000002 /* CalDesign */,
@@ -133,8 +148,8 @@
 				CA2000000000000000000008 /* CalVoice */,
 				CA2000000000000000000009 /* ElevenLabs */,
 			);
-			productName = "Cal";
-			productReference = 8CBF4DE2301AEE0F00AE31EB /* Cal.app */;
+			productName = Cal;
+			productReference = 8CF5B54530366C8500F8313B /* Cal.app */;
 			productType = "com.apple.product-type.application";
 		};
 		8CBF4DF2301AEE1000AE31EB /* CalTests */ = {
@@ -153,11 +168,11 @@
 			fileSystemSynchronizedGroups = (
 				8CBF4DF6301AEE1000AE31EB /* CalTests */,
 			);
-			name = "CalTests";
+			name = CalTests;
 			packageProductDependencies = (
 			);
-			productName = "CalTests";
-			productReference = 8CBF4DF3301AEE1000AE31EB /* CalTests.xctest */;
+			productName = CalTests;
+			productReference = 8CF5B54630366C8500F8313B /* CalTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		8CBF4DFC301AEE1000AE31EB /* CalUITests */ = {
@@ -176,11 +191,11 @@
 			fileSystemSynchronizedGroups = (
 				8CBF4E00301AEE1000AE31EB /* CalUITests */,
 			);
-			name = "CalUITests";
+			name = CalUITests;
 			packageProductDependencies = (
 			);
-			productName = "CalUITests";
-			productReference = 8CBF4DFD301AEE1000AE31EB /* CalUITests.xctest */;
+			productName = CalUITests;
+			productReference = 8CF5B54730366C8500F8313B /* CalUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -206,7 +221,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 8CBF4DDD301AEE0F00AE31EB /* Build configuration list for PBXProject "Cal" */;
+			buildConfigurationList = 8CBF4DDD301AEE0F00AE31EB /* Build configuration list for PBXProject "CalSageAI" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -215,7 +230,6 @@
 			);
 			mainGroup = 8CBF4DD9301AEE0F00AE31EB;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
 			packageReferences = (
 				CA1000000000000000000001 /* XCLocalSwiftPackageReference "Packages/CalKit" */,
 				CA1000000000000000000002 /* XCLocalSwiftPackageReference "Packages/CalDesign" */,
@@ -227,6 +241,7 @@
 				CA1000000000000000000008 /* XCLocalSwiftPackageReference "Packages/CalVoice" */,
 				CA1000000000000000000009 /* XCRemoteSwiftPackageReference "elevenlabs-swift-sdk" */,
 			);
+			preferredProjectObjectVersion = 77;
 			productRefGroup = 8CBF4DD9301AEE0F00AE31EB;
 			projectDirPath = "";
 			projectRoot = "";
@@ -305,15 +320,16 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "Cal/Cal.entitlements";
+				CODE_SIGN_ENTITLEMENTS = Cal/Cal.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = TC59SLLRF4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "Cal/Info.plist";
-				INFOPLIST_KEY_NSCameraUsageDescription = "Cal does not use your camera. This permission is only declared because a voice library includes camera support.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Cal listens so you can talk to him out loud. You can type instead anytime.";
+				INFOPLIST_FILE = Cal/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "C.A.L does not use your camera. This permission is only declared because a voice library includes camera support.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "C.A.L uses the local network so a live voice session can connect.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "C.A.L listens so you can talk to him out loud. You can type instead anytime.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -324,7 +340,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "org.wholelifeministries.cal";
+				PRODUCT_BUNDLE_IDENTIFIER = org.wholelifeministries.cal;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -341,15 +357,16 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "Cal/Cal.entitlements";
+				CODE_SIGN_ENTITLEMENTS = Cal/Cal.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = TC59SLLRF4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "Cal/Info.plist";
-				INFOPLIST_KEY_NSCameraUsageDescription = "Cal does not use your camera. This permission is only declared because a voice library includes camera support.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Cal listens so you can talk to him out loud. You can type instead anytime.";
+				INFOPLIST_FILE = Cal/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "C.A.L does not use your camera. This permission is only declared because a voice library includes camera support.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "C.A.L uses the local network so a live voice session can connect.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "C.A.L listens so you can talk to him out loud. You can type instead anytime.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -360,7 +377,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "org.wholelifeministries.cal";
+				PRODUCT_BUNDLE_IDENTIFIER = org.wholelifeministries.cal;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -503,7 +520,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "org.wholelifeministries.cal.tests";
+				PRODUCT_BUNDLE_IDENTIFIER = org.wholelifeministries.cal.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -525,7 +542,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "org.wholelifeministries.cal.tests";
+				PRODUCT_BUNDLE_IDENTIFIER = org.wholelifeministries.cal.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -545,7 +562,7 @@
 				DEVELOPMENT_TEAM = TC59SLLRF4;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "org.wholelifeministries.cal.uitests";
+				PRODUCT_BUNDLE_IDENTIFIER = org.wholelifeministries.cal.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -553,7 +570,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = "Cal";
+				TEST_TARGET_NAME = Cal;
 			};
 			name = Debug;
 		};
@@ -565,7 +582,7 @@
 				DEVELOPMENT_TEAM = TC59SLLRF4;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "org.wholelifeministries.cal.uitests";
+				PRODUCT_BUNDLE_IDENTIFIER = org.wholelifeministries.cal.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -573,14 +590,14 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = "Cal";
+				TEST_TARGET_NAME = Cal;
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		8CBF4DDD301AEE0F00AE31EB /* Build configuration list for PBXProject "Cal" */ = {
+		8CBF4DDD301AEE0F00AE31EB /* Build configuration list for PBXProject "CalSageAI" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				8CBF4E09301AEE1000AE31EB /* Debug */,
@@ -617,17 +634,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-/* Begin PBXBuildFile section */
-		CA3000000000000000000001 /* CalKit in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000001 /* CalKit */; };
-		CA3000000000000000000002 /* CalDesign in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000002 /* CalDesign */; };
-		CA3000000000000000000003 /* CalData in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000003 /* CalData */; };
-		CA3000000000000000000004 /* CalAI in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000004 /* CalAI */; };
-		CA3000000000000000000005 /* CalContent in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000005 /* CalContent */; };
-		CA3000000000000000000006 /* CalStore in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000006 /* CalStore */; };
-		CA3000000000000000000007 /* CalRemote in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000007 /* CalRemote */; };
-		CA3000000000000000000008 /* CalVoice in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000008 /* CalVoice */; };
-		CA3000000000000000000009 /* ElevenLabs in Frameworks */ = {isa = PBXBuildFile; productRef = CA2000000000000000000009 /* ElevenLabs */; };
-/* End PBXBuildFile section */
 
 /* Begin XCLocalSwiftPackageReference section */
 		CA1000000000000000000001 /* XCLocalSwiftPackageReference "Packages/CalKit" */ = {

@@ -3,10 +3,9 @@ import PackageDescription
 
 let package = Package(
     name: "CalData",
-    // macOS 15, unlike the other packages' 14: SwiftData's `#Unique` macro needs it.
-    // The macOS platform exists purely so `swift test` runs natively with no
-    // simulator, so raising it costs nothing — iOS 18 already has `#Unique`.
-    platforms: [.iOS(.v18), .macOS(.v15)],
+    // macOS 15 so `swift test` can run natively with SwiftData; iOS 17 matches
+    // the app deployment target.
+    platforms: [.iOS(.v17), .macOS(.v15)],
     products: [
         .library(name: "CalData", targets: ["CalData"])
     ],

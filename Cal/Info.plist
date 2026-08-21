@@ -52,12 +52,40 @@
 
 	  Full access is requested because Apple provides no read-only calendar tier:
 	  "To read events or reminders from the event store, your app needs full
-	  access." Cal only ever reads. The write-only key is deliberately absent —
+	  access." C.A.L only ever reads. The write-only key is deliberately absent —
 	  requesting a permission the app doesn't use invites 5.1.1(iii) data
 	  minimisation questions at review.
 	-->
 	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>Cal shows today's classes and deadlines from the calendars already on your phone. It only reads them and never adds, edits, or deletes anything.</string>
+	<string>C.A.L shows today's classes and deadlines from the calendars already on your phone. It only reads them and never adds, edits, or deletes anything.</string>
+
+	<!--
+	  Microphone (voice-first root). Required before any AVAudioSession /
+	  ElevenLabs session opens — without it the app crashes on first talk.
+	-->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>C.A.L listens so you can talk to him out loud. You can type instead anytime.</string>
+
+	<!--
+	  Camera. C.A.L does not use the camera, but LiveKit (pulled in by the
+	  ElevenLabs voice SDK) links camera APIs. App Store Connect rejects the
+	  binary without this purpose string even when the feature is unused.
+	-->
+	<key>NSCameraUsageDescription</key>
+	<string>C.A.L does not use your camera. This permission is only declared because a voice library includes camera support.</string>
+
+	<!--
+	  LiveKit (ElevenLabs voice) uses Bonjour/mDNS while gathering ICE candidates.
+	  Without these keys iOS silently denies local-network access and the WebRTC
+	  room drops immediately — which is the "connection dropped" TestFlight saw.
+	-->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>C.A.L uses the local network so a live voice session can connect.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_livekit._tcp</string>
+		<string>_livekit._udp</string>
+	</array>
 	<key>CalSupabaseURL</key>
 	<string>https://woudmxksrkrzjnmlfven.supabase.co</string>
 	<key>CalSupabaseAnonKey</key>

@@ -1,10 +1,9 @@
 import CalAI
-import CalData
 import CalKit
 import Foundation
 import Observation
 
-/// The state behind "Chat with Cal".
+/// The state behind "Chat with C.A.L".
 ///
 /// Separated from the view so the parts that matter — what happens when the
 /// stream yields a crisis, what happens when it fails mid-reply, what the person
@@ -36,19 +35,7 @@ final class ChatViewModel {
     var draft = ""
 
     private let coach: any CoachClient
-    private let store: any CoherenceStoring
-    private let dates: any DateProvider
     private let threadID: UUID
-
-    /// How far back the digest reads.
-    ///
-    /// Wider than the digest's own 7-day window on purpose: `CoherenceSummary`
-    /// compares this week against the previous one, and its streak count walks
-    /// backwards day by day. Fetching only 14 days would silently report a
-    /// two-month streak as fourteen days — a wrong number in Cal's mouth, which
-    /// is the specific failure the prompt's "never invent a number" rule exists
-    /// to prevent.
-    private static let digestWindowDays = 120
 
     /// `@ObservationIgnored` so `deinit` can cancel it.
     ///
@@ -62,13 +49,9 @@ final class ChatViewModel {
 
     init(
         coach: any CoachClient,
-        store: any CoherenceStoring,
-        dates: any DateProvider,
         threadID: UUID = UUID()
     ) {
         self.coach = coach
-        self.store = store
-        self.dates = dates
         self.threadID = threadID
     }
 
@@ -95,16 +78,12 @@ final class ChatViewModel {
 
         streamTask = Task { [weak self] in
             guard let self else { return }
-            // Rebuilt per turn rather than cached: a student can complete a
-            // check-in in the middle of a conversation, and Cal reasoning from
-            // this morning's numbers after they changed is worse than not
-            // reasoning from numbers at all.
             let request = CoachRequest(
                 surface: .chat,
                 threadID: self.threadID,
                 message: text,
                 history: history,
-                coherence: await self.digest()
+                coherence: nil
             )
             do {
                 for try await event in self.coach.send(request) {
@@ -158,24 +137,6 @@ final class ChatViewModel {
             messages.append(CoachMessage(role: .assistant, text: text, safety: crisis))
         }
         streamingText = ""
-    }
-
-    /// The compact numeric context Cal is allowed to reason from (§8.3).
-    ///
-    /// `nil` when there is nothing to say. An empty digest block would be worse
-    /// than no block: it reads to the model as "this student has no data", which
-    /// is a claim, where absence is merely silence.
-    private func digest() async -> CoherenceSummary? {
-        let today = dates.today
-        let calendar = dates.calendar
-        let start = today.adding(days: -(Self.digestWindowDays - 1), in: calendar)
-
-        guard let history = try? await store.checkIns(from: start, to: today) else { return nil }
-        let completed = history.filter(\.isComplete)
-        guard !completed.isEmpty else { return nil }
-
-        let summary = CoherenceSummary.build(history: completed, today: today, calendar: calendar)
-        return summary.promptText.isEmpty ? nil : summary
     }
 
     /// Dismisses the crisis card. The conversation is left intact — see

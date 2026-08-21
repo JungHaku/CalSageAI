@@ -20,10 +20,13 @@
 
 import { CAL_SYSTEM_PROMPT, PROMPT_VERSION } from "./prompt.ts";
 import { assembleMessages, type Turn } from "./assemble.ts";
-import { ChromaVectorStore, OpenAIEmbedder, retrieve } from "./retrieval.ts";
+import {
+  OpenAIEmbedder,
+  postgresVectorStoreFromEnv,
+  retrieve,
+} from "./retrieval.ts";
 import { verifyUser } from "./identity.ts";
-import { ChromaMemoryBackend, personalMemoryFor } from "./memory.ts";
-import { distill, isDurable } from "./distillation.ts";
+import { personalMemoryFor, postgresMemoryFromEnv, ingestTurn } from "./memory.ts";
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 const DEFAULT_MODEL = "gpt-5.6-luna";
@@ -60,12 +63,9 @@ interface CoachBody {
   severity?: string;
 }
 
-/// Retrieval is opt-in via configuration. With no CHROMA_URL the function
-/// behaves exactly as it did before M1 — which is what keeps a fresh checkout,
-/// and anyone who has not run the seeding script, working.
-const CHROMA_URL = Deno.env.get("CHROMA_URL");
-const CHROMA_TOKEN = Deno.env.get("CHROMA_TOKEN");
-const CAL_COLLECTION = Deno.env.get("CAL_COLLECTION") ?? "cal_content";
+/// Retrieval is on whenever the function can reach Postgres. An empty
+/// `content_chunks` table — a fresh checkout that has not run the seed script —
+/// returns nothing and the coach still answers.
 const EMBED_MODEL = Deno.env.get("CAL_EMBED_MODEL") ?? "text-embedding-3-small";
 
 /// Optional (M3). Unset means memories are stored as the student wrote them.
@@ -73,16 +73,27 @@ const EMBED_MODEL = Deno.env.get("CAL_EMBED_MODEL") ?? "text-embedding-3-small";
 /// §10.5's budget before turning on in anything but development.
 const DISTILL_MODEL = Deno.env.get("CAL_DISTILL_MODEL");
 
-const vectorStore = CHROMA_URL
-  ? new ChromaVectorStore(CHROMA_URL, CAL_COLLECTION, "default_tenant", "default_database", CHROMA_TOKEN)
-  : null;
+const vectorStore = postgresVectorStoreFromEnv();
 
-/// Personal memory (M2). Separate collection, separate rules — see memory.ts.
-/// Unreachable in practice until the app can sign in, because without a verified
-/// token every request is anonymous and anonymous requests have no memory.
-const memoryBackend = CHROMA_URL
-  ? new ChromaMemoryBackend(CHROMA_URL, "cal_memory", "default_tenant", "default_database", CHROMA_TOKEN)
-  : null;
+/// Personal memory. Postgres standing facts, gated on a verified user *and* a
+/// current `consents` row — a bearer token alone is not permission to remember.
+const memoryBackend = postgresMemoryFromEnv();
+
+async function rememberTurn(
+  memory: ReturnType<typeof personalMemoryFor>,
+  message: string,
+  severity: string | undefined,
+  apiKey: string,
+): Promise<void> {
+  try {
+    await ingestTurn(memory, message, severity, {
+      apiKey,
+      distillModel: DISTILL_MODEL,
+    });
+  } catch (error) {
+    console.error("memory remember (async) failed:", error);
+  }
+}
 
 function sse(event: Record<string, unknown>): Uint8Array {
   return new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`);
@@ -132,47 +143,53 @@ Deno.serve(async (req) => {
 
   const model = Deno.env.get("CAL_MODEL") ?? DEFAULT_MODEL;
 
-  // Who is asking. `null` for every request today: the app sends no session, so
-  // there is no identity, so there is no personal memory. That is the intended
-  // resting state until sign-in and the consent flow exist.
+  // Who is asking. `null` is the normal case: no token, or a token that is not
+  // a user. Memory also needs a current consent row — withholding the bearer
+  // on the phone is not the only gate.
   const user = await verifyUser(req);
-  const embedder = new OpenAIEmbedder(apiKey, EMBED_MODEL);
-  const memory = user && memoryBackend
+  const consented = user && memoryBackend
+    ? await memoryBackend.hasCurrentConsent(user.id)
+    : false;
+
+  // One embedding per turn, reused for content RAG and personal k-NN. Retrieval
+  // runs against the message alone, not the message plus history: a student who
+  // spent four turns on their roommate and then asks about breathing should get
+  // the breath practice, not a vector averaged over both.
+  const embedder = (vectorStore || (user && consented && memoryBackend))
+    ? new OpenAIEmbedder(apiKey, EMBED_MODEL)
+    : null;
+  const memory = user && consented && memoryBackend
     ? personalMemoryFor(user, memoryBackend, embedder)
     : null;
 
-  const memories = memory ? await memory.recall(message) : [];
+  let queryVector: number[] | null = null;
+  if (embedder) {
+    try {
+      queryVector = await embedder.embed(message);
+    } catch (error) {
+      console.error("query embed failed, continuing without vectors:", error);
+    }
+  }
 
-  // Retrieval runs against the message alone, not the message plus history: a
-  // student who spent four turns on their roommate and then asks about breathing
-  // should get the breath practice, not a vector averaged over both.
+  const memories = memory ? await memory.recall(message, { vector: queryVector }) : [];
   const retrieved = await retrieve({
     surface: body.surface ?? "chat",
     query: message,
-    embedder,
+    embedder: null,
     store: vectorStore,
+    vector: queryVector,
   });
 
-  // Written before the reply streams, not after. The student's own words are the
-  // durable fact worth keeping; Cal's reply is reconstructable from them, and
-  // waiting for the stream to finish would mean losing the write whenever
-  // someone closes the screen mid-answer.
+  // Remember off the stream's critical path. Distill (when on) is a second
+  // model call; awaiting it here delayed the first spoken/streamed token.
+  // Closing the screen mid-answer can still lose the write — that is the
+  // trade for not blocking the reply.
   if (memory) {
-    // Distillation runs only for turns that already passed the free gate, so a
-    // question never costs a model call on its way to being discarded.
-    const durable = !body.severity || body.severity === "none" ? isDurable(message) : false;
-    const text = durable && DISTILL_MODEL
-      ? await distill(message, { apiKey, model: DISTILL_MODEL })
-      : message;
-
-    if (text) {
-      await memory.remember({
-        id: crypto.randomUUID(),
-        text,
-        createdAt: new Date().toISOString(),
-        severity: body.severity,
-      });
-    }
+    const severity = body.severity;
+    const toRemember = message;
+    void rememberTurn(memory, toRemember, severity, apiKey).catch((error) => {
+      console.error("memory remember failed:", error);
+    });
   }
 
   // System prompt first and byte-identical every time: prompt caching keys on a

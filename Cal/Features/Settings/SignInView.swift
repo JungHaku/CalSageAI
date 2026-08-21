@@ -23,6 +23,12 @@ struct SignInView: View {
     @State private var isWorking = false
     @State private var error: String?
     @State private var signedInEmail: String?
+    @State private var pendingSync = 0
+    @State private var lastSync: SyncOutcome?
+    /// Tracked apart from `lastSync` because `try?` renders a refusal and a
+    /// never-pressed button identically.
+    @State private var syncFailed = false
+    @State private var isSyncing = false
 
     // No NavigationStack of its own. This is pushed from Settings, which already
     // provides one, and nesting a second stack inside a pushed view makes the
@@ -40,7 +46,10 @@ struct SignInView: View {
         }
         .navigationTitle(signedInEmail == nil ? "Sign in" : "Account")
         .navigationBarTitleDisplayMode(.inline)
-        .task { signedInEmail = await container.auth.credentials()?.email }
+        .task {
+            signedInEmail = await container.auth.credentials()?.email
+            pendingSync = (try? await container.sync.pendingCount()) ?? 0
+        }
     }
 
     // MARK: Signed out
@@ -50,8 +59,8 @@ struct SignInView: View {
             Text(
                 """
                 An account is only needed so Cal can carry a conversation across \
-                devices. Everything you have already done — check-ins, practices, \
-                history — is on this phone and stays there whether you sign in or not.
+                devices. Everything you have already done — practices, journal, \
+                settings — is on this phone and stays there whether you sign in or not.
                 """
             )
             .font(.footnote)
@@ -114,6 +123,7 @@ struct SignInView: View {
                 : try await container.auth.signIn(email: email, password: password)
             password = ""
             signedInEmail = credentials.email
+            container.noteSignedIn()
         } catch let authError as AuthError {
             error = authError.userFacingMessage
         } catch is CancellationError {
@@ -129,19 +139,76 @@ struct SignInView: View {
 
     // MARK: Signed in
 
+    /// Two sections, so this needs the builder.
+    @ViewBuilder
     private func signedInSection(_ address: String) -> some View {
         Section {
             LabeledContent("Signed in as", value: address)
             Button("Sign out", role: .destructive) {
-                Task {
-                    await container.auth.signOut()
-                    signedInEmail = nil
-                }
+                container.signOut()
+                signedInEmail = nil
             }
             .accessibilityIdentifier("signin-signout")
         } footer: {
             Text("Signing out on this phone doesn't delete anything. Use Settings › Delete everything for that.")
         }
+
+        // Backup lives here rather than in Settings, and that is a design call
+        // rather than a tidy-up: it does nothing at all without an account, so
+        // putting it beside sign-in is where someone would look for it.
+        //
+        // It also keeps Settings' destructive row where it was. Adding a row
+        // above "Delete everything" pushed it below the fold, and a SwiftUI List
+        // does not build off-screen rows — so the control that erases everything
+        // stopped existing as far as the accessibility tree was concerned. A UI
+        // test caught that; nothing on screen looked wrong.
+        Section {
+            LabeledContent(
+                "Not yet backed up",
+                value: pendingSync == 1 ? "1 item" : "\(pendingSync) items"
+            )
+            Button {
+                Task { await backUpNow() }
+            } label: {
+                if isSyncing {
+                    ProgressView()
+                } else {
+                    Label(syncLabel, systemImage: "arrow.triangle.2.circlepath")
+                }
+            }
+            .disabled(isSyncing)
+            .accessibilityIdentifier("sync-now")
+        } header: {
+            Text("Backup")
+        } footer: {
+            Text("Your data is copied to your account so it survives losing this phone.")
+        }
+    }
+
+    private var syncLabel: String {
+        if syncFailed { return "Couldn't back up — try again" }
+        switch lastSync {
+        case .none: return "Back up now"
+        case .notConfigured: return "Sign in to back up"
+        case .offline: return "Offline — try again"
+        case .synced(let pushed, let pulled):
+            return pushed == 0 && pulled == 0
+                ? "Up to date" : "Backed up \(pushed), received \(pulled)"
+        }
+    }
+
+    private func backUpNow() async {
+        guard !isSyncing else { return }
+        isSyncing = true
+        defer { isSyncing = false }
+        do {
+            lastSync = try await container.sync.sync()
+            syncFailed = false
+        } catch {
+            lastSync = nil
+            syncFailed = true
+        }
+        pendingSync = (try? await container.sync.pendingCount()) ?? pendingSync
     }
 
     /// The second yes — two explicit choices, not a switch.
@@ -177,8 +244,8 @@ struct SignInView: View {
             // should never have to infer whether this is on.
             Text(
                 isRemembering
-                    ? "Cal is keeping what you type in Chat. Choose the second option to stop."
-                    : "Cal is not keeping anything. Chat still works; it just starts fresh each time."
+                    ? "C.A.L is keeping what you type in Chat. Choose the second option to stop."
+                    : "C.A.L is not keeping anything. Chat still works; it just starts fresh each time."
             )
             .accessibilityIdentifier("memory-consent-state")
         }

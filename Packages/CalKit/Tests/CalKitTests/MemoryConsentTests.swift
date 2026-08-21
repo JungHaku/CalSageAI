@@ -22,6 +22,7 @@ struct MemoryConsentTests {
         #expect(consent.permitsRemoteMemory)
         #expect(consent.grantedAt == now)
         #expect(consent.version == MemoryConsent.currentVersion)
+        #expect(MemoryConsent.remoteDocType == "memory")
     }
 
     /// Consent to old wording is not consent to new wording. Cheaper to ask
@@ -53,5 +54,6 @@ struct MemoryConsentTests {
         #expect(body.contains("delete"))
         #expect(MemoryConsentCopy.sharingNote.lowercased().contains("do not sell"))
         #expect(!MemoryConsentCopy.declineTitle.isEmpty, "declining needs its own words")
+        #expect(MemoryConsent.remoteDocType == "memory")
     }
 }

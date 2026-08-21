@@ -1,7 +1,7 @@
-# Cal Coherence — MVP Architecture
+# C.A.L Coherence — MVP Architecture
 
 **Client:** Breathe Health Center (Dr. Mia Curcuruto)
-**Product:** `Cal` — a coherence coach for UC Berkeley students.
+**Product:** `C.A.L` — a coherence coach for UC Berkeley students.
 **Owner:** Beck Jungwhan
 **Revised:** 2026-07-30 — restructured as a **local-first MVP, no backend**.
 

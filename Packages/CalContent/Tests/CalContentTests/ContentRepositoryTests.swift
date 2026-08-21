@@ -11,7 +11,7 @@ struct ContentRepositoryTests {
     @Test("the bundled payload decodes")
     func decodes() async throws {
         let bundle = try await repo.bundle()
-        #expect(bundle.version == 3)
+        #expect(bundle.version == 4)
         #expect(!bundle.exercises.isEmpty)
         #expect(!bundle.questions.isEmpty)
         #expect(!bundle.motivations.isEmpty)
@@ -53,7 +53,7 @@ struct ContentRepositoryTests {
 
     // MARK: Exercises
 
-    @Test("Dr. Mia's five practices are present, plus the labelled placeholder")
+    @Test("Dr. Mia's five practices and the five basic breathworks are present")
     func practicesPresent() async throws {
         let slugs = Set(try await repo.exercises(tier: nil).map(\.slug))
         for expected in [
@@ -62,6 +62,11 @@ struct ContentRepositoryTests {
             "presence-of-light",
             "solar-plexus-light",
             "sovereignty-reflection",
+            "box-breath",
+            "even-breath",
+            "belly-breath",
+            "four-seven-eight",
+            "release-sigh",
         ] {
             #expect(slugs.contains(expected), "missing practice: \(expected)")
         }
@@ -103,30 +108,32 @@ struct ContentRepositoryTests {
     func lookups() async throws {
         #expect(try await repo.exercise(slug: "presence-of-light")?.title == "Presence of Light")
         #expect(try await repo.exercise(slug: "nope") == nil)
+        #expect(try await repo.exercise(for: .safety)?.slug == "box-breath")
+        #expect(try await repo.exercise(for: .breath)?.slug == "even-breath")
         #expect(try await repo.exercise(for: .presence)?.slug == "presence-of-light")
         #expect(try await repo.exercise(for: .connection)?.slug == "microcosm-macrocosm-breath")
     }
 
-    /// Six categories still have no authored regulation exercise (§17 question 6).
-    /// This test documents which, so when Dr. Mia supplies one the gap closes
-    /// visibly instead of silently.
-    @Test("categories still awaiting a practice are exactly the five we expect")
+    @Test("every category has a regulation exercise")
     func knownContentGaps() async throws {
         var missing: [CoherenceCategory] = []
         for category in CoherenceCategory.allCases
         where try await repo.exercise(for: category) == nil {
             missing.append(category)
         }
-        #expect(
-            Set(missing) == Set([.safety, .breath, .bodyAwareness, .innerKnowing, .authenticExpression]),
-            "content gaps changed: \(missing.map(\.rawValue).sorted())"
-        )
+        #expect(missing.isEmpty, "content gaps: \(missing.map(\.rawValue).sorted())")
     }
 
-    @Test("tier filtering separates the five practices from the free utilities")
+    @Test("tier filtering separates guided practices from free breathwork")
     func tierFilter() async throws {
-        let free = try await repo.exercises(tier: .free).map(\.slug)
-        #expect(Set(free) == ["seed-placeholder", "study-reset"])
+        let free = Set(try await repo.exercises(tier: .free).map(\.slug))
+        #expect(free.contains("seed-placeholder"))
+        #expect(free.contains("study-reset"))
+        #expect(free.contains("box-breath"))
+        #expect(free.contains("even-breath"))
+        #expect(free.contains("belly-breath"))
+        #expect(free.contains("four-seven-eight"))
+        #expect(free.contains("release-sigh"))
         #expect(try await repo.exercises(tier: .premium).count == 5)
     }
 
@@ -150,6 +157,7 @@ struct ContentRepositoryTests {
         let premium = try await repo.exercises(tier: .premium).map(\.slug)
         #expect(!premium.contains("study-reset"), "the reset is a tool, not a library session")
         #expect(!premium.contains("seed-placeholder"))
+        #expect(!premium.contains("box-breath"))
         #expect(premium.count == 5)
     }
 

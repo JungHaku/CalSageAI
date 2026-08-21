@@ -10,15 +10,21 @@ public struct PersonalDataService: Sendable {
     private let checkIns: any CoherenceStoring
     private let profiles: any ProfileStoring
     private let sessions: any PracticeSessionStoring
+    private let journal: any JournalStoring
+    private let remoteMemory: any RemoteMemoryControlling
 
     public init(
         checkIns: any CoherenceStoring,
         profiles: any ProfileStoring,
-        sessions: any PracticeSessionStoring
+        sessions: any PracticeSessionStoring,
+        journal: any JournalStoring,
+        remoteMemory: any RemoteMemoryControlling = NoOpRemoteMemory()
     ) {
         self.checkIns = checkIns
         self.profiles = profiles
         self.sessions = sessions
+        self.journal = journal
+        self.remoteMemory = remoteMemory
     }
 
     /// Everything, as one archive.
@@ -35,7 +41,8 @@ public struct PersonalDataService: Sendable {
             generatedAt: Date(),
             profile: try await profiles.current(),
             checkIns: try await checkIns.checkIns(from: start, to: end),
-            practiceSessions: try await sessions.sessions(from: start, to: end)
+            practiceSessions: try await sessions.sessions(from: start, to: end),
+            journalEntries: try await journal.entries(from: start, to: end)
         )
     }
 
@@ -46,12 +53,15 @@ public struct PersonalDataService: Sendable {
     /// the contents on disk under a `deletedAt` flag would be exactly the wrong
     /// reading of the request.
     ///
-    /// Ordering matters: check-ins and sessions first, profile last. The profile
-    /// is the identity everything hangs off, so if this is interrupted the result
-    /// is an empty profile rather than orphaned health data with no owner.
+    /// Ordering matters: check-ins, sessions, and journal first, profile last. The
+    /// profile is the identity everything hangs off, so if this is interrupted the
+    /// result is an empty profile rather than orphaned health data with no owner.
     public func deleteEverything() async throws {
         try await checkIns.purgeAll()
         try await sessions.purgeAll()
+        try await journal.purgeAll()
+        try await remoteMemory.forgetAll()
+        try await remoteMemory.persistConsent(granted: false)
         try await profiles.purge()
     }
 }

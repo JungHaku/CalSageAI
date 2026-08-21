@@ -9,10 +9,9 @@ import SwiftUI
 public enum CoherenceScale {
     /// The **fill** tint — swatches, dots, and filled shapes.
     ///
-    /// Not safe as a text colour, and that is not a subtlety: measured against the
-    /// app background these are 3.21:1, 1.85:1 and 2.57:1, where text needs 4.5:1.
-    /// Use `textTint(for:)` for anything a person reads. `ContrastTests` asserts
-    /// both facts so the two cannot be quietly merged back together.
+    /// Prefer `textTint(for:)` for anything a person reads. On the light field
+    /// the fills fail as text, so feature code still goes through the text path
+    /// so a numeral is never painted with a swatch by accident.
     public static func tint(for band: CoherenceBand) -> Color {
         switch band {
         case .low:      Color(rgb: Band.lowFill)
@@ -40,20 +39,16 @@ public enum CoherenceScale {
         public static let moderateFill: UInt32 = 0xE6B859
         public static let highFill: UInt32 = 0x59B28C
 
-        // Chosen to sit at *separated* contrast ratios — roughly 9.0, 6.4 and 4.6
-        // against the card — rather than all pushed to the 4.5:1 minimum.
-        //
-        // The first attempt did exactly that, and a test caught it: three colours
-        // tuned to the same threshold end up at the same luminance, so they are
-        // distinguishable only by hue. That is precisely the case a red-green
-        // colourblind reader, a greyscale screenshot, and a printed page all fail.
-        // Spreading the luminance costs nothing and fixes all three.
-        public static let lowTextLight: UInt32 = 0x712B1A
-        public static let lowTextDark: UInt32 = 0xE9AFA0
-        public static let moderateTextLight: UInt32 = 0x715111
-        public static let moderateTextDark: UInt32 = 0xCD9420
-        public static let highTextLight: UInt32 = 0x38785D
-        public static let highTextDark: UInt32 = 0x449371
+        // Tuned for the light field: dark enough to clear 4.5:1 on both app and
+        // card, and held at *separated* luminances (≥1.3:1 apart) so the three
+        // bands survive greyscale and red-green deficiency. Light and dark keys
+        // match — the page no longer flips to forest green.
+        public static let lowTextLight: UInt32 = 0x6B1E14
+        public static let lowTextDark: UInt32 = 0x6B1E14
+        public static let moderateTextLight: UInt32 = 0x6B4E0A
+        public static let moderateTextDark: UInt32 = 0x6B4E0A
+        public static let highTextLight: UInt32 = 0x2E7A58
+        public static let highTextDark: UInt32 = 0x2E7A58
 
         public static let allFills: [UInt32] = [lowFill, moderateFill, highFill]
         public static let allTextLight: [UInt32] = [lowTextLight, moderateTextLight, highTextLight]
@@ -159,6 +154,7 @@ public struct ScoreScale: View {
             .accessibilityValue(
                 score.map { "\($0.value) out of \(Score.validRange.upperBound)" } ?? "Not answered yet"
             )
+            .accessibilityIdentifier("score-scale")
         }
     }
 }

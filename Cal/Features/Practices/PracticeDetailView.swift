@@ -7,11 +7,19 @@ import SwiftUI
 /// One practice: what it's for, how long it runs, and a way to begin.
 struct PracticeDetailView: View {
     @Environment(AppContainer.self) private var container
+    @Environment(PracticeRunCoordinator.self) private var practices: PracticeRunCoordinator?
     @State private var exercise: Exercise?
     @State private var isPlaying = false
     @State private var lastCompleted = false
 
     let slug: String
+    /// Begin as soon as the script has loaded, without waiting for a tap.
+    ///
+    /// Set when Cal opened this herself (`play_practice`). She has just said
+    /// "let's breathe together" out loud, and a screen that then waits for a
+    /// button makes her a liar. Still `false` for someone who navigated here
+    /// themselves — they came to read what it is.
+    var autoStart = false
 
     var body: some View {
         Group {
@@ -27,13 +35,27 @@ struct PracticeDetailView: View {
             if exercise == nil {
                 exercise = try? await container.content.exercise(slug: slug)
             }
+            // Only once, and only if the script actually loaded — auto-starting
+            // an empty timeline would flash a player that immediately finishes.
+            if autoStart, exercise != nil, !lastCompleted {
+                isPlaying = true
+            }
         }
         .fullScreenCover(isPresented: $isPlaying) {
             if let exercise {
                 PracticeRunnerView(exercise: exercise) { completed in
                     isPlaying = false
                     lastCompleted = completed
+                    // Voice-awaited runs resolve here; tap-only runs are a no-op
+                    // because the coordinator is idle.
+                    practices?.resolve(completed ? .completed : .stopped)
                 }
+            }
+        }
+        .onDisappear {
+            // Route torn down while Cal is still awaiting — treat as stopped.
+            if practices?.activeSlug == slug {
+                practices?.resolve(.stopped)
             }
         }
     }
@@ -101,7 +123,9 @@ struct PracticeDetailView: View {
 /// whether a practice is mistimed.
 struct PracticeRunnerView: View {
     @Environment(AppContainer.self) private var container
+    @Environment(PracticeRunCoordinator.self) private var practices: PracticeRunCoordinator?
     @State private var session: PracticeSession?
+    @State private var stopObserver: Int = 0
 
     let exercise: Exercise
     /// `true` when the practice ran to the end.
@@ -114,6 +138,11 @@ struct PracticeRunnerView: View {
             onSkip: { progress in Task { await abandon(at: progress) } }
         )
         .task { await begin() }
+        .onChange(of: practices?.stopToken ?? 0) { _, token in
+            guard token != stopObserver, practices?.isRunning == true else { return }
+            stopObserver = token
+            Task { await abandon(at: 0) }
+        }
     }
 
     private func begin() async {
@@ -128,18 +157,28 @@ struct PracticeRunnerView: View {
     }
 
     private func finish() async {
-        guard var session else { return onDismiss(true) }
+        guard var session else {
+            practices?.resolve(.completed)
+            onDismiss(true)
+            return
+        }
         session.finish(at: container.dates.now)
         self.session = session
         try? await container.practiceSessions.save(session)
+        practices?.resolve(.completed)
         onDismiss(true)
     }
 
     private func abandon(at progress: Double) async {
-        guard var session else { return onDismiss(false) }
+        guard var session else {
+            practices?.resolve(.stopped)
+            onDismiss(false)
+            return
+        }
         session.abandon(atProgress: progress)
         self.session = session
         try? await container.practiceSessions.save(session)
+        practices?.resolve(.stopped)
         onDismiss(false)
     }
 }

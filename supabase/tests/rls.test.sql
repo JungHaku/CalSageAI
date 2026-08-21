@@ -10,7 +10,7 @@
 
 begin;
 create extension if not exists pgtap;
-select plan(13);
+select plan(18);
 
 -- --------------------------------------------------------------- invariant 1 ---
 -- Every table that holds user data has RLS enabled. No policy means deny-all,
@@ -82,7 +82,8 @@ select is_empty(
   $$ with owned(t) as (
        values ('profiles'),('checkins'),('checkin_scores'),('practice_sessions'),
               ('journal_entries'),('chat_threads'),('chat_messages'),('action_plans'),
-              ('weekly_reviews'),('emergency_contacts'),('consents'),('calendar_feeds')
+              ('weekly_reviews'),('emergency_contacts'),('consents'),('calendar_feeds'),
+              ('ambassador_signups')
      )
      select owned.t || ' has ' || count(p.polname) || ' policies'
        from owned
@@ -153,7 +154,8 @@ select is_empty(
        values ('profiles'),('checkins'),('checkin_scores'),('practice_sessions'),
               ('journal_entries'),('chat_threads'),('chat_messages'),('action_plans'),
               ('weekly_reviews'),('emergency_contacts'),('consents'),('calendar_feeds'),
-              ('ai_usage'),('safety_events'),('subscriptions')
+              ('ai_usage'),('safety_events'),('subscriptions'),('memories'),
+              ('ambassador_signups')
      )
      select owned.t
        from owned
@@ -182,7 +184,8 @@ select is_empty(
        values ('profiles'),('checkins'),('checkin_scores'),('practice_sessions'),
               ('journal_entries'),('chat_threads'),('chat_messages'),('action_plans'),
               ('weekly_reviews'),('emergency_contacts'),('consents'),('calendar_feeds'),
-              ('ai_usage'),('safety_events'),('subscriptions')
+              ('ai_usage'),('safety_events'),('subscriptions'),('memories'),
+              ('ambassador_signups')
      )
      select ours.t
        from ours
@@ -201,6 +204,61 @@ select is_empty(
            )
       ) $$,
   'the extension exclusion still leaves every one of our own tables in the sweep'
+);
+
+-- -------------------------------------------------------------- invariant 14 ---
+-- Personal memory is service-role-written. A client that can insert poisons
+-- its own prompt; a client that can delete wipes the store without the coach.
+select is_empty(
+  $$ select p.polname
+       from pg_policy p
+      where p.polrelid = 'public.memories'::regclass and p.polcmd <> 'r' $$,
+  'memories has no client-writable policy — only service_role writes it'
+);
+
+-- -------------------------------------------------------------- invariant 15 ---
+select ok(
+  has_table_privilege('authenticated', 'public.memories'::regclass, 'SELECT')
+  and not has_table_privilege('authenticated', 'public.memories'::regclass, 'INSERT')
+  and not has_table_privilege('authenticated', 'public.memories'::regclass, 'UPDATE')
+  and not has_table_privilege('authenticated', 'public.memories'::regclass, 'DELETE'),
+  'authenticated may SELECT own memories and nothing else'
+);
+
+-- -------------------------------------------------------------- invariant 16 ---
+-- Shared corpus is not a client dump. The app already bundles the same copy;
+-- exposing embeddings here would only invite scraping the index.
+select is_empty(
+  $$ select p.polname from pg_policy p where p.polrelid = 'public.content_chunks'::regclass $$,
+  'content_chunks is not client-accessible at all'
+);
+
+select ok(
+  not has_table_privilege('authenticated', 'public.content_chunks'::regclass, 'SELECT')
+  and not has_table_privilege('authenticated', 'public.content_chunks'::regclass, 'INSERT')
+  and not has_table_privilege('authenticated', 'public.content_chunks'::regclass, 'UPDATE')
+  and not has_table_privilege('authenticated', 'public.content_chunks'::regclass, 'DELETE'),
+  'authenticated has no privileges on content_chunks'
+);
+
+select ok(
+  not exists (
+    select 1
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public'
+       and p.proname in ('match_content_chunks', 'match_memories')
+       and has_function_privilege('authenticated', p.oid, 'EXECUTE')
+  )
+  and (
+    select count(*)
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public'
+       and p.proname in ('match_content_chunks', 'match_memories')
+       and has_function_privilege('service_role', p.oid, 'EXECUTE')
+  ) = 2,
+  'match RPCs are service_role only — a client cannot pass another user id'
 );
 
 -- -------------------------------------------------------------- invariant 11 ---
@@ -260,7 +318,8 @@ select is_empty(
   $$ with owned(t) as (
        values ('profiles'),('checkins'),('checkin_scores'),('practice_sessions'),
               ('journal_entries'),('chat_threads'),('chat_messages'),('action_plans'),
-              ('weekly_reviews'),('emergency_contacts'),('consents'),('calendar_feeds')
+              ('weekly_reviews'),('emergency_contacts'),('consents'),('calendar_feeds'),
+              ('ambassador_signups')
      )
      select owned.t || ' is missing: ' ||
             array_to_string(array(

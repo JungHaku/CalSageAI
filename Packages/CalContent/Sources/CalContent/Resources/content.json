@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "questions": [
     {
       "category": "overall",
@@ -224,6 +224,101 @@
           { "kind": "exhale", "text": "", "seconds": 7 },
           { "kind": "cue", "text": "Then choose peace over struggle.", "seconds": 7 },
           { "kind": "cue", "text": "Allow yourself to return to the quiet strength already within you.", "seconds": 10 }
+        ]
+      }
+    },
+
+    {
+      "slug": "box-breath",
+      "title": "Box Breath",
+      "purpose": "A four-count square to settle the body when you feel unsafe or wired.",
+      "category": "safety",
+      "tier": "free",
+      "version": 1,
+      "script": {
+        "steps": [
+          { "kind": "cue", "text": "Close your eyes. We will breathe in a square — four counts in, hold, out, hold.", "seconds": 8 },
+          { "kind": "inhale", "text": "Inhale.", "seconds": 4 },
+          { "kind": "hold", "text": "Hold.", "seconds": 4 },
+          { "kind": "exhale", "text": "Exhale.", "seconds": 4 },
+          { "kind": "hold", "text": "Hold.", "seconds": 4 },
+          { "kind": "repeat", "times": 4 },
+          { "kind": "cue", "text": "Let your breath return to normal.", "seconds": 6 }
+        ]
+      }
+    },
+
+    {
+      "slug": "even-breath",
+      "title": "Even Breath",
+      "purpose": "Match the inhale and exhale so the breath can move more freely.",
+      "category": "breath",
+      "tier": "free",
+      "version": 1,
+      "script": {
+        "steps": [
+          { "kind": "cue", "text": "Close your eyes. Breathe evenly — five seconds in, five seconds out.", "seconds": 7 },
+          { "kind": "inhale", "text": "Inhale.", "seconds": 5 },
+          { "kind": "exhale", "text": "Exhale.", "seconds": 5 },
+          { "kind": "repeat", "times": 6 },
+          { "kind": "cue", "text": "Soften the shoulders.", "seconds": 5 }
+        ]
+      }
+    },
+
+    {
+      "slug": "belly-breath",
+      "title": "Belly Breath",
+      "purpose": "Feel the breath in the body by letting the belly rise and fall.",
+      "category": "body_awareness",
+      "tier": "free",
+      "version": 1,
+      "script": {
+        "steps": [
+          { "kind": "cue", "text": "Place one hand on your belly. Close your eyes.", "seconds": 6 },
+          { "kind": "cue", "text": "Let the hand rise as you breathe in, and fall as you breathe out.", "seconds": 8 },
+          { "kind": "inhale", "text": "Belly rises.", "seconds": 4 },
+          { "kind": "exhale", "text": "Belly falls.", "seconds": 6 },
+          { "kind": "repeat", "times": 5 },
+          { "kind": "cue", "text": "Keep the hand there for one more easy breath.", "seconds": 6 }
+        ]
+      }
+    },
+
+    {
+      "slug": "four-seven-eight",
+      "title": "Four-Seven-Eight",
+      "purpose": "A longer exhale to quiet the mind and come inward.",
+      "category": "inner_knowing",
+      "tier": "free",
+      "version": 1,
+      "script": {
+        "steps": [
+          { "kind": "cue", "text": "Close your eyes. Inhale for four, hold for seven, exhale for eight.", "seconds": 8 },
+          { "kind": "inhale", "text": "Inhale.", "seconds": 4 },
+          { "kind": "hold", "text": "Hold.", "seconds": 7 },
+          { "kind": "exhale", "text": "Exhale.", "seconds": 8 },
+          { "kind": "repeat", "times": 4 },
+          { "kind": "cue", "text": "Rest.", "seconds": 5 }
+        ]
+      }
+    },
+
+    {
+      "slug": "release-sigh",
+      "title": "Release Sigh",
+      "purpose": "Two short inhales and a long sigh out — a simple way to let something go.",
+      "category": "authentic_expression",
+      "tier": "free",
+      "version": 1,
+      "script": {
+        "steps": [
+          { "kind": "cue", "text": "Close your eyes. Two short inhales, then a long sigh out.", "seconds": 7 },
+          { "kind": "inhale", "text": "Inhale.", "seconds": 2 },
+          { "kind": "inhale", "text": "And a little more.", "seconds": 1 },
+          { "kind": "exhale", "text": "Sigh it out.", "seconds": 6 },
+          { "kind": "repeat", "times": 4 },
+          { "kind": "cue", "text": "Let the shoulders drop.", "seconds": 5 }
         ]
       }
     },

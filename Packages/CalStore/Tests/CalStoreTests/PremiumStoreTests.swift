@@ -15,8 +15,7 @@ struct PremiumStoreTests {
 
         #expect(store.hasResolved)
         #expect(store.entitlement == .free)
-        #expect(!store.unlocks(.fullCheckIn))
-        #expect(store.checkInKind == .quick)
+        #expect(!store.unlocks(.practiceLibrary))
     }
 
     /// The launch-flicker guard. If `hasResolved` were not tracked separately, a
@@ -41,7 +40,6 @@ struct PremiumStoreTests {
         for feature in PremiumFeature.allCases {
             #expect(store.unlocks(feature))
         }
-        #expect(store.checkInKind == .full)
     }
 
     // MARK: Purchase
@@ -55,7 +53,7 @@ struct PremiumStoreTests {
         let outcome = await store.purchase(.calPlusPreview)
         #expect(outcome == .purchased(.plus))
         #expect(store.entitlement == .plus)
-        #expect(store.unlocks(.coherenceAnalytics))
+        #expect(store.unlocks(.practiceLibrary))
         #expect(!store.isPurchasing, "the spinner must not be left running")
     }
 
@@ -127,7 +125,7 @@ struct PremiumStoreTests {
 
         await provider.simulate(.free)
         try await waitUntil { store.entitlement == .free }
-        #expect(!store.unlocks(.fullCheckIn))
+        #expect(!store.unlocks(.practiceLibrary))
     }
 
     @Test("a renewal arriving while the app is open unlocks without a relaunch")

@@ -15,6 +15,16 @@ final class SettingsViewModel {
     private(set) var profile: Profile?
     private(set) var authorization: ReminderAuthorization = .notDetermined
     private(set) var pendingSync = 0
+    /// What the last sync attempt did. `nil` until one has been tried.
+    private(set) var lastSync: SyncOutcome?
+    /// Set when the last attempt threw.
+    ///
+    /// Separate from `lastSync` because `try?` collapses a failure into `nil`,
+    /// which renders identically to "never tried" — so a sync that was refused
+    /// looked exactly like a button nobody had pressed. That cost real debugging
+    /// time on the first live run.
+    private(set) var lastSyncFailed = false
+    private(set) var isSyncing = false
 
     private let profiles: any ProfileStoring
     private let reminders: any ReminderScheduling
@@ -41,6 +51,26 @@ final class SettingsViewModel {
         profile = (try? await profiles.current()) ?? Profile()
         authorization = await reminders.authorization()
         pendingSync = (try? await sync.pendingCount()) ?? 0
+    }
+
+    /// Runs a sync and refreshes the pending count.
+    ///
+    /// Failures are swallowed into `nil` on purpose. A sync that could not reach
+    /// the server is not something the person did wrong and not something they
+    /// can fix; everything stays queued and the next attempt retries it. The
+    /// count going down is the only feedback that means anything.
+    func syncNow() async {
+        guard !isSyncing else { return }
+        isSyncing = true
+        defer { isSyncing = false }
+        do {
+            lastSync = try await sync.sync()
+            lastSyncFailed = false
+        } catch {
+            lastSync = nil
+            lastSyncFailed = true
+        }
+        pendingSync = (try? await sync.pendingCount()) ?? pendingSync
     }
 
     func setEnabled(_ enabled: Bool) async {

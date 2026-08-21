@@ -1,39 +1,61 @@
 // Run with:  deno test --allow-net supabase/functions/coach/memory.test.ts
-//
-// The test that matters here is `isolation`. Everything else in this file is
-// ordinary; that one is the difference between a memory feature and a data
-// breach involving students' mental health.
 
 import { assertEquals, assertRejects } from "jsr:@std/assert";
 import { type VerifiedUser, verifyUser } from "./identity.ts";
 import {
-  agedDistance,
   type MemoryBackend,
-  MEMORY_MAX_DISTANCE,
   type MemoryRecord,
+  MEMORY_CONSENT_DOC_TYPE,
+  MEMORY_CONSENT_VERSION,
+  MEMORY_DIGEST_N,
+  MEMORY_SIMILAR_K,
+  normalize,
   personalMemoryFor,
+  PostgresMemoryBackend,
   shouldRemember,
+  ingestTurn,
 } from "./memory.ts";
-import type { Embedder, RetrievedChunk } from "./retrieval.ts";
+import type { RecalledMemory } from "./memory.ts";
+import type { Embedder } from "./retrieval.ts";
 
-const embedder: Embedder = { embed: () => Promise.resolve([1, 0, 0]) };
-
-/// Stores per profile and, crucially, only ever returns what was filed under the
-/// profile it is asked for — the same contract Chroma's `where` clause provides.
 class FakeBackend implements MemoryBackend {
   readonly byProfile = new Map<string, MemoryRecord[]>();
   readonly queriedProfiles: string[] = [];
+  readonly similarProfiles: string[] = [];
+  embeddings = new Map<string, number[]>();
 
-  query(profileId: string, _vector: number[], k: number): Promise<RetrievedChunk[]> {
+  query(profileId: string, k: number): Promise<RecalledMemory[]> {
     this.queriedProfiles.push(profileId);
-    const records = this.byProfile.get(profileId) ?? [];
+    const records = (this.byProfile.get(profileId) ?? [])
+      .slice()
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, k);
     return Promise.resolve(
-      // 0.6 because that is roughly where genuinely distinct memories sit —
-      // measured live, two unrelated topics in one store are ~0.73 apart, while
-      // the same fact retold is ~0.23. An arbitrary 0.3 sat right on the dedupe
-      // threshold and made this fixture change meaning when the threshold moved.
-      records.slice(0, k).map((record) => ({ id: record.id, text: record.text, distance: 0.6 })),
+      records.map((record) => ({
+        id: record.id,
+        text: record.text,
+        distance: 0,
+        createdAt: record.createdAt,
+      })),
     );
+  }
+
+  querySimilar(profileId: string, vector: number[], k: number): Promise<RecalledMemory[]> {
+    this.similarProfiles.push(profileId);
+    const records = this.byProfile.get(profileId) ?? [];
+    const scored: RecalledMemory[] = [];
+    for (const record of records) {
+      const embedding = this.embeddings.get(record.id) ?? record.embedding;
+      if (!embedding?.length) continue;
+      scored.push({
+        id: record.id,
+        text: record.text,
+        distance: cosineDistance(vector, embedding),
+        createdAt: record.createdAt,
+      });
+    }
+    scored.sort((a, b) => a.distance - b.distance);
+    return Promise.resolve(scored.slice(0, k));
   }
 
   upsert(profileId: string, record: MemoryRecord): Promise<void> {
@@ -43,31 +65,47 @@ class FakeBackend implements MemoryBackend {
     return Promise.resolve();
   }
 
+  setEmbedding(_profileId: string, id: string, vector: number[]): Promise<void> {
+    this.embeddings.set(id, vector);
+    return Promise.resolve();
+  }
+
   deleteAll(profileId: string): Promise<void> {
     this.byProfile.delete(profileId);
     return Promise.resolve();
   }
 }
 
+function cosineDistance(a: number[], b: number[]): number {
+  let dot = 0;
+  let na = 0;
+  let nb = 0;
+  const n = Math.min(a.length, b.length);
+  for (let i = 0; i < n; i++) {
+    dot += a[i] * b[i];
+    na += a[i] * a[i];
+    nb += b[i] * b[i];
+  }
+  const denom = Math.sqrt(na) * Math.sqrt(nb);
+  return denom === 0 ? 1 : 1 - dot / denom;
+}
+
 const alice: VerifiedUser = { id: "aaaaaaaa-0000-0000-0000-000000000001" };
 const bob: VerifiedUser = { id: "bbbbbbbb-0000-0000-0000-000000000002" };
 
-function write(text: string) {
-  return { id: crypto.randomUUID(), text, createdAt: "2026-08-01T00:00:00Z" };
+function write(text: string, createdAt = "2026-08-01T00:00:00Z") {
+  return { id: crypto.randomUUID(), text, createdAt };
 }
-
-// --- isolation -------------------------------------------------------------
 
 Deno.test("isolation: one person's memory is never returned to another", async () => {
   const backend = new FakeBackend();
 
-  const aliceMemory = personalMemoryFor(alice, backend, embedder);
-  await aliceMemory.remember(write("my roommate keeps having people over late"));
+  await personalMemoryFor(alice, backend).remember(
+    write("my roommate keeps having people over late"),
+  );
 
-  const bobMemory = personalMemoryFor(bob, backend, embedder);
-  // Writing also queries now (M3 dedupe), so measure only what Bob's recall did.
   const before = backend.queriedProfiles.length;
-  const recalled = await bobMemory.recall("roommate");
+  const recalled = await personalMemoryFor(bob, backend).recall("roommate");
 
   assertEquals(recalled, [], "Bob must not see Alice's memory");
   assertEquals(
@@ -79,35 +117,27 @@ Deno.test("isolation: one person's memory is never returned to another", async (
 
 Deno.test("isolation: the profile id comes from the verified user, not a caller", async () => {
   const backend = new FakeBackend();
-  await personalMemoryFor(alice, backend, embedder).remember(write("something about my week"));
+  await personalMemoryFor(alice, backend).remember(write("something about my week"));
 
-  // There is no API surface that accepts a profile id — the only way to reach
-  // memory is to hold a VerifiedUser. This asserts the shape stays that way.
-  const memory = personalMemoryFor(bob, backend, embedder);
   const before = backend.queriedProfiles.length;
-  await memory.recall("week");
+  await personalMemoryFor(bob, backend).recall("week");
   assertEquals(backend.queriedProfiles.slice(before).every((id) => id === bob.id), true);
 });
 
 Deno.test("isolation: forgetting one person leaves the other untouched", async () => {
   const backend = new FakeBackend();
-  await personalMemoryFor(alice, backend, embedder)
+  await personalMemoryFor(alice, backend)
     .remember(write("my roommate has loud guests on weeknights"));
-  await personalMemoryFor(bob, backend, embedder)
+  await personalMemoryFor(bob, backend)
     .remember(write("my chemistry midterm is on Thursday morning"));
 
-  await personalMemoryFor(alice, backend, embedder).forgetEverything();
+  await personalMemoryFor(alice, backend).forgetEverything();
 
   assertEquals(backend.byProfile.has(alice.id), false);
   assertEquals(backend.byProfile.get(bob.id)?.length, 1);
 });
 
-// --- what may be remembered ------------------------------------------------
-
 Deno.test("a crisis is never written to memory", () => {
-  // Stricter than ConversationWindow on purpose. There, elevated content still
-  // travels because the model is answering that message. Here the question is
-  // whether it should resurface unprompted weeks later, and the answer is no.
   assertEquals(shouldRemember("I want to end my life", "acute"), false);
   assertEquals(shouldRemember("some days I want to die", "elevated"), false);
   assertEquals(shouldRemember("my chemistry midterm is on Thursday", "none"), true);
@@ -116,9 +146,10 @@ Deno.test("a crisis is never written to memory", () => {
 
 Deno.test("remember() refuses flagged text rather than relying on the caller", async () => {
   const backend = new FakeBackend();
-  const memory = personalMemoryFor(alice, backend, embedder);
-
-  const wrote = await memory.remember({ ...write("I want to kill myself"), severity: "acute" });
+  const wrote = await personalMemoryFor(alice, backend).remember({
+    ...write("I want to kill myself"),
+    severity: "acute",
+  });
 
   assertEquals(wrote, false);
   assertEquals(backend.byProfile.get(alice.id), undefined);
@@ -130,51 +161,47 @@ Deno.test("trivial fragments are not stored", () => {
   assertEquals(shouldRemember(""), false);
 });
 
-// --- recall behaviour ------------------------------------------------------
+Deno.test("recall returns the newest facts first", async () => {
+  const backend = new FakeBackend();
+  const memory = personalMemoryFor(alice, backend);
+  await memory.remember(write("my chemistry midterm is on Thursday morning", "2026-07-01T00:00:00Z"));
+  await memory.remember(write("my roommate keeps having people over late", "2026-08-01T00:00:00Z"));
 
-Deno.test("distant memories are dropped, and the bar is higher than for content", async () => {
-  const backend: MemoryBackend = {
-    query: () =>
-      Promise.resolve([
-        { id: "near", text: "close enough", distance: 0.4 },
-        { id: "far", text: "not really related", distance: 0.8 },
-      ]),
-    upsert: () => Promise.resolve(),
-    deleteAll: () => Promise.resolve(),
-  };
-
-  const recalled = await personalMemoryFor(alice, backend, embedder).recall("anything");
-
-  assertEquals(recalled.map((r) => r.id), ["near"]);
-  assertEquals(MEMORY_MAX_DISTANCE < 0.82, true, "memory must be stricter than content retrieval");
+  const recalled = await memory.recall("anything");
+  assertEquals(recalled[0].text.includes("roommate"), true);
+  assertEquals(recalled.length, 2);
 });
 
-Deno.test("an empty query recalls nothing", async () => {
+Deno.test("recall still works when the query is empty — recency does not need it", async () => {
   const backend = new FakeBackend();
-  assertEquals(await personalMemoryFor(alice, backend, embedder).recall("  "), []);
+  await personalMemoryFor(alice, backend).remember(
+    write("my roommate keeps having people over late"),
+  );
+  const recalled = await personalMemoryFor(alice, backend).recall("  ");
+  assertEquals(recalled.length, 1);
 });
 
 Deno.test("a backend failure degrades to no memory rather than no reply", async () => {
   const backend: MemoryBackend = {
-    query: () => Promise.reject(new Error("chroma is down")),
+    query: () => Promise.reject(new Error("postgres is down")),
+    querySimilar: () => Promise.reject(new Error("postgres is down")),
     upsert: () => Promise.resolve(),
+    setEmbedding: () => Promise.resolve(),
     deleteAll: () => Promise.resolve(),
   };
-  assertEquals(await personalMemoryFor(alice, backend, embedder).recall("anything"), []);
+  assertEquals(await personalMemoryFor(alice, backend).recall("anything"), []);
 });
 
 Deno.test("forgetEverything propagates failure instead of pretending to succeed", async () => {
-  // The opposite of recall on purpose. Silently failing to delete is the one
-  // outcome that turns a deletion promise into a false statement.
   const backend: MemoryBackend = {
     query: () => Promise.resolve([]),
+    querySimilar: () => Promise.resolve([]),
     upsert: () => Promise.resolve(),
+    setEmbedding: () => Promise.resolve(),
     deleteAll: () => Promise.reject(new Error("delete failed")),
   };
-  await assertRejects(() => personalMemoryFor(alice, backend, embedder).forgetEverything());
+  await assertRejects(() => personalMemoryFor(alice, backend).forgetEverything());
 });
-
-// --- identity --------------------------------------------------------------
 
 function requestWith(authorization?: string): Request {
   return new Request("https://example.invalid/", {
@@ -192,9 +219,6 @@ Deno.test("no Authorization header means no user", async () => {
 });
 
 Deno.test("the anon key is not a user", async () => {
-  // Clients that are not signed in send the anon key as their bearer token. It
-  // is a valid JWT, so if this were not rejected every anonymous device on the
-  // planet would share one memory store.
   let called = false;
   const result = await verifyUser(requestWith("Bearer anon-key"), {
     ...identityOptions,
@@ -218,7 +242,8 @@ Deno.test("a rejected token means no user", async () => {
 Deno.test("a 200 without an id is still not a user", async () => {
   const result = await verifyUser(requestWith("Bearer odd"), {
     ...identityOptions,
-    fetchImpl: () => Promise.resolve(new Response(JSON.stringify({ email: "x@y.z" }), { status: 200 })),
+    fetchImpl: () =>
+      Promise.resolve(new Response(JSON.stringify({ email: "x@y.z" }), { status: 200 })),
   });
   assertEquals(result, null);
 });
@@ -226,7 +251,8 @@ Deno.test("a 200 without an id is still not a user", async () => {
 Deno.test("a valid token yields the id the auth server reports", async () => {
   const result = await verifyUser(requestWith("Bearer good"), {
     ...identityOptions,
-    fetchImpl: () => Promise.resolve(new Response(JSON.stringify({ id: alice.id }), { status: 200 })),
+    fetchImpl: () =>
+      Promise.resolve(new Response(JSON.stringify({ id: alice.id }), { status: 200 })),
   });
   assertEquals(result, { id: alice.id });
 });
@@ -239,62 +265,195 @@ Deno.test("an unreachable auth server fails closed", async () => {
   assertEquals(result, null, "an auth outage must not grant an identity");
 });
 
-// --- M3: dedupe and decay --------------------------------------------------
-
 Deno.test("saying the same thing twice does not store it twice", async () => {
-  // A worry repeated three nights running is the normal shape of a worry. Stored
-  // three times it crowds everything else out of the top-3.
-  const backend: MemoryBackend = {
-    query: () => Promise.resolve([{ id: "existing", text: "same worry", distance: 0.05 }]),
-    upsert: () => {
-      throw new Error("a near-duplicate must not be written");
-    },
-    deleteAll: () => Promise.resolve(),
-  };
-
-  const wrote = await personalMemoryFor(alice, backend, embedder)
-    .remember(write("my roommate is still having people over late"));
-
-  assertEquals(wrote, false);
+  const backend = new FakeBackend();
+  const memory = personalMemoryFor(alice, backend);
+  const text = "my roommate keeps having people over late at night";
+  assertEquals(await memory.remember(write(text)), true);
+  assertEquals(await memory.remember(write(`  ${text.toUpperCase()}  `)), false);
+  assertEquals(backend.byProfile.get(alice.id)?.length, 1);
 });
 
 Deno.test("a genuinely different memory is still written", async () => {
   const backend = new FakeBackend();
-  await personalMemoryFor(alice, backend, embedder).remember(write("my roommate has loud guests late"));
-  // FakeBackend reports 0.6, comfortably outside the dedupe radius.
-  const wrote = await personalMemoryFor(alice, backend, embedder)
-    .remember(write("my chemistry midterm is on Thursday and I am dreading it"));
+  await personalMemoryFor(alice, backend).remember(
+    write("my roommate has loud guests late"),
+  );
+  const wrote = await personalMemoryFor(alice, backend).remember(
+    write("my chemistry midterm is on Thursday and I am dreading it"),
+  );
 
   assertEquals(wrote, true);
   assertEquals(backend.byProfile.get(alice.id)?.length, 2);
 });
 
-Deno.test("age penalises a memory without ever hard-dropping it", () => {
-  const now = new Date("2026-08-01T00:00:00Z");
-  const fresh = agedDistance(0.40, "2026-07-31T00:00:00Z", now);
-  const old = agedDistance(0.40, "2024-08-01T00:00:00Z", now);
-
-  assertEquals(fresh < old, true, "a fresher memory must rank ahead of an identical old one");
-  assertEquals(Math.abs(fresh - 0.40) < 0.001, true, "yesterday is essentially unpenalised");
-  assertEquals(old > 0.59 && old < 0.61, true, `two years should cost ~0.2, got ${old}`);
+Deno.test("normalize collapses case and whitespace for dedupe", () => {
+  assertEquals(
+    normalize("  My Roommate  keeps having people over  "),
+    "my roommate keeps having people over",
+  );
 });
 
-Deno.test("a recent, slightly-worse match beats a stale, slightly-better one", async () => {
-  const now = new Date("2026-08-01T00:00:00Z");
+Deno.test("MEMORY_DIGEST_N is the recency window, not a vector top-k of 3", () => {
+  assertEquals(MEMORY_DIGEST_N, 10);
+  assertEquals(MEMORY_SIMILAR_K, 5);
+});
+
+Deno.test("recall with a query vector returns nearest facts, not the newest", async () => {
+  const backend = new FakeBackend();
+  const memory = personalMemoryFor(alice, backend);
+  const older = write("my chemistry midterm is on Thursday morning", "2026-07-01T00:00:00Z");
+  const newer = write("my roommate keeps having people over late", "2026-08-01T00:00:00Z");
+  await memory.remember(older);
+  await memory.remember(newer);
+  backend.embeddings.set(older.id, [1, 0]);
+  backend.embeddings.set(newer.id, [0, 1]);
+
+  const recalled = await memory.recall("midterm", { vector: [1, 0] });
+  assertEquals(recalled[0].text.includes("chemistry"), true);
+  assertEquals(backend.similarProfiles.includes(alice.id), true);
+});
+
+Deno.test("k-NN that returns nothing falls back to recency", async () => {
+  const backend = new FakeBackend();
+  const memory = personalMemoryFor(alice, backend);
+  await memory.remember(write("my roommate keeps having people over late"));
+  const recalled = await memory.recall("roommate", { vector: [1, 0] });
+  assertEquals(recalled.length, 1);
+  assertEquals(recalled[0].text.includes("roommate"), true);
+});
+
+Deno.test("a k-NN failure falls back to recency rather than empty", async () => {
   const backend: MemoryBackend = {
     query: () =>
-      Promise.resolve([
-        { id: "stale", text: "from two years ago", distance: 0.30, createdAt: "2024-08-01T00:00:00Z" },
-        { id: "recent", text: "from last week", distance: 0.38, createdAt: "2026-07-25T00:00:00Z" },
-      ]),
+      Promise.resolve([{ id: "1", text: "my chemistry midterm is Thursday", distance: 0 }]),
+    querySimilar: () => Promise.reject(new Error("rpc down")),
     upsert: () => Promise.resolve(),
+    setEmbedding: () => Promise.resolve(),
     deleteAll: () => Promise.resolve(),
   };
-
-  const recalled = await personalMemoryFor(alice, backend, embedder).recall("anything", 2, now);
-  assertEquals(recalled[0].id, "recent");
+  const recalled = await personalMemoryFor(alice, backend).recall("midterm", { vector: [1] });
+  assertEquals(recalled.length, 1);
 });
 
-Deno.test("a malformed timestamp leaves the distance alone rather than corrupting it", () => {
-  assertEquals(agedDistance(0.4, "not a date", new Date()), 0.4);
+Deno.test("remember indexes an embedding without blocking the caller on failure", async () => {
+  const backend = new FakeBackend();
+  const embedder: Embedder = { embed: () => Promise.resolve([0.2, 0.8]) };
+  const memory = personalMemoryFor(alice, backend, embedder);
+  const record = write("my chemistry midterm is on Thursday morning");
+  assertEquals(await memory.remember(record), true);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assertEquals(backend.embeddings.get(record.id), [0.2, 0.8]);
+});
+
+Deno.test("ingestTurn stores a durable none-severity turn", async () => {
+  const backend = new FakeBackend();
+  const memory = personalMemoryFor(alice, backend);
+  const stored = await ingestTurn(
+    memory,
+    "my chemistry midterm is on Thursday morning",
+    "none",
+  );
+  assertEquals(stored, true);
+  assertEquals(backend.byProfile.get(alice.id)?.length, 1);
+});
+
+Deno.test("ingestTurn does not store crisis or elevated turns", async () => {
+  const backend = new FakeBackend();
+  const memory = personalMemoryFor(alice, backend);
+  assertEquals(
+    await ingestTurn(memory, "I want to kill myself", "acute"),
+    false,
+  );
+  assertEquals(
+    await ingestTurn(memory, "some days I just want to die", "elevated"),
+    false,
+  );
+  assertEquals(backend.byProfile.get(alice.id), undefined);
+});
+
+// --- Postgres REST backend -------------------------------------------------
+
+Deno.test("PostgresMemoryBackend scopes every request by profile id", async () => {
+  const urls: string[] = [];
+  const backend = new PostgresMemoryBackend({
+    restUrl: "https://stack.invalid/rest/v1",
+    serviceRoleKey: "service",
+    fetchImpl: (input, init) => {
+      const url = String(input);
+      urls.push(`${init?.method ?? "GET"} ${url}`);
+      if (url.includes("/consents")) {
+        return Promise.resolve(new Response("[]", { status: 200 }));
+      }
+      if (url.includes("match_memories")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify([{ id: "1", body: "fact", distance: 0.1, created_at: "2026-08-01T00:00:00Z" }]),
+            { status: 200 },
+          ),
+        );
+      }
+      if (
+        url.includes("/memories") &&
+        (init?.method === "POST" || init?.method === "DELETE" || init?.method === "PATCH")
+      ) {
+        return Promise.resolve(new Response(null, { status: 204 }));
+      }
+      return Promise.resolve(
+        new Response(
+          JSON.stringify([{ id: "1", text: "fact", created_at: "2026-08-01T00:00:00Z" }]),
+          { status: 200 },
+        ),
+      );
+    },
+  });
+
+  await backend.query(alice.id, 10);
+  await backend.querySimilar(alice.id, [0.1, 0.2], 5);
+  await backend.upsert(alice.id, write("my chemistry midterm is on Thursday morning"));
+  await backend.setEmbedding(alice.id, "1", [0.1, 0.2]);
+  await backend.deleteAll(alice.id);
+  await backend.hasCurrentConsent(alice.id);
+
+  assertEquals(urls.some((line) => line.includes("GET") && line.includes(alice.id)), true);
+  assertEquals(urls.some((line) => line.includes("DELETE") && line.includes(alice.id)), true);
+  assertEquals(urls.some((line) => line.includes("POST") && line.includes("/memories")), true);
+  assertEquals(urls.some((line) => line.includes("POST") && line.includes("match_memories")), true);
+  assertEquals(urls.some((line) => line.includes("PATCH") && line.includes(alice.id)), true);
+  assertEquals(urls.some((line) => line.includes(bob.id)), false);
+  assertEquals(
+    urls.some((line) =>
+      line.includes(`doc_type=eq.${MEMORY_CONSENT_DOC_TYPE}`) &&
+      line.includes(`doc_version=eq.${MEMORY_CONSENT_VERSION}`)
+    ),
+    true,
+  );
+});
+
+Deno.test("consent lookup fails closed when the row is missing", async () => {
+  const backend = new PostgresMemoryBackend({
+    restUrl: "https://stack.invalid/rest/v1",
+    serviceRoleKey: "service",
+    fetchImpl: () => Promise.resolve(new Response("[]", { status: 200 })),
+  });
+  assertEquals(await backend.hasCurrentConsent(alice.id), false);
+});
+
+Deno.test("consent lookup succeeds when a current row exists", async () => {
+  const backend = new PostgresMemoryBackend({
+    restUrl: "https://stack.invalid/rest/v1",
+    serviceRoleKey: "service",
+    fetchImpl: () =>
+      Promise.resolve(new Response(JSON.stringify([{ id: "c1" }]), { status: 200 })),
+  });
+  assertEquals(await backend.hasCurrentConsent(alice.id), true);
+});
+
+Deno.test("consent lookup fails closed on an outage", async () => {
+  const backend = new PostgresMemoryBackend({
+    restUrl: "https://stack.invalid/rest/v1",
+    serviceRoleKey: "service",
+    fetchImpl: () => Promise.reject(new Error("down")),
+  });
+  assertEquals(await backend.hasCurrentConsent(alice.id), false);
 });

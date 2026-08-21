@@ -1,4 +1,5 @@
 import CalData
+import CalDesign
 import CalKit
 import CalStore
 import SwiftUI
@@ -13,6 +14,10 @@ struct SettingsView: View {
     @State private var isExporting = false
     @State private var exportFailed = false
     @State private var confirmingDelete = false
+    @State private var ambassadorEmail = ""
+    @State private var ambassadorNotice: String?
+    @State private var ambassadorWorking = false
+    @State private var ambassadorSignedUp = false
     @State private var deleteFailed = false
 
     var body: some View {
@@ -23,6 +28,7 @@ struct SettingsView: View {
                 reminderSection(model)
                 dataSection(model)
                 aboutSection
+                ambassadorSection
             } else {
                 ProgressView()
             }
@@ -42,6 +48,13 @@ struct SettingsView: View {
             // toggle looked broken.
             await created.load()
             model = created
+            if ambassadorEmail.isEmpty {
+                ambassadorEmail = await container.auth.credentials()?.email ?? ""
+            }
+            if let existing = await container.ambassadorSignup.currentEmail() {
+                ambassadorEmail = existing
+                ambassadorSignedUp = true
+            }
         }
         .sheet(
             isPresented: Binding(get: { exportURL != nil }, set: { if !$0 { clearExport() } })
@@ -69,9 +82,9 @@ struct SettingsView: View {
         } message: {
             Text(
                 """
-                This erases every check-in, practice session, and your profile \
-                from this phone. There's no account and no copy on our side, so it \
-                can't be undone. Export first if you want to keep a copy.
+                This erases every practice session, journal entry, and your profile \
+                from this phone. It does not delete your sign-in. Export first if \
+                you want to keep a copy. This can't be undone.
                 """
             )
         }
@@ -124,12 +137,12 @@ struct SettingsView: View {
     private var subscriptionSection: some View {
         Section {
             if container.premium.entitlement == .plus {
-                LabeledContent("Cal+ Coherence", value: "Subscribed")
+                LabeledContent("C.A.L+ Coherence", value: "Subscribed")
                     .accessibilityIdentifier("subscription-status")
                 Link("Manage or cancel", destination: Self.manageSubscriptions)
                     .accessibilityIdentifier("manage-subscription")
             } else {
-                NavigationLink("Cal+ Coherence") { PaywallView() }
+                NavigationLink("C.A.L+ Coherence") { PaywallView() }
                     .accessibilityIdentifier("open-paywall")
                 Button("Restore purchases") {
                     Task { await container.premium.restore() }
@@ -172,7 +185,7 @@ struct SettingsView: View {
             Text("Reminder")
         } footer: {
             if model.isDenied {
-                Text("Notifications are turned off for Cal in iOS Settings.")
+                Text("Notifications are turned off for C.A.L in iOS Settings.")
             } else {
                 Text("One gentle nudge a day. No streak warnings, no badges.")
             }
@@ -183,7 +196,14 @@ struct SettingsView: View {
 
     private func dataSection(_ model: SettingsViewModel) -> some View {
         Section {
-            LabeledContent("Stored on this device", value: "\(model.pendingSync) check-ins")
+            // Deliberately says "not yet backed up", not "stored on this device".
+            // The old wording was true when nothing synced and is misleading now:
+            // a signed-in person needs to know which rows are *only* here.
+            LabeledContent(
+                "Not yet backed up",
+                value: model.pendingSync == 1 ? "1 item" : "\(model.pendingSync) items"
+            )
+            .accessibilityIdentifier("pending-sync")
 
             Button {
                 Task { await prepareExport() }
@@ -205,15 +225,12 @@ struct SettingsView: View {
         } header: {
             Text("Your data")
         } footer: {
-            // Honest about what the MVP is: no account, no server, so the phone is
-            // the only copy (ARCHITECTURE.md §1, §14). The backup caveat matters —
-            // an in-app delete cannot reach a device backup taken yesterday, and
-            // implying otherwise would be the dishonest version.
             Text(
                 """
-                Everything stays on this phone — there's no account and nothing is \
-                uploaded. Deleting the app deletes your history too. A copy may \
-                still exist in an iPhone backup you've already made.
+                Practice sessions and journal entries live on this phone. Signing \
+                in lets Cal back them up to your account. Deleting the app deletes \
+                the local copy. A copy may still exist in an iPhone backup you've \
+                already made.
                 """
             )
         }
@@ -223,7 +240,7 @@ struct SettingsView: View {
     @ViewBuilder
     private var aboutSection: some View {
         Section("About") {
-            LabeledContent("Cal", value: "MVP")
+            LabeledContent("C.A.L", value: "MVP")
             NavigationLink("Emergency help") { EmergencyView() }
         }
 
@@ -233,7 +250,7 @@ struct SettingsView: View {
         // exists on the chat screen.
         Section {
             Toggle(
-                "Block Cal",
+                "Block C.A.L",
                 isOn: Binding(
                     get: { moderation.isBlocked },
                     set: { moderation.setBlocked($0) }
@@ -251,9 +268,66 @@ struct SettingsView: View {
             Text("Chat and safety")
         } footer: {
             Text(
-                "Blocking stops Cal replying. You can report any reply from the "
+                "Blocking stops C.A.L replying. You can report any reply from the "
                 + "chat itself. We aim to respond to reports within two business days."
             )
+        }
+    }
+
+    // MARK: Ambassador
+
+    private var ambassadorSection: some View {
+        Section {
+            TextField("Email", text: $ambassadorEmail)
+                .textContentType(.emailAddress)
+                .keyboardType(.emailAddress)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .accessibilityIdentifier("ambassador-email")
+
+            Button {
+                Task { await submitAmbassador() }
+            } label: {
+                if ambassadorWorking {
+                    ProgressView()
+                } else {
+                    Text(ambassadorSignedUp ? "Update signup" : "Sign up")
+                }
+            }
+            .disabled(ambassadorWorking || ambassadorEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .accessibilityIdentifier("ambassador-submit")
+
+            if let ambassadorNotice {
+                Text(ambassadorNotice)
+                    .font(.footnote)
+                    .foregroundStyle(Surface.inkSecondary)
+                    .accessibilityIdentifier("ambassador-notice")
+            }
+        } header: {
+            Text("Ambassador program")
+        } footer: {
+            Text(
+                "Leave your email if you want to help get Cal into more students' hands. "
+                    + "We'll only use it to reach you about the program."
+            )
+        }
+    }
+
+    private func submitAmbassador() async {
+        ambassadorWorking = true
+        ambassadorNotice = nil
+        defer { ambassadorWorking = false }
+        do {
+            try await container.ambassadorSignup.submit(email: ambassadorEmail)
+            ambassadorSignedUp = true
+            ambassadorEmail = RestAmbassadorSignup.normalize(ambassadorEmail)
+            ambassadorNotice = "You're on the list."
+        } catch AmbassadorSignupError.invalidEmail {
+            ambassadorNotice = "Enter a valid email address."
+        } catch AmbassadorSignupError.unsigned {
+            ambassadorNotice = "Sign in again to join the program."
+        } catch {
+            ambassadorNotice = "Couldn't save that just now. Try again."
         }
     }
 

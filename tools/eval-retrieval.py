@@ -23,7 +23,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from embed_corpus_lib import chroma_query, collections_url, ensure_collection, embed, resolve_key  # noqa: E402
+from embed_corpus_lib import embed, match_content_chunks, resolve_key, resolve_supabase  # noqa: E402
 
 K = 4
 
@@ -107,7 +107,7 @@ KINDS = {"chat": ["practice", "question", "place"], "navigate": ["place"]}
 def main():
     verbose = "--verbose" in sys.argv
     api_key = resolve_key()
-    collection_id = ensure_collection()
+    supabase_url, service_key = resolve_supabase()
 
     vectors = embed([query for _, query, _ in CASES], api_key)
 
@@ -116,7 +116,9 @@ def main():
         # The cutoff is applied here exactly as the function applies it, so the
         # eval measures the pipeline that runs rather than raw neighbours.
         hits = [
-            hit for hit in chroma_query(collection_id, vector, KINDS[surface], K)
+            hit for hit in match_content_chunks(
+                supabase_url, service_key, vector, KINDS[surface], K
+            )
             if hit["distance"] <= MAX_DISTANCE
         ]
         ids = [hit["id"] for hit in hits]

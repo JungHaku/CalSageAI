@@ -79,12 +79,13 @@ struct ContentSeedTests {
         }
     }
 
-    @Test("the full check-in is Dr. Mia's ten categories in her order, and excludes .overall")
+    @Test("the full check-in is the first five of Dr. Mia's categories, and excludes .overall")
     func fullCheckInShape() {
-        #expect(CoherenceCategory.fullCheckIn.count == 10)
+        #expect(CoherenceCategory.fullCheckIn.count == 5)
         #expect(!CoherenceCategory.fullCheckIn.contains(.overall))
         #expect(CoherenceCategory.fullCheckIn.first == .safety)
-        #expect(CoherenceCategory.fullCheckIn.last == .authenticExpression)
+        #expect(CoherenceCategory.fullCheckIn.last == .bodyAwareness)
+        #expect(!CoherenceCategory.fullCheckIn.contains(.choice))
     }
 
     @Test("raw values match the Postgres coherence_category enum")

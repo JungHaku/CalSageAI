@@ -16,10 +16,10 @@ struct CheckInFlowTests {
 
     // MARK: Shape
 
-    @Test("a full check-in opens on safety, the first of Dr. Mia's ten")
+    @Test("a full check-in opens on safety, the first of Dr. Mia's five")
     func opensOnFirstCategory() {
         #expect(flow(.full).step.category == .safety)
-        #expect(flow(.full).progress == (answered: 0, total: 10))
+        #expect(flow(.full).progress == (answered: 0, total: 5))
     }
 
     @Test("a quick check-in opens on the single overall question")
@@ -41,15 +41,15 @@ struct CheckInFlowTests {
         var f = flow(.full)
         f.submitRating(score(9), now: now)
         #expect(f.step.category == .breath)
-        #expect(f.progress == (answered: 1, total: 10))
+        #expect(f.progress == (answered: 1, total: 5))
         #expect(f.checkIn.scores[0].after == nil)
         #expect(f.checkIn.scores[0].exerciseSlug == nil)
     }
 
-    @Test("ten high scores complete the check-in with nothing regulated")
+    @Test("five high scores complete the check-in with nothing regulated")
     func allHighCompletesDirectly() {
         var f = flow(.full)
-        for _ in 0..<10 { f.submitRating(score(9), now: now) }
+        for _ in 0..<5 { f.submitRating(score(9), now: now) }
 
         #expect(f.isComplete)
         #expect(f.checkIn.completedAt == now)
@@ -167,9 +167,9 @@ struct CheckInFlowTests {
     @Test("a mixed run records the right before/after pairs and daily aggregates")
     func mixedRun() {
         var f = flow(.full)
-        // safety 8 (fine), breath 3 → 7, presence 9, emotional_flow 5 → 6, rest 8
+        // safety 8 (fine), breath 3 → 7, presence 9, emotional_flow 5 → 6, body 8
         let plan: [(before: Int, after: Int?)] = [
-            (8, nil), (3, 7), (9, nil), (5, 6), (8, nil), (8, nil), (8, nil), (8, nil), (8, nil), (8, nil),
+            (8, nil), (3, 7), (9, nil), (5, 6), (8, nil),
         ]
         for entry in plan {
             f.submitRating(score(entry.before), now: now)
@@ -181,7 +181,7 @@ struct CheckInFlowTests {
 
         #expect(f.isComplete)
         #expect(f.checkIn.regulatedCount == 2)
-        #expect(f.checkIn.scores.count == 10)
+        #expect(f.checkIn.scores.count == 5)
 
         let breath = f.checkIn.scores.first { $0.category == .breath }
         #expect(breath?.delta == 4)

@@ -15,7 +15,7 @@
 
 begin;
 create extension if not exists pgtap;
-select plan(19);
+select plan(33);
 
 -- Two users. The first is the seeded tester; the second is created here so the
 -- test does not depend on seed order.
@@ -155,6 +155,51 @@ select throws_ok(
 );
 
 select throws_ok(
+  $$ insert into public.memories (user_id, text)
+     values ('00000000-0000-4000-a000-000000000002', 'my chemistry midterm is on Thursday morning') $$,
+  '42501',
+  null,
+  'a client cannot insert its own memories — only the coach writes them'
+);
+
+select throws_ok(
+  $$ delete from public.memories
+      where user_id = '00000000-0000-4000-a000-000000000002' $$,
+  '42501',
+  null,
+  'a client cannot delete memories via the table — forget_memories is the path'
+);
+
+select throws_ok(
+  $$ select count(*) from public.content_chunks $$,
+  '42501',
+  null,
+  'content_chunks is not readable by a client at all'
+);
+
+select throws_ok(
+  $$ select public.match_content_chunks(
+       (select '[' || array_to_string(array(select '0' from generate_series(1, 1536)), ',') || ']')::vector,
+       array['practice'],
+       3
+     ) $$,
+  '42501',
+  null,
+  'a client cannot call match_content_chunks'
+);
+
+select throws_ok(
+  $$ select public.match_memories(
+       (select '[' || array_to_string(array(select '0' from generate_series(1, 1536)), ',') || ']')::vector,
+       '00000000-0000-4000-a000-000000000001'::uuid,
+       5
+     ) $$,
+  '42501',
+  null,
+  'a client cannot call match_memories with another user id'
+);
+
+select throws_ok(
   $$ select count(*) from public.safety_events $$,
   '42501',
   null,
@@ -215,6 +260,122 @@ select is(
   (select count(*)::int from public.daily_coherence),
   59,
   'a tombstoned check-in drops out of daily_coherence rather than lingering in the analytics'
+);
+
+select test_reset();
+
+-- ----------------------------------------------------------- personal memory ---
+
+insert into public.memories (user_id, text) values
+  ('00000000-0000-4000-a000-000000000001', 'my roommate keeps having people over late'),
+  ('00000000-0000-4000-a000-000000000002', 'my chemistry midterm is on Thursday morning');
+
+select test_become('00000000-0000-4000-a000-000000000002');
+
+select is(
+  (select count(*)::int from public.memories),
+  1,
+  'Mallory sees exactly her own memory, not the other user''s'
+);
+
+select lives_ok(
+  $$ select public.forget_memories() $$,
+  'a person can forget their own memories through the definer function'
+);
+
+select test_reset();
+
+select is(
+  (select count(*)::int from public.memories
+    where user_id = '00000000-0000-4000-a000-000000000002'),
+  0,
+  'forget_memories erased Mallory''s rows'
+);
+
+select is(
+  (select count(*)::int from public.memories
+    where user_id = '00000000-0000-4000-a000-000000000001'),
+  1,
+  'forget_memories as Mallory left Alice''s memories untouched'
+);
+
+-- k-NN isolation: service_role can search, but only the requested user_id.
+-- One-hot vectors so nearest-neighbour is unambiguous without a real embedder.
+update public.memories
+   set embedding = (
+     '[' || array_to_string(
+       array(select case when g = 1 then '1' else '0' end from generate_series(1, 1536) g),
+       ','
+     ) || ']'
+   )::vector
+ where user_id = '00000000-0000-4000-a000-000000000001';
+
+insert into public.memories (user_id, text, embedding) values (
+  '00000000-0000-4000-a000-000000000002',
+  'my chemistry midterm is on Thursday morning',
+  (
+    '[' || array_to_string(
+      array(select case when g = 2 then '1' else '0' end from generate_series(1, 1536) g),
+      ','
+    ) || ']'
+  )::vector
+);
+
+select is(
+  (select count(*)::int from public.match_memories(
+     (
+       '[' || array_to_string(
+         array(select case when g = 2 then '1' else '0' end from generate_series(1, 1536) g),
+         ','
+       ) || ']'
+     )::vector,
+     '00000000-0000-4000-a000-000000000001'::uuid,
+     5
+  )),
+  1,
+  'match_memories for Alice returns only Alice even when Mallory is a closer vector'
+);
+
+select is(
+  (select body from public.match_memories(
+     (
+       '[' || array_to_string(
+         array(select case when g = 2 then '1' else '0' end from generate_series(1, 1536) g),
+         ','
+       ) || ']'
+     )::vector,
+     '00000000-0000-4000-a000-000000000001'::uuid,
+     5
+  )),
+  'my roommate keeps having people over late',
+  'Alice''s k-NN hit is her own fact, not the nearer other-user row'
+);
+
+-- ----------------------------------------------------------- ambassador ---
+
+insert into public.ambassador_signups (user_id, email) values
+  ('00000000-0000-4000-a000-000000000001', 'alice-ambassador@example.com');
+
+select test_become('00000000-0000-4000-a000-000000000002');
+
+select is(
+  (select count(*)::int from public.ambassador_signups),
+  0,
+  'Mallory sees none of the other user''s ambassador signup'
+);
+
+select lives_ok(
+  $$ insert into public.ambassador_signups (user_id, email)
+     values ('00000000-0000-4000-a000-000000000002', 'mallory-ambassador@example.com') $$,
+  'a person can sign themselves up for the ambassador program'
+);
+
+select throws_ok(
+  $$ insert into public.ambassador_signups (user_id, email)
+     values ('00000000-0000-4000-a000-000000000001', 'stolen@example.com') $$,
+  '42501',
+  null,
+  'a person cannot insert an ambassador row for someone else'
 );
 
 select test_reset();

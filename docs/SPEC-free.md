@@ -1,6 +1,6 @@
-# SPEC — Free Cal (verbatim)
+# SPEC — Free C.A.L (verbatim)
 
-> Source: email from Mia <mcurcuruto@gmail.com>, "Free Cal", July 29 2026 5:23 PM PDT,
+> Source: email from Mia <mcurcuruto@gmail.com>, "Free C.A.L", July 29 2026 5:23 PM PDT,
 > forwarded 5:43 PM. **This copy is INCOMPLETE** — the received message was truncated by
 > Gmail (`[Message clipped]`). Request the full text and replace this file.
 > Do not treat this as the complete requirements document.
@@ -17,7 +17,7 @@ Version 1.0
 
 This is the first screen every morning.
 
-Cal says:
+C.A.L says:
 
 Good morning!
 How do you feel right here in the moment?
@@ -26,7 +26,7 @@ The student rates:
 
 0–10
 
-Cal responds according to the score.
+C.A.L responds according to the score.
 
 If 8–10
 
@@ -52,7 +52,7 @@ The app keeps analytics.
 
 ## 2. Navigate Berkeley
 
-Students can ask Cal things like:
+Students can ask C.A.L things like:
 
 "Where is Wheeler Hall?"
 "Where can I study?"
@@ -65,7 +65,7 @@ Students can ask Cal things like:
 "What time is the library open?"
 "Where's the quietest place to study?"
 
-Cal answers instantly.
+C.A.L answers instantly.
 
 ## 3. Berkeley Campus Map
 
@@ -164,7 +164,7 @@ Breathe Health Center
 
 ## 9. Daily Motivation
 
-One short message from Cal.
+One short message from C.A.L.
 
 Examples
 
@@ -229,7 +229,7 @@ Interests
 🧠 Check-In
 🗺️ Navigate
 📅 Planner
-💬 Chat with Cal
+💬 Chat with C.A.L
 
 ## FREE VERSION GOAL
 
@@ -239,9 +239,9 @@ When a Berkeley student thinks,
 
 the first thought should be,
 
-"Open Cal."
+"Open C.A.L."
 
-This version creates daily value without asking students to pay. Once they rely on Cal for
+This version creates daily value without asking students to pay. Once they rely on C.A.L for
 navigating campus, organizing their day, and checking in with themselves, the premium
 features become a natural upgrade rather than an upsell.
 

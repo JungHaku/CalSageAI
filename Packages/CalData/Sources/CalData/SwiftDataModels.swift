@@ -18,7 +18,6 @@ import SwiftData
 public final class StoredCheckIn {
     /// Local identity, and the same UUID the row carries in Postgres — so a
     /// re-sync can't duplicate a check-in that was already pushed.
-    #Unique<StoredCheckIn>([\.id])
     public var id: UUID = UUID()
 
     public var kindRaw: String = CheckInKind.full.rawValue

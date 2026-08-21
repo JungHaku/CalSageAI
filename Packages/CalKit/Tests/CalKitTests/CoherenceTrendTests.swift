@@ -252,13 +252,13 @@ struct CategorySummaryTests {
         #expect(build([partial]).isEmpty)
     }
 
-    @Test("the 60-day fixture yields all ten categories")
+    @Test("the 60-day fixture yields all five check-in categories")
     func sixtyDayFixture() {
         let history = CheckIn.syntheticHistory(days: 60, endingOn: today, calendar: calendar)
         let summaries = CategorySummary.build(
             history: history, from: today.adding(days: -59, in: calendar), to: today
         )
-        #expect(summaries.count == 10)
+        #expect(summaries.count == 5)
         let allRated = summaries.allSatisfy { $0.timesRated == 60 }
         #expect(allRated)
     }

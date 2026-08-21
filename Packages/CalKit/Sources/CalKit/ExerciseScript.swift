@@ -135,6 +135,55 @@ public struct ExerciseTimeline: Sendable, Equatable {
 }
 
 extension ExerciseScript {
+    /// What Cal should say out loud so someone can follow with their eyes closed.
+    ///
+    /// Built from the authored steps, not the expanded timeline — a `repeat` is
+    /// one instruction ("do that cycle N more times") rather than a recitation
+    /// of every breath. Empty breath beats still get a spoken phase name.
+    public var spokenGuide: String {
+        var lines: [String] = []
+        var lastBreathRun: [String] = []
+
+        for step in steps {
+            switch step {
+            case .timed(let phase, let text, let seconds):
+                let spoken = Self.spokenLine(phase: phase, text: text)
+                guard let spoken else { continue }
+                let wait = max(1, Int(seconds.rounded()))
+                let line = "\(spoken) Wait \(wait) seconds."
+                lines.append(line)
+                if phase.isBreath {
+                    lastBreathRun.append(line)
+                } else {
+                    lastBreathRun = []
+                }
+
+            case .repeatCycle(let times):
+                let extra = max(0, times - 1)
+                if extra > 0, !lastBreathRun.isEmpty {
+                    lines.append(
+                        extra == 1
+                            ? "Repeat that same breath cycle one more time, same pace."
+                            : "Repeat that same breath cycle \(extra) more times, same pace."
+                    )
+                }
+                lastBreathRun = []
+            }
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    private static func spokenLine(phase: BreathPhase, text: String) -> String? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty { return trimmed }
+        switch phase {
+        case .inhale: return "Inhale."
+        case .exhale: return "Exhale."
+        case .hold: return "Hold."
+        case .cue: return nil
+        }
+    }
+
     public func timeline() throws -> ExerciseTimeline {
         guard !steps.isEmpty else { throw ExerciseScriptError.empty }
 

@@ -12,7 +12,7 @@ import PackageDescription
 // is the SDK's choice, not ours, but it is the cost of this line.
 let package = Package(
     name: "CalRemote",
-    platforms: [.iOS(.v18), .macOS(.v15)],
+    platforms: [.iOS(.v17), .macOS(.v15)],
     products: [
         .library(name: "CalRemote", targets: ["CalRemote"])
     ],

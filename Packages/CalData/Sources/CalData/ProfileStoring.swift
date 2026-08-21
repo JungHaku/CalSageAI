@@ -15,7 +15,6 @@ public protocol ProfileStoring: Sendable {
 
 @Model
 public final class StoredProfile {
-    #Unique<StoredProfile>([\.id])
     public var id: UUID = UUID()
 
     public var displayName: String?

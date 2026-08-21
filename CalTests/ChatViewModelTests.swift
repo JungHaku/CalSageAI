@@ -1,5 +1,4 @@
 import CalAI
-import CalData
 import CalKit
 import Foundation
 import Testing
@@ -35,27 +34,19 @@ private final class RecordingCoachClient: CoachClient, @unchecked Sendable {
 @MainActor
 struct ChatViewModelTests {
 
-    private static let today = LocalDate(iso: "2026-07-29")!
-
     private func model(
-        _ behaviour: MockCoachClient.Behaviour = .reply("Let's take one slow breath."),
-        store: any CoherenceStoring = InMemoryCoherenceStore()
+        _ behaviour: MockCoachClient.Behaviour = .reply("Let's take one slow breath.")
     ) -> ChatViewModel {
         ChatViewModel(
-            coach: MockCoachClient(behaviour: behaviour),
-            store: store,
-            dates: FixedDateProvider(day: Self.today)
+            coach: MockCoachClient(behaviour: behaviour)
         )
     }
 
     private func recording(
-        _ behaviour: MockCoachClient.Behaviour = .reply("ok"),
-        store: any CoherenceStoring = InMemoryCoherenceStore()
+        _ behaviour: MockCoachClient.Behaviour = .reply("ok")
     ) -> (ChatViewModel, RecordingCoachClient) {
         let coach = RecordingCoachClient(behaviour)
-        let model = ChatViewModel(
-            coach: coach, store: store, dates: FixedDateProvider(day: Self.today)
-        )
+        let model = ChatViewModel(coach: coach)
         return (model, coach)
     }
 
@@ -187,33 +178,12 @@ struct ChatViewModelTests {
         )
     }
 
-    // MARK: Memory — coherence digest
+    // MARK: Memory — no numeric digest
 
-    @Test("the digest is attached when there are completed check-ins")
-    func digestIsAttached() async throws {
-        // Built against the provider's own calendar, not `.current` — otherwise
-        // the fixture's days and the digest's window can land a day apart
-        // depending on the machine's time zone.
-        let calendar = FixedDateProvider(day: Self.today).calendar
-        let store = InMemoryCoherenceStore(
-            CheckIn.syntheticHistory(days: 5, endingOn: Self.today, calendar: calendar)
-        )
-        let (model, coach) = recording(store: store)
-
-        model.draft = "how am I doing"
-        model.send()
-        try await settle(model)
-
-        let digest = try #require(coach.requests.first?.coherence)
-        #expect(!digest.promptText.isEmpty)
-    }
-
-    /// Absence is silence. An empty digest block would read to the model as a
-    /// claim that the student has no data, which is a different thing.
-    @Test("no digest is sent when there is no history")
-    func noDigestWhenEmpty() async throws {
+    @Test("no coherence digest is sent — there is no rating in this app")
+    func noDigest() async throws {
         let (model, coach) = recording()
-        model.draft = "hello"
+        model.draft = "how am I doing"
         model.send()
         try await settle(model)
 

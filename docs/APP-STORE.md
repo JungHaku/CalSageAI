@@ -30,7 +30,7 @@ Limits are Apple's, and are counted here.
 
 | Field | Limit | Draft | Count |
 |---|---|---|---|
-| **Name** | 30 | `Cal Coherence` | 13 |
+| **Name** | 30 | `C.A.L Coherence` | 16 |
 | **Subtitle** | 30 | `A daily check-in for students` | 29 |
 | **Promotional text** | 170 | see below | 148 |
 | **Keywords** | 100 | see below | 98 |
@@ -52,10 +52,10 @@ coherence,checkin,breathing,wellbeing,student,campus,berkeley,stress,focus,study
 Description:
 
 ```
-Cal is a daily coherence check-in built for university life.
+C.A.L is a daily coherence check-in built for university life.
 
 Answer one question — how you're doing, right now, on a scale of 0 to 10. If
-you're low, Cal takes you through a short guided breathing practice and asks
+you're low, C.A.L takes you through a short guided breathing practice and asks
 again, so you can see what a couple of minutes actually changed. That's the
 whole loop, and it's designed to take about thirty seconds on an ordinary day.
 
@@ -67,7 +67,7 @@ WHAT'S IN THE FREE VERSION
 • A campus map with search and filtering
 • Emergency help, one tap from every screen, working offline
 
-CAL+ COHERENCE
+C.A.L+ COHERENCE
 A monthly subscription adds the full ten-area framework — safety, breath,
 presence, emotional flow, body awareness, choice, connection, energy, inner
 knowing, and authentic expression — each with a regulation practice when a
@@ -79,7 +79,7 @@ There's no account and nothing is uploaded. You can export everything as a
 readable file, or delete all of it, from Settings. Deleting the app takes your
 history with it.
 
-Cal is a wellness tool. It is not therapy, not medical care, and not a
+C.A.L is a wellness tool. It is not therapy, not medical care, and not a
 substitute for either. If you are in danger, call 911. The Suicide & Crisis
 Lifeline is 988, by call or text, at any hour.
 ```

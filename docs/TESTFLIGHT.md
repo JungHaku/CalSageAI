@@ -71,7 +71,7 @@ tell me what was confusing, not just what broke.
    Settings > Account and memory > Create an account instead.
    You'll get a confirmation email — click the link, then come back and sign in.
    - Did the email arrive? How long did it take?
-   - The "Let Cal remember our conversations?" question defaults to NO.
+   - The "Let C.A.L remember our conversations?" question defaults to NO.
      Was it clear what you were agreeing to?
 
 4. LOOK AROUND (5 minutes)
@@ -99,10 +99,12 @@ any bug.
 
 In the order they will actually bite.
 
-1. **Resend still sends from `onboarding@resend.dev`.** That shared test sender
-   only delivers to the Resend account owner's address, so **no tester can
-   confirm their email or finish signing up**. Verify a real domain first. This
-   is the one that makes step 3 above impossible.
+1. **Auth mail has to go through Resend, from a domain you verified.**
+   Built-in Supabase SMTP only delivers to project members. Resend's
+   `onboarding@resend.dev` only delivers to the Resend account owner. Either
+   way testers never get "check your email." Point Auth at Resend SMTP
+   (`./tools/configure-resend-smtp.sh` or Authentication → Email → SMTP) using
+   an address on a verified domain. Then delete the stuck user and sign up again.
 2. **Set a spend cap in the OpenAI dashboard.** The coach function is public
    (`--no-verify-jwt`, so anonymous chat works as designed), has no per-user
    budget, no rate limit and no kill switch — none of §10's controls are built.

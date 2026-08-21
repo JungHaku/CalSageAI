@@ -42,6 +42,20 @@ public enum BackendConfiguration {
         public var coachEndpoint: URL {
             url.appendingPathComponent("functions/v1/coach")
         }
+
+        /// Remember-only ingest for voice (and any non-chat turn). Sibling of
+        /// `coachEndpoint` so a voice outage does not take typed chat down.
+        public var memoryEndpoint: URL {
+            url.appendingPathComponent("functions/v1/memory")
+        }
+
+        /// Where the phone gets a short-lived ElevenLabs conversation token.
+        ///
+        /// Sibling of `coachEndpoint` for the same reason that function is not
+        /// folded into `coach`: a voice outage must not take typed chat down.
+        public var voiceTokenEndpoint: URL {
+            url.appendingPathComponent("functions/v1/voice-token")
+        }
     }
 
     /// The local development stack, served by `supabase start`.

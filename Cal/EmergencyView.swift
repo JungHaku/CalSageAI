@@ -37,7 +37,7 @@ struct EmergencyView: View {
                 Section {
                     Text(
                         """
-                        Cal is a coherence coach, not a therapist, and not a \
+                        C.A.L is a coherence coach, not a therapist, and not a \
                         substitute for medical care. If you are in danger, call 911.
                         """
                     )

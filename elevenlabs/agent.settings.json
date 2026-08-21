@@ -1,0 +1,31 @@
+{
+  "name": "C.A.L",
+  "conversation_config": {
+    "agent": {
+      "first_message": "{{session_opener}}",
+      "language": "en",
+      "dynamic_variables": {
+        "dynamic_variable_placeholders": {
+          "memory_digest": "none",
+          "session_opener": "Check in today."
+        }
+      },
+      "prompt": {
+        "llm": "gpt-4o",
+        "temperature": 0.4
+      }
+    },
+    "asr": {
+      "quality": "high"
+    },
+    "turn": {
+      "turn_timeout": 12
+    },
+    "tts": {
+      "model_id": "eleven_flash_v2",
+      "speed": 0.95,
+      "stability": 0.6,
+      "voice_id": "hA0EIutPW5EJicQ0YdyK"
+    }
+  }
+}

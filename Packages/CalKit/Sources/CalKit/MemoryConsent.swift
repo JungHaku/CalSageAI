@@ -24,6 +24,10 @@ public struct MemoryConsent: Codable, Sendable, Equatable {
     /// rather than assumed.
     public static let currentVersion = "memory-v1"
 
+    /// `consents.doc_type` on the server. Must match `MEMORY_CONSENT_DOC_TYPE`
+    /// in `supabase/functions/coach/memory.ts`.
+    public static let remoteDocType = "memory"
+
     public let isGranted: Bool
     public let grantedAt: Date?
     public let version: String
@@ -53,20 +57,20 @@ public struct MemoryConsent: Codable, Sendable, Equatable {
 /// The disclosure a student reads before agreeing. Kept here, next to the policy,
 /// so it is versioned with it rather than drifting inside a view.
 public enum MemoryConsentCopy {
-    public static let title = "Let Cal remember our conversations?"
+    public static let title = "Let C.A.L remember our conversations?"
 
     /// Written to be refusable. A disclosure that reads like a feature pitch is
     /// not really asking.
     public static let body = """
-    Cal works without this. Your check-ins, practices and history all stay on \
-    this phone either way, and you can use Cal exactly as you have been.
+    C.A.L works without this. Your practices, journal and history all stay on \
+    this phone either way, and you can use C.A.L exactly as you have been.
 
     If you say yes, what you type in Chat is sent to our server and kept there, \
-    linked to your account, so Cal can refer back to it in a later conversation. \
+    linked to your account, so C.A.L can refer back to it in a later conversation. \
     That is a copy of what you have written living somewhere other than your \
     phone.
 
-    You can turn this off at any time, and you can delete everything Cal has \
+    You can turn this off at any time, and you can delete everything C.A.L has \
     kept. Turning it off stops anything new being kept.
     """
 
@@ -75,7 +79,7 @@ public enum MemoryConsentCopy {
     /// answer a question the student has every reason to ask.
     public static let sharingNote = """
     We do not sell this or share it with advertisers or analytics companies. \
-    It is processed by the AI provider that generates Cal's replies, and by \
+    It is processed by the AI provider that generates C.A.L's replies, and by \
     nobody else.
     """
 

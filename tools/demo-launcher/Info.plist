@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleName</key>
-	<string>Cal Demo</string>
+	<string>C.A.L Demo</string>
 	<key>CFBundleDisplayName</key>
-	<string>Cal Demo</string>
+	<string>C.A.L Demo</string>
 	<key>CFBundleIdentifier</key>
 	<string>org.wholelifeministries.cal.demolauncher</string>
 	<key>CFBundleVersion</key>

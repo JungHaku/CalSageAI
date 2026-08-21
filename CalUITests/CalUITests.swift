@@ -5,6 +5,8 @@ import XCTest
 ///
 /// Every test launches with seeded state and a mock coach, so nothing here spends
 /// money, touches the network, or depends on a real model's wording (§11.4).
+///
+/// Navigation is the voice home: orb plus menu catalog. Destinations push.
 final class CalUITests: XCTestCase {
     override func setUp() {
         super.setUp()
@@ -13,11 +15,9 @@ final class CalUITests: XCTestCase {
 
     /// Launches as a **subscriber** by default.
     ///
-    /// This suite is about whether the features themselves work — the ten-question
-    /// framework, the Progress charts, the practice library — and since MVP-7 those
-    /// sit behind Cal+. Pinning the tier here keeps these tests testing the thing
-    /// they were written to test. Gating itself, and everything the free tier does
-    /// and doesn't get, is `PremiumUITests`.
+    /// This suite is about whether the features themselves work — practices,
+    /// check-in, campus tools, settings — after sign-in. Gating itself, and
+    /// everything the free tier does and doesn't get, is `PremiumUITests`.
     private func launch(
         scenario: String = "empty",
         entitlement: String = "plus",
@@ -34,84 +34,76 @@ final class CalUITests: XCTestCase {
         return app
     }
 
-    private let tabTitles = ["Home", "Check-In", "Navigate", "Planner", "Chat with Cal"]
-
-    /// SwiftUI decides whether a combined accessibility element surfaces as an
-    /// `otherElement`, a `staticText`, or a `button`, and it isn't stable across
-    /// layouts. Matching on identifier across any type avoids betting on it.
     private func element(_ app: XCUIApplication, _ identifier: String) -> XCUIElement {
-        app.descendants(matching: .any).matching(identifier: identifier).firstMatch
+        SageUI.element(app, identifier)
     }
 
-    func testAllFiveTabsFromTheSpecArePresent() {
+    func testHomeOffersTheCatalogCalCanOpen() {
         let app = launch()
-        for title in tabTitles {
+        XCTAssertTrue(SageUI.waitForHome(app), "voice home did not appear")
+
+        XCTAssertTrue(app.buttons["home-menu"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["emergency-button"].waitForExistence(timeout: 10))
+
+        SageUI.openMenu(app)
+        for identifier in [
+            "type-instead", "dest-practices", "quick-reset", "dest-study",
+            "dest-map", "start-checkin", "dest-settings",
+        ] {
             XCTAssertTrue(
-                app.tabBars.buttons[title].waitForExistence(timeout: 10),
-                "missing tab: \(title)"
+                app.buttons[identifier].waitForExistence(timeout: 10),
+                "missing menu control: \(identifier)"
             )
         }
+        XCTAssertFalse(element(app, "sage-bar").exists)
+        XCTAssertFalse(app.buttons["dismiss-cal"].exists)
     }
 
-    /// §9.2 Layer D: reachable in one tap from *every* tab, not just Home.
-    func testEmergencyHelpIsOneTapFromEveryTab() {
+    /// §9.2 Layer D: reachable in one tap from the voice home *and* a pushed screen.
+    func testEmergencyHelpIsOneTapFromHomeAndAPushedScreen() {
         let app = launch()
-        for title in tabTitles {
-            app.tabBars.buttons[title].tap()
 
-            let emergency = app.buttons["emergency-button"]
-            XCTAssertTrue(emergency.waitForExistence(timeout: 10), "no emergency button on \(title)")
-            emergency.tap()
+        let homeEmergency = SageUI.emergency(app)
+        XCTAssertTrue(homeEmergency.waitForExistence(timeout: 10), "no emergency on Cal")
+        SageUI.tap(homeEmergency)
+        XCTAssertTrue(app.buttons["emergency-988-call"].waitForExistence(timeout: 10))
+        app.buttons["Done"].tap()
 
-            XCTAssertTrue(
-                app.buttons["emergency-988-call"].waitForExistence(timeout: 10),
-                "988 not offered from \(title)"
-            )
-            app.buttons["Done"].tap()
-        }
-    }
-
-    // MARK: Home and the retention loop (MVP-3)
-
-    func testHomeOffersACheckInAndTheDailyMotivation() {
-        let app = launch()
-        app.tabBars.buttons["Home"].tap()
-
-        XCTAssertTrue(app.buttons["start-checkin"].waitForExistence(timeout: 10))
-        XCTAssertTrue(element(app, "daily-motivation").exists, "home should show a daily message")
-        // Empty history → no progress card claiming statistics we don't have.
-        XCTAssertFalse(element(app, "stat-consistency").exists)
-    }
-
-    func testHomeLeadsWithConsistencyNotTheStreak() {
-        let app = launch(scenario: "day30Streak")
-        app.tabBars.buttons["Home"].tap()
-
-        let consistency = element(app, "stat-consistency")
-        XCTAssertTrue(consistency.waitForExistence(timeout: 10))
-        XCTAssertTrue(consistency.label.contains("30"), "expected days-practised, got: \(consistency.label)")
-
-        // The streak is shown in WEEKS, not days — 30 daily check-ins is 5 weeks.
-        // A daily counter would mark most students as failing every week.
-        let streak = element(app, "stat-streak")
-        XCTAssertTrue(streak.exists)
+        SageUI.open(app, "dest-practices")
+        let pushed = SageUI.emergency(app)
+        XCTAssertTrue(pushed.waitForExistence(timeout: 10), "no emergency on a pushed screen")
+        SageUI.tap(pushed)
         XCTAssertTrue(
-            streak.label.contains("Weeks") && streak.label.contains("5"),
-            "expected a weekly streak of 5, got: \(streak.label)"
+            app.buttons["emergency-988-call"].waitForExistence(timeout: 10),
+            "988 not offered from a pushed screen"
         )
-
-        // A seeded 30-day history has already checked in today, so the CTA is gone.
-        XCTAssertTrue(element(app, "checked-in-today").exists)
+        app.buttons["Done"].tap()
     }
 
-    func testHistoryListsPastCheckIns() {
-        let app = launch(scenario: "day30Streak")
-        app.tabBars.buttons["Home"].tap()
+    // MARK: Today and the retention loop (MVP-3)
 
-        element(app, "dest-history").tap()
+    func testHomeOffersQuickReset() {
+        let app = launch()
+        XCTAssertTrue(SageUI.waitForHome(app))
+
+        SageUI.openMenu(app)
+        XCTAssertTrue(element(app, "quick-reset").exists, "menu should offer Quick Reset")
+        XCTAssertTrue(app.buttons["start-checkin"].exists)
+    }
+
+    func testCheckInOpensOnTheFirstOfFiveQuestions() {
+        let app = launch()
+        SageUI.open(app, "start-checkin")
+
+        let prompt = SageUI.element(app, "question-prompt")
+        XCTAssertTrue(prompt.waitForExistence(timeout: 10))
         XCTAssertTrue(
-            app.buttons["history-2026-07-29"].waitForExistence(timeout: 10),
-            "history should list seeded days"
+            prompt.label.contains("safe") || prompt.label.contains("How safe"),
+            "expected safety prompt, got: \(prompt.label)"
+        )
+        XCTAssertTrue(
+            SageUI.element(app, "score-chips").waitForExistence(timeout: 5),
+            "spoken check-in should offer 0–10 chips"
         )
     }
 
@@ -119,21 +111,15 @@ final class CalUITests: XCTestCase {
     /// — a system permission alert would block the run with no useful failure.
     func testReminderToggleSchedulesWithoutASystemPrompt() {
         let app = launch()
-        app.tabBars.buttons["Home"].tap()
-        element(app, "dest-settings").tap()
+        SageUI.open(app, "dest-settings")
 
         let toggle = app.switches["reminder-toggle"]
         XCTAssertTrue(toggle.waitForExistence(timeout: 10))
         XCTAssertEqual(toggle.value as? String, "0", "the reminder is off until asked for")
 
-        // A Form row exposes TWO switches: the full-width row, which carries the
-        // identifier, and the actual control inside it. Tapping the row hits the
-        // label and does nothing — the control has to be tapped directly.
         let control = toggle.switches.firstMatch
         (control.exists ? control : toggle).tap()
 
-        // Enabling runs through authorization and a store write, so the value
-        // changes asynchronously — asserting immediately races the Task.
         wait(
             for: [expectation(for: NSPredicate(format: "value == '1'"), evaluatedWith: toggle)],
             timeout: 10
@@ -148,8 +134,7 @@ final class CalUITests: XCTestCase {
 
     func testProfileFieldsAreOptionalAndEditable() {
         let app = launch()
-        app.tabBars.buttons["Home"].tap()
-        element(app, "dest-settings").tap()
+        SageUI.open(app, "dest-settings")
         element(app, "open-profile").tap()
 
         let name = element(app, "profile-name")
@@ -161,14 +146,9 @@ final class CalUITests: XCTestCase {
 
     /// Deleting is irreversible with no server-side copy, so it must confirm —
     /// and the confirmation must name what actually goes, not just "are you sure?".
-    ///
-    /// Only the appearance and wording are asserted. iOS renders this dialog as a
-    /// popover with NO cancel button — dismissal is a tap outside — so a test that
-    /// taps "Cancel" is testing a control the system chose not to draw.
     func testDeleteAsksBeforeErasingEverything() {
         let app = launch(scenario: "day30Streak")
-        app.tabBars.buttons["Home"].tap()
-        element(app, "dest-settings").tap()
+        SageUI.open(app, "dest-settings")
 
         let delete = element(app, "delete-data")
         XCTAssertTrue(delete.waitForExistence(timeout: 10))
@@ -178,7 +158,6 @@ final class CalUITests: XCTestCase {
             app.staticTexts["Delete everything?"].waitForExistence(timeout: 10),
             "a destructive action must confirm"
         )
-        // The wording has to say it can't be undone and offer the export route.
         let message = app.staticTexts.matching(
             NSPredicate(format: "label CONTAINS %@", "can't be undone")
         ).firstMatch
@@ -188,29 +167,23 @@ final class CalUITests: XCTestCase {
 
     func testDeleteRemovesTheHistory() {
         let app = launch(scenario: "day30Streak")
-        app.tabBars.buttons["Home"].tap()
-        element(app, "dest-settings").tap()
+        SageUI.open(app, "dest-settings")
         element(app, "delete-data").tap()
 
         XCTAssertTrue(app.staticTexts["Delete everything?"].waitForExistence(timeout: 10))
         element(app, "confirm-delete").tap()
 
-        app.tabBars.buttons["Home"].tap()
-        // With nothing left there is no progress card to render — and the CTA to
-        // start a check-in comes back.
-        XCTAssertTrue(app.buttons["start-checkin"].waitForExistence(timeout: 10))
+        SageUI.pop(app)
+        XCTAssertTrue(app.buttons["home-menu"].waitForExistence(timeout: 10))
         XCTAssertFalse(element(app, "stat-consistency").exists)
     }
 
-    // MARK: Campus (MVP-5)
+    // MARK: Campus / Tools (MVP-5)
 
     func testNavigateListsCampusPlacesAndFilters() {
         let app = launch()
-        app.tabBars.buttons["Navigate"].tap()
+        SageUI.open(app, "dest-map")
 
-        // Search rather than scroll: a List is lazy, so a row 20 items down
-        // doesn't exist in the hierarchy yet and asserting on it would be
-        // testing the scroll position, not the data.
         let field = app.searchFields.firstMatch
         XCTAssertTrue(field.waitForExistence(timeout: 15))
         field.tap()
@@ -224,8 +197,7 @@ final class CalUITests: XCTestCase {
 
     func testStudyTimerRunsAndCanBeEnded() {
         let app = launch()
-        app.tabBars.buttons["Home"].tap()
-        element(app, "dest-study").tap()
+        SageUI.open(app, "dest-study")
 
         XCTAssertTrue(element(app, "length-picker").waitForExistence(timeout: 10))
         app.buttons["50 min"].tap()
@@ -243,86 +215,15 @@ final class CalUITests: XCTestCase {
         XCTAssertTrue(app.buttons["start-study"].waitForExistence(timeout: 10))
     }
 
-    /// The prompt must never fire in a test — and the connect screen has to say
-    /// what iOS will ask for, since Apple offers no read-only calendar tier.
-    func testPlannerAsksBeforeReadingTheCalendar() {
-        let app = launch()
-        app.tabBars.buttons["Planner"].tap()
-
-        let connect = app.buttons["connect-calendar"]
-        XCTAssertTrue(connect.waitForExistence(timeout: 10))
-        connect.tap()
-
-        // The mock grants without a system alert; an empty calendar is the
-        // honest result, not an error.
-        XCTAssertTrue(
-            element(app, "planner-empty").waitForExistence(timeout: 10),
-            "granting should show today's (empty) schedule"
-        )
-    }
-
-    // MARK: Analytics (MVP-4)
-
-    func testProgressShowsTheHeadlineDeltaAndCharts() {
-        let app = launch(scenario: "day30Streak")
-        app.tabBars.buttons["Home"].tap()
-        element(app, "dest-progress").tap()
-
-        // The product's actual claim leads, as a number rather than a chart.
-        let hero = element(app, "hero-delta")
-        XCTAssertTrue(hero.waitForExistence(timeout: 10))
-        XCTAssertTrue(hero.label.hasPrefix("+"), "expected a signed delta, got: \(hero.label)")
-
-        XCTAssertTrue(app.staticTexts["Coherence over time"].exists)
-        XCTAssertTrue(app.staticTexts["By area"].exists)
-    }
-
-    /// Non-negotiable: no value may be reachable only through a chart.
-    func testProgressHasATableViewTwin() {
-        let app = launch(scenario: "day30Streak")
-        app.tabBars.buttons["Home"].tap()
-        element(app, "dest-progress").tap()
-
-        XCTAssertTrue(app.buttons["toggle-table"].waitForExistence(timeout: 10))
-        app.buttons["toggle-table"].tap()
-
-        XCTAssertTrue(
-            element(app, "trend-table").waitForExistence(timeout: 10),
-            "the trend must be readable as a table"
-        )
-        XCTAssertTrue(element(app, "category-table").exists, "areas must be readable as a table")
-    }
-
-    func testGranularityFilterScopesEverything() {
-        let app = launch(scenario: "day30Streak")
-        app.tabBars.buttons["Home"].tap()
-        element(app, "dest-progress").tap()
-
-        let picker = element(app, "granularity-picker")
-        XCTAssertTrue(picker.waitForExistence(timeout: 10))
-        // One filter row above everything it scopes, not a per-chart control.
-        app.buttons["Monthly"].tap()
-        XCTAssertTrue(app.staticTexts["Coherence over time"].waitForExistence(timeout: 10))
-    }
-
-    func testProgressIsHonestWhenThereIsNoData() {
-        let app = launch()
-        app.tabBars.buttons["Home"].tap()
-        element(app, "dest-progress").tap()
-
-        XCTAssertTrue(
-            app.staticTexts["Nothing to show yet"].waitForExistence(timeout: 10),
-            "an empty history must not render an empty chart claiming a trend"
-        )
-        XCTAssertFalse(element(app, "hero-delta").exists)
-    }
-
     // MARK: The practice library (MVP-2)
 
     func testPracticeLibraryListsDrMiasPractices() {
         let app = launch()
-        app.tabBars.buttons["Home"].tap()
-        element(app, "dest-practices").tap()
+        SageUI.open(app, "dest-practices")
+        XCTAssertTrue(
+            app.staticTexts["Guided practices"].waitForExistence(timeout: 10),
+            "practice library did not load"
+        )
 
         for slug in [
             "microcosm-macrocosm-breath",
@@ -330,23 +231,26 @@ final class CalUITests: XCTestCase {
             "presence-of-light",
             "solar-plexus-light",
             "sovereignty-reflection",
+            "box-breath",
+            "even-breath",
+            "belly-breath",
+            "four-seven-eight",
+            "release-sigh",
         ] {
             XCTAssertTrue(
-                app.buttons["practice-\(slug)"].waitForExistence(timeout: 10),
+                SageUI.element(app, "practice-\(slug)").waitForExistence(timeout: 10),
                 "library is missing \(slug)"
             )
         }
 
-        // The placeholder is scaffolding, not a practice — it must not be browsable.
         XCTAssertFalse(app.buttons["practice-seed-placeholder"].exists)
     }
 
     func testPracticeDetailShowsHerPurposeAndCanBegin() {
         let app = launch()
-        app.tabBars.buttons["Home"].tap()
-        element(app, "dest-practices").tap()
+        SageUI.open(app, "dest-practices")
 
-        let row = app.buttons["practice-presence-of-light"]
+        let row = SageUI.element(app, "practice-presence-of-light")
         XCTAssertTrue(row.waitForExistence(timeout: 10))
         row.tap()
 
@@ -356,7 +260,6 @@ final class CalUITests: XCTestCase {
 
         app.buttons["begin-practice"].tap()
 
-        // The player opens full screen; declining returns to the detail screen.
         let skip = app.buttons["skip-exercise"]
         XCTAssertTrue(skip.waitForExistence(timeout: 10), "Begin should start playback")
         skip.tap()
@@ -364,90 +267,6 @@ final class CalUITests: XCTestCase {
         XCTAssertTrue(
             app.buttons["begin-practice"].waitForExistence(timeout: 10),
             "declining should return to the practice detail"
-        )
-    }
-
-    // MARK: The check-in flow (Phase 1)
-
-    func testCheckInOpensOnTheFirstOfDrMiasTenQuestions() {
-        let app = launch()
-        app.tabBars.buttons["Check-In"].tap()
-
-        let prompt = app.staticTexts["question-prompt"]
-        XCTAssertTrue(prompt.waitForExistence(timeout: 10))
-        XCTAssertEqual(prompt.label, "How safe does your body feel as a place to live right now?")
-    }
-
-    /// The scale starts unset on purpose (ARCHITECTURE.md §7): a pre-filled 5 is
-    /// exactly the premium regulation threshold, so tapping straight through would
-    /// record everyone as low and inflate the before→after delta.
-    func testContinueIsDisabledUntilTheScaleIsTouched() {
-        let app = launch()
-        app.tabBars.buttons["Check-In"].tap()
-
-        let button = app.buttons["continue-button"]
-        XCTAssertTrue(button.waitForExistence(timeout: 10))
-        XCTAssertFalse(button.isEnabled, "Continue must not be tappable before the student answers")
-
-        app.sliders.firstMatch.adjust(toNormalizedSliderPosition: 0.8)
-        XCTAssertTrue(button.isEnabled, "answering should enable Continue")
-    }
-
-    /// The spec's core loop: a low score routes into regulation **immediately**,
-    /// before the next category, and the exercise is declinable.
-    func testLowScoreRoutesIntoTheExerciseImmediately() {
-        let app = launch()
-        app.tabBars.buttons["Check-In"].tap()
-        XCTAssertTrue(app.staticTexts["question-prompt"].waitForExistence(timeout: 10))
-
-        app.sliders.firstMatch.adjust(toNormalizedSliderPosition: 0)
-        app.buttons["continue-button"].tap()
-
-        // The breathwork player, not the next question.
-        //
-        // Asserted on the skip button rather than on the cue text: the cue changes
-        // every few seconds as the timeline advances, so matching it is a race the
-        // test would sometimes lose. The button exists for the whole exercise.
-        let skip = app.buttons["skip-exercise"]
-        XCTAssertTrue(
-            skip.waitForExistence(timeout: 10),
-            "a low score should open the exercise before advancing"
-        )
-        XCTAssertTrue(
-            app.staticTexts["One Minute Together (placeholder)"].exists,
-            "the exercise player should show which exercise is running"
-        )
-
-        // Declining is always available — the framework is about restoring choice.
-        skip.tap()
-
-        let prompt = app.staticTexts["question-prompt"]
-        XCTAssertTrue(prompt.waitForExistence(timeout: 10))
-        XCTAssertEqual(
-            prompt.label,
-            "How freely is your breath moving into your heart and belly right now?",
-            "skipping should advance to the second category"
-        )
-    }
-
-    func testHighScoresSkipRegulationAndCompleteTheCheckIn() {
-        let app = launch()
-        app.tabBars.buttons["Check-In"].tap()
-
-        for question in 1...10 {
-            let button = app.buttons["continue-button"]
-            XCTAssertTrue(button.waitForExistence(timeout: 10), "stalled at question \(question)")
-            app.sliders.firstMatch.adjust(toNormalizedSliderPosition: 1)
-            button.tap()
-            XCTAssertFalse(
-                app.buttons["skip-exercise"].exists,
-                "a high score must not open an exercise (question \(question))"
-            )
-        }
-
-        XCTAssertTrue(
-            app.staticTexts["checkin-complete"].waitForExistence(timeout: 10),
-            "ten high scores should complete the check-in"
         )
     }
 }

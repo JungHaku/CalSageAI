@@ -8,7 +8,7 @@ import PackageDescription
 // URLSession, it belongs in CalDesign or CalData instead.
 let package = Package(
     name: "CalKit",
-    platforms: [.iOS(.v18), .macOS(.v14)],
+    platforms: [.iOS(.v17), .macOS(.v14)],
     products: [
         .library(name: "CalKit", targets: ["CalKit"])
     ],

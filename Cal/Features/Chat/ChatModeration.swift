@@ -35,7 +35,7 @@ enum Support {
     }
 
     static var mailtoURL: URL? {
-        URL(string: "mailto:\(contactEmail)?subject=Cal%20support")
+        URL(string: "mailto:\(contactEmail)?subject=C.A.L%20support")
     }
 }
 

@@ -10,12 +10,12 @@ import SwiftUI
 /// as complete.
 struct PracticesLibraryView: View {
     @Environment(AppContainer.self) private var container
-    @State private var exercises: [Exercise] = []
-    @State private var missingCategories: [CoherenceCategory] = []
+    @State private var basics: [Exercise] = []
+    @State private var guided: [Exercise] = []
     @State private var loadFailed = false
 
     var body: some View {
-        List {
+        Group {
             if loadFailed {
                 ContentUnavailableView(
                     "Practices unavailable",
@@ -23,48 +23,53 @@ struct PracticesLibraryView: View {
                     description: Text("The practice library couldn't be read.")
                 )
             } else {
-                Section {
-                    ForEach(exercises) { exercise in
-                        NavigationLink(value: exercise.slug) {
-                            PracticeRow(exercise: exercise)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        if !basics.isEmpty {
+                            practiceGroup("Basic breathwork", exercises: basics)
+                        }
+                        if !guided.isEmpty {
+                            PremiumGate(feature: .practiceLibrary) {
+                                practiceGroup("Guided practices", exercises: guided)
+                            }
+                            .frame(minHeight: 120)
                         }
                     }
-                } header: {
-                    Text("Guided practices")
-                } footer: {
-                    if !missingCategories.isEmpty {
-                        Text(
-                            """
-                            More coming: \(missingCategories.map(\.displayName).formatted(.list(type: .and))). \
-                            Low scores in those areas use a placeholder for now.
-                            """
-                        )
-                    }
+                    .padding()
                 }
             }
-        }
-        .navigationDestination(for: String.self) { slug in
-            PracticeDetailView(slug: slug)
         }
         .navigationTitle("Practices")
         .task { await load() }
     }
 
+    private func practiceGroup(_ title: String, exercises: [Exercise]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.title3.weight(.semibold))
+
+            VStack(spacing: 0) {
+                ForEach(Array(exercises.enumerated()), id: \.element.id) { index, exercise in
+                    if index > 0 { Divider() }
+                    NavigationLink(value: VoiceRoute.practice(slug: exercise.slug, autoStart: false)) {
+                        PracticeRow(exercise: exercise)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("practice-\(exercise.slug)")
+                }
+            }
+            .background(Surface.card, in: .rect(cornerRadius: 14))
+        }
+    }
+
     private func load() async {
         do {
-            // Bound to a local before iterating: `for x in try await <call>`
-            // segfaults this toolchain (see ARCHITECTURE.md §11).
-            // Premium only: the placeholder is scaffolding and the study reset is
-            // a tool inside Study Mode — neither is a session a student browses to.
-            let all = try await container.content.exercises(tier: .premium)
-            exercises = all.sorted { $0.title < $1.title }
-
-            var missing: [CoherenceCategory] = []
-            for category in CoherenceCategory.fullCheckIn {
-                let match = try await container.content.exercise(for: category)
-                if match == nil { missing.append(category) }
-            }
-            missingCategories = missing
+            let allFree = try await container.content.exercises(tier: .free)
+            basics = allFree
+                .filter { $0.slug != "study-reset" && $0.slug != "seed-placeholder" }
+                .sorted { $0.title < $1.title }
+            guided = try await container.content.exercises(tier: .premium)
+                .sorted { $0.title < $1.title }
             loadFailed = false
         } catch {
             loadFailed = true
@@ -80,6 +85,7 @@ private struct PracticeRow: View {
             HStack(alignment: .firstTextBaseline) {
                 Text(exercise.title)
                     .font(.headline)
+                    .foregroundStyle(.primary)
                 Spacer()
                 if let duration = exercise.duration {
                     Text(Duration.seconds(duration).formatted(.time(pattern: .minuteSecond)))
@@ -95,9 +101,11 @@ private struct PracticeRow: View {
                     .lineLimit(2)
             }
         }
-        .padding(.vertical, 4)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(.rect)
         .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("practice-\(exercise.slug)")
     }
 }
 
