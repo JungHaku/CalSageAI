@@ -28,12 +28,9 @@ final class ElevenLabsVoiceSession: VoiceSession, @unchecked Sendable {
 
     private let tokenClient: VoiceTokenClient
     /// Prefetch standing facts. Fail-open to `none` so a slow store never
-    /// delays the first spoken word past a short wait after the token lands.
+    /// delays connect past a short wait after the token lands.
     private let loadMemoryDigest: @Sendable () async -> String
-    /// First line C.A.L. speaks — check-in invite or result-based greeting.
-    private let loadSessionOpener: @Sendable () async -> String
     private var memoryDigest = MemoryDigest.noneSentinel
-    private var sessionOpener = "Check in today."
     private var conversation: Conversation?
     private var continuation: AsyncStream<VoiceEvent>.Continuation?
     private var observers = Set<AnyCancellable>()
@@ -51,14 +48,10 @@ final class ElevenLabsVoiceSession: VoiceSession, @unchecked Sendable {
         tokenClient: VoiceTokenClient,
         loadMemoryDigest: @escaping @Sendable () async -> String = {
             MemoryDigest.noneSentinel
-        },
-        loadSessionOpener: @escaping @Sendable () async -> String = {
-            "Check in today."
         }
     ) {
         self.tokenClient = tokenClient
         self.loadMemoryDigest = loadMemoryDigest
-        self.loadSessionOpener = loadSessionOpener
         #if targetEnvironment(simulator)
         self.textOnly = true
         #else
@@ -157,19 +150,16 @@ final class ElevenLabsVoiceSession: VoiceSession, @unchecked Sendable {
 
     private func connect() async {
         let digestTask = Task { await self.loadMemoryDigest() }
-        let openerTask = Task { await self.loadSessionOpener() }
         let credentials: VoiceTokenClient.Credentials
         do {
             credentials = try await tokenClient.fetchCredentials()
         } catch let failure as VoiceTokenClient.Failure {
             digestTask.cancel()
-            openerTask.cancel()
             emit(.failed(mapTokenFailure(failure)))
             await end()
             return
         } catch {
             digestTask.cancel()
-            openerTask.cancel()
             emit(.failed(.offline))
             await end()
             return
@@ -179,11 +169,6 @@ final class ElevenLabsVoiceSession: VoiceSession, @unchecked Sendable {
             digestTask,
             timeout: .milliseconds(400),
             fallback: MemoryDigest.noneSentinel
-        )
-        sessionOpener = await firstReady(
-            openerTask,
-            timeout: .milliseconds(400),
-            fallback: "Check in today."
         )
 
         if textOnly {
@@ -278,7 +263,6 @@ final class ElevenLabsVoiceSession: VoiceSession, @unchecked Sendable {
             conversationOverrides: .init(textOnly: textOnly),
             dynamicVariables: [
                 "memory_digest": memoryDigest,
-                "session_opener": sessionOpener,
             ],
             networkConfiguration: network,
             onError: { [weak self] error in

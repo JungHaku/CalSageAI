@@ -283,10 +283,6 @@ final class VoiceRootViewModel {
     static func describe(_ tool: CalTool) -> String {
         switch tool {
         case .todayStatus:            "Getting oriented"
-        case .startCheckIn:           "Starting check-in"
-        case .recordScore:            "Saving your rating"
-        case .skipRegulation:         "Skipping regulation"
-        case .continueCheckIn:        "Continuing check-in"
         case .playPractice(let slug): "Starting \(slug.replacingOccurrences(of: "-", with: " "))"
         case .stopPractice:           "Stopping the practice"
         case .showPlace(let query):   "Looking up \(query)"
@@ -315,35 +311,6 @@ extension VoiceSessionState {
 }
 
 extension VoiceRootViewModel {
-    /// Menu / chip entry into the spoken check-in. Keeps state on the router so
-    /// the home banner can show the question while Cal asks it out loud.
-    func beginCheckIn() {
-        Task {
-            append(.action, Self.describe(.startCheckIn))
-            let result = await router.perform(.startCheckIn)
-            if result.isError {
-                append(.action, result.text)
-            }
-            if isLive {
-                await session?.sendUserText(
-                    "I'd like to check in — ask me the current question."
-                )
-            }
-        }
-    }
-
-    func recordCheckInScore(_ value: Int) {
-        Task {
-            append(.action, Self.describe(.recordScore(value: value)))
-            let result = await router.perform(.recordScore(value: value))
-            if result.isError {
-                append(.action, result.text)
-            } else if isLive {
-                await session?.sendUserText("I rated that a \(value).")
-            }
-        }
-    }
-
     /// Suggestion chip → typed turn when the session can take text; otherwise a
     /// quiet no-op until they tap Talk (voice path still hears them).
     func sendSuggestion(_ text: String) async {
@@ -356,7 +323,6 @@ extension VoiceRootViewModel {
     }
 
     private func connectAndSuggest(_ text: String) {
-        // Session may be ended after backgrounding — restart, then send.
         Task {
             if !isLive { await restart() }
             draft = text

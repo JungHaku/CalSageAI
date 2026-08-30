@@ -39,31 +39,13 @@ final class SageRouter: CalToolPerforming {
     /// Single owner of an awaited `play_practice` run.
     let practices: PracticeRunCoordinator
 
-    /// Spoken check-in in progress. Nil when idle or complete.
-    private(set) var checkInFlow: CheckInFlow?
-
-    /// Prompt for the current check-in step — shown under the orb for sighted /
-    /// VoiceOver users while Cal asks out loud.
-    var checkInPrompt: String? {
-        guard let flow = checkInFlow else { return nil }
-        switch flow.step {
-        case .rating(let q): return q.prompt
-        case .reRating(let q): return q.rePrompt
-        case .regulation: return "A short regulation when you're ready."
-        case .complete: return nil
-        }
-    }
-
-    var checkInProgress: (answered: Int, total: Int)? {
-        guard let flow = checkInFlow, !flow.isComplete else { return nil }
-        return flow.progress
-    }
+    /// When true, present the check-in form sheet (startup or menu/chip).
+    var showingCheckInForm = false
 
     private let content: any ContentRepository
     private let placeSearch: any PlaceSearching
     private let store: (any CoherenceStoring)?
     private let dates: any DateProvider
-    private let remember: (@MainActor @Sendable (String) -> Void)?
     /// Clinic suggestion throttle — once per local calendar day.
     private var lastClinicSuggestionDay: LocalDate?
 
@@ -72,33 +54,36 @@ final class SageRouter: CalToolPerforming {
         placeSearch: any PlaceSearching,
         store: (any CoherenceStoring)? = nil,
         dates: any DateProvider = SystemDateProvider(),
-        practices: PracticeRunCoordinator = PracticeRunCoordinator(),
-        remember: (@MainActor @Sendable (String) -> Void)? = nil
+        practices: PracticeRunCoordinator = PracticeRunCoordinator()
     ) {
         self.content = content
         self.placeSearch = placeSearch
         self.store = store
         self.dates = dates
         self.practices = practices
-        self.remember = remember
+    }
+
+    /// Complete check-in for today — source of truth for the startup sheet.
+    func hasCompletedCheckInToday() async -> Bool {
+        guard let store else { return false }
+        let today = dates.today
+        let todays = ((try? await store.checkIns(from: today, to: today)) ?? [])
+            .filter(\.isComplete)
+        return !todays.isEmpty
+    }
+
+    func presentCheckInForm() {
+        showingCheckInForm = true
+    }
+
+    func dismissCheckInForm() {
+        showingCheckInForm = false
     }
 
     func perform(_ tool: CalTool) async -> ToolResult {
         switch tool {
         case .todayStatus:
             return await todayStatus()
-
-        case .startCheckIn:
-            return await startCheckIn()
-
-        case .recordScore(let value):
-            return await recordScore(value)
-
-        case .skipRegulation:
-            return await skipRegulation()
-
-        case .continueCheckIn:
-            return await continueCheckIn()
 
         case .playPractice(let slug):
             return await playPractice(slug)
@@ -120,153 +105,6 @@ final class SageRouter: CalToolPerforming {
         case .endSession:
             return .ok("Ending the conversation.")
         }
-    }
-
-    // MARK: Spoken check-in
-
-    private func startCheckIn() async -> ToolResult {
-        if let store {
-            let today = dates.today
-            let existing = (try? await store.checkIns(from: today, to: today))?
-                .filter(\.isComplete) ?? []
-            if !existing.isEmpty {
-                return .ok(
-                    """
-                    They already finished today's check-in. Do not start another. \
-                    Open from how that check-in went, or just listen.
-                    """
-                )
-            }
-        }
-
-        var copy = CoherenceQuestion.seed
-        if let questions = try? await content.questions() {
-            copy = questions
-        }
-        var exercises: [CoherenceCategory: String] = [:]
-        for category in CheckInKind.full.categories {
-            if let exercise = try? await content.exercise(for: category) {
-                exercises[category] = exercise.slug
-            }
-        }
-
-        let flow = CheckInFlow(
-            kind: .full,
-            localDate: dates.today,
-            timeZoneIdentifier: dates.calendar.timeZone.identifier,
-            copy: copy,
-            exercises: exercises
-        )
-        checkInFlow = flow
-        return .ok(describeStep(flow))
-    }
-
-    private func recordScore(_ value: Int) async -> ToolResult {
-        guard var flow = checkInFlow else {
-            return .failure("No check-in is in progress. Call start_check_in first.")
-        }
-        let score = Score(clamping: value)
-        switch flow.step {
-        case .rating:
-            flow.submitRating(score, now: dates.now)
-        case .reRating:
-            flow.submitReRating(score, now: dates.now)
-        default:
-            return .failure("Waiting for a regulation to finish or be skipped, not a score.")
-        }
-        checkInFlow = flow
-        await persistCheckIn()
-        if flow.isComplete {
-            return await finishCheckIn()
-        }
-        return .ok(describeStep(flow))
-    }
-
-    private func skipRegulation() async -> ToolResult {
-        guard var flow = checkInFlow else {
-            return .failure("No check-in is in progress.")
-        }
-        guard case .regulation = flow.step else {
-            return .failure("Nothing to skip — they are not in a regulation step.")
-        }
-        flow.skipRegulation(now: dates.now)
-        checkInFlow = flow
-        await persistCheckIn()
-        if flow.isComplete {
-            return await finishCheckIn()
-        }
-        return .ok(describeStep(flow))
-    }
-
-    private func continueCheckIn() async -> ToolResult {
-        guard var flow = checkInFlow else {
-            return .failure("No check-in is in progress.")
-        }
-        guard case .regulation = flow.step else {
-            return .failure("Call continue_check_in only after a regulation practice.")
-        }
-        flow.completeRegulation()
-        checkInFlow = flow
-        return .ok(describeStep(flow))
-    }
-
-    private func describeStep(_ flow: CheckInFlow) -> String {
-        switch flow.step {
-        case .rating(let q):
-            let (answered, total) = flow.progress
-            return """
-                Ask this out loud, then wait for a number 0–10. Do not paraphrase.
-                Question \(answered + 1) of \(total) (\(q.category.rawValue)):
-                \(q.prompt)
-                """
-        case .reRating(let q):
-            return """
-                Ask this re-prompt out loud, then wait for a number 0–10:
-                \(q.rePrompt)
-                """
-        case .regulation(_, let slug):
-            return """
-                Their score was low. Offer a short regulation. Call play_practice \
-                with slug '\(slug)' (or another basic breath if that slug fails). \
-                After it ends, call continue_check_in. If they decline, call \
-                skip_regulation.
-                """
-        case .complete:
-            return "Check-in is complete."
-        }
-    }
-
-    private func finishCheckIn() async -> ToolResult {
-        guard let flow = checkInFlow, flow.isComplete else {
-            return .failure("Check-in is not complete yet.")
-        }
-        await persistCheckIn()
-        let checkIn = flow.checkIn
-        let parts = checkIn.scores.map {
-            "\($0.category.displayName.lowercased()) \($0.effective.value)"
-        }.joined(separator: ", ")
-        let avg = checkIn.averageAfter.map { String(format: "%.1f", $0) } ?? "unknown"
-        remember?(
-            "Daily check-in \(checkIn.localDate.iso): \(parts). Average \(avg)."
-        )
-        checkInFlow = nil
-        let band: String = {
-            guard let avg = checkIn.averageAfter else { return "moderate" }
-            if avg >= 8 { return "high" }
-            if avg >= 5 { return "moderate" }
-            return "low"
-        }()
-        return .ok(
-            """
-            Check-in saved. Average \(avg) (\(band)). Thank them briefly, then \
-            listen. Scores: \(parts).
-            """
-        )
-    }
-
-    private func persistCheckIn() async {
-        guard let flow = checkInFlow, let store else { return }
-        try? await store.save(flow.checkIn)
     }
 
     // MARK: Practices
@@ -321,13 +159,14 @@ final class SageRouter: CalToolPerforming {
     private func todayStatus() async -> ToolResult {
         let today = dates.today
         let numbersRule = """
-            Never state a number about them that is not in this result.
+            Never state a number about them that is not in this result. \
+            Do not start a check-in — that is a form on the phone.
             """
         guard let store else {
             return .ok(
                 """
-                They have not finished a check-in today. Say "Check in today", \
-                call start_check_in, then ask the first question it returns.
+                They have not finished a check-in today. If they ask about it, \
+                point them to Check in in the menu. Do not run a spoken check-in.
                 \(numbersRule)
                 """
             )
@@ -338,8 +177,8 @@ final class SageRouter: CalToolPerforming {
         if completedToday.isEmpty {
             return .ok(
                 """
-                They have not finished a check-in today. Say "Check in today", \
-                call start_check_in, then ask the first question it returns.
+                They have not finished a check-in today. If they ask about it, \
+                point them to Check in in the menu. Do not run a spoken check-in.
                 \(numbersRule)
                 """
             )
@@ -354,40 +193,13 @@ final class SageRouter: CalToolPerforming {
             if avg >= 5 { return "moderate" }
             return "low"
         }()
-        let openerHint: String = switch band {
-        case "high":
-            "Open warmly — seems like they're having a good day — then listen."
-        case "low":
-            "Open gently — you're with them — then listen. Offer a breath if it fits."
-        default:
-            "Open simply — ask how the rest of the day is going — then listen."
-        }
         return .ok(
             """
             They already checked in today. Band: \(band).
             \(summary.promptText)
-            \(openerHint)
             \(numbersRule)
             """
         )
-    }
-
-    /// First spoken line for a new session (`{{session_opener}}`).
-    func sessionOpener() async -> String {
-        guard let store else { return "Check in today." }
-        let today = dates.today
-        let todays = ((try? await store.checkIns(from: today, to: today)) ?? [])
-            .filter(\.isComplete)
-        guard let checkIn = todays.last, let avg = checkIn.averageAfter else {
-            return "Check in today."
-        }
-        if avg >= 8 {
-            return "Seems like you're having a great day. What's on your mind?"
-        }
-        if avg >= 5 {
-            return "How's the rest of today feeling?"
-        }
-        return "I'm here with you. What's been the hardest part today?"
     }
 
     // MARK: Places

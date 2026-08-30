@@ -44,13 +44,15 @@ final class PremiumUITests: XCTestCase {
 
     func testCheckInIsNeverGated() {
         let app = launch(entitlement: "free")
-        SageUI.open(app, "start-checkin")
-
+        // Free tier still sees the startup form when not checked in.
         XCTAssertTrue(
             SageUI.element(app, "question-prompt").waitForExistence(timeout: 10),
             "check-in should open for the free tier"
         )
-        XCTAssertTrue(SageUI.element(app, "score-chips").waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            SageUI.element(app, "score-scale").waitForExistence(timeout: 5)
+                || app.buttons["checkin-dismiss"].waitForExistence(timeout: 2)
+        )
     }
 
     func testSubscriberSeesPractices() {

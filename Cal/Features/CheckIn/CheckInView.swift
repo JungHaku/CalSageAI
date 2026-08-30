@@ -8,9 +8,18 @@ import SwiftUI
 /// transition decision lives in `CalKit` where it's tested without a simulator.
 struct CheckInView: View {
     @Environment(AppContainer.self) private var container
+    @Environment(\.dismiss) private var dismiss
     @State private var model: CheckInViewModel?
 
     let kind: CheckInKind
+    /// Called when the flow reaches `.complete` (or the Done button). Sheets use
+    /// this to dismiss and let the voice agent connect.
+    var onFinished: (() -> Void)?
+
+    init(kind: CheckInKind, onFinished: (() -> Void)? = nil) {
+        self.kind = kind
+        self.onFinished = onFinished
+    }
 
     var body: some View {
         Group {
@@ -35,6 +44,19 @@ struct CheckInView: View {
             model = created
             await created.loadContent()
         }
+        .onChange(of: model?.isComplete) { _, complete in
+            guard complete == true else { return }
+            // Brief beat so the summary can paint, then dismiss the sheet.
+            Task {
+                try? await Task.sleep(for: .milliseconds(400))
+                finish()
+            }
+        }
+    }
+
+    private func finish() {
+        onFinished?()
+        dismiss()
     }
 
     @ViewBuilder
@@ -92,7 +114,13 @@ struct CheckInView: View {
                 }
 
             case .complete:
-                CheckInSummary(checkIn: model.flow.checkIn)
+                VStack(spacing: 20) {
+                    CheckInSummary(checkIn: model.flow.checkIn)
+                    Button("Done") { finish() }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.large)
+                        .accessibilityIdentifier("checkin-done")
+                }
             }
         }
         .animation(.snappy, value: model.flow.step)

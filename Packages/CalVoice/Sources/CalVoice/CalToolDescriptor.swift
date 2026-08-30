@@ -72,50 +72,9 @@ extension CalToolDescriptor {
             Grounding before you talk about how this student has been. Never \
             state a number about them — a streak, an average, a past score — \
             that you did not get from this tool. If they have not checked in \
-            today, say "Check in today" and call start_check_in, then ask the \
-            first question it returns. If they already checked in, open from \
-            the band it reports (high / moderate / low) — never invent one.
-            """
-        ),
-
-        CalToolDescriptor(
-            name: CalTool.Name.startCheckIn,
-            purpose: """
-            Begin the spoken daily check-in (five topics, each 0–10). Returns \
-            the exact question to ask next. Ask it out loud and wait for a \
-            number. Do not open a screen. Do not stay silent.
-            """
-        ),
-
-        CalToolDescriptor(
-            name: CalTool.Name.recordScore,
-            purpose: """
-            Save their 0–10 answer for the current check-in question. Call this \
-            as soon as they give a number. The result tells you the next \
-            question, or to offer a short regulation practice if the score is low.
-            """,
-            parameters: [
-                Parameter(
-                    name: "value",
-                    type: .integer,
-                    describedAs: "Their rating from 0 to 10 inclusive."
-                )
-            ]
-        ),
-
-        CalToolDescriptor(
-            name: CalTool.Name.skipRegulation,
-            purpose: """
-            They declined the regulation exercise. Advance to the next check-in \
-            topic without an after-score.
-            """
-        ),
-
-        CalToolDescriptor(
-            name: CalTool.Name.continueCheckIn,
-            purpose: """
-            Call after a regulation practice finishes (or they are ready to \
-            re-rate). Returns the re-prompt question to ask out loud.
+            today, this says so — do not start a check-in; that is a form on \
+            the phone. If they already checked in, use the band it reports \
+            (high / moderate / low) when it fits — never invent one.
             """
         ),
 
@@ -169,7 +128,7 @@ extension CalToolDescriptor {
             purpose: """
             Open one of the app's other screens when the student asks to see it. \
             Use screen 'map' for the Berkeley campus map with no place selected. \
-            For check-in, use start_check_in — do not open a check-in screen.
+            Check-in is a form on the phone — do not open it with this tool.
             """,
             parameters: [
                 Parameter(

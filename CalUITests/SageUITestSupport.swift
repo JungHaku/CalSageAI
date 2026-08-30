@@ -18,9 +18,19 @@ enum SageUI {
 
     @discardableResult
     static func waitForHome(_ app: XCUIApplication, timeout: TimeInterval = 15) -> Bool {
-        app.buttons["home-menu"].waitForExistence(timeout: timeout)
+        // Startup may present the daily check-in form before the orb connects.
+        dismissCheckInIfNeeded(app)
+        return app.buttons["home-menu"].waitForExistence(timeout: timeout)
             || element(app, "home-menu").waitForExistence(timeout: 2)
             || element(app, "voice-state").waitForExistence(timeout: 2)
+    }
+
+    /// Skip the mandatory form so tests that are not about check-in can proceed.
+    static func dismissCheckInIfNeeded(_ app: XCUIApplication, timeout: TimeInterval = 5) {
+        let dismiss = app.buttons["checkin-dismiss"]
+        if dismiss.waitForExistence(timeout: timeout) {
+            tap(dismiss)
+        }
     }
 
     /// Open the catalog menu. Idempotent if it is already open.

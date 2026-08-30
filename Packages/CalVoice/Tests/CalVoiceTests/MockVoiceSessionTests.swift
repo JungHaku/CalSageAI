@@ -195,15 +195,9 @@ struct MockVoiceSessionTests {
         #expect(throws: CalToolError.self) { try CalTool(call) }
     }
 
-    @Test("the greeting script asks for grounding before speaking")
+    @Test("the greeting script stays silent and waits")
     func greetingScriptShape() throws {
-        let tools = MockVoiceSession.greeting.compactMap { beat -> CalTool? in
-            guard case .calls(let call) = beat else { return nil }
-            return try? CalTool(call)
-        }
-        #expect(tools.first == .todayStatus)
-        #expect(tools.contains(.startCheckIn))
-        #expect(tools.count == 2)
+        #expect(MockVoiceSession.greeting == [.idle])
     }
 
     @Test("practice mute keeps the mic gated but still lets Cal speak")

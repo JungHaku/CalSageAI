@@ -1,4 +1,3 @@
-import CalKit
 import Foundation
 
 /// A tool call as it arrives from the agent, undecoded.
@@ -45,20 +44,12 @@ public enum CalScreen: String, Codable, Sendable, CaseIterable {
 /// short, enumerated, and reviewed in a diff.
 ///
 /// Note what is deliberately absent: nothing deletes, nothing spends, nothing
-/// signs in or out, and nothing changes consent. Those stay taps.
+/// signs in or out, and nothing changes consent. Those stay taps. Daily check-in
+/// is a form on the phone, not a voice tool.
 public enum CalTool: Sendable, Equatable {
     /// Grounding before Cal talks about "how you've been." Call this before
     /// stating any number about them. If they have not checked in, this says so.
     case todayStatus
-
-    /// Begin the spoken five-question check-in. Returns the first prompt to ask.
-    case startCheckIn
-    /// Record a 0–10 answer for the current check-in step (before or after).
-    case recordScore(value: Int)
-    /// Student declined the regulation exercise — advance without an after-score.
-    case skipRegulation
-    /// After a regulation practice finishes, move to the re-rate question.
-    case continueCheckIn
 
     case playPractice(slug: String)
     case stopPractice
@@ -76,22 +67,9 @@ extension CalTool {
     /// the student's data, so it validates rather than coerces.
     public init(_ call: VoiceToolCall) throws(CalToolError) {
         switch call.name {
-        case Name.todayStatus:     self = .todayStatus
-        case Name.startCheckIn:    self = .startCheckIn
-        case Name.skipRegulation:  self = .skipRegulation
-        case Name.continueCheckIn: self = .continueCheckIn
-        case Name.stopPractice:    self = .stopPractice
-        case Name.endSession:      self = .endSession
-
-        case Name.recordScore:
-            let args: ScoreArgs = try Self.decode(call)
-            guard Score.validRange.contains(args.value) else {
-                throw .invalidValue(
-                    tool: call.name, argument: "value",
-                    reason: "must be an integer from 0 to 10"
-                )
-            }
-            self = .recordScore(value: args.value)
+        case Name.todayStatus:  self = .todayStatus
+        case Name.stopPractice: self = .stopPractice
+        case Name.endSession:   self = .endSession
 
         case Name.playPractice:
             let args: SlugArgs = try Self.decode(call)
@@ -127,38 +105,29 @@ extension CalTool {
     /// The tool's wire name, for logging and for asserting against `agent.json`.
     public var name: String {
         switch self {
-        case .todayStatus:     Name.todayStatus
-        case .startCheckIn:    Name.startCheckIn
-        case .recordScore:     Name.recordScore
-        case .skipRegulation:  Name.skipRegulation
-        case .continueCheckIn: Name.continueCheckIn
-        case .playPractice:    Name.playPractice
-        case .stopPractice:    Name.stopPractice
-        case .showPlace:       Name.showPlace
-        case .openScreen:      Name.openScreen
-        case .endSession:      Name.endSession
+        case .todayStatus:  Name.todayStatus
+        case .playPractice: Name.playPractice
+        case .stopPractice: Name.stopPractice
+        case .showPlace:    Name.showPlace
+        case .openScreen:   Name.openScreen
+        case .endSession:   Name.endSession
         }
     }
 
     public enum Name {
-        public static let todayStatus     = "get_today_status"
-        public static let startCheckIn    = "start_check_in"
-        public static let recordScore     = "record_score"
-        public static let skipRegulation  = "skip_regulation"
-        public static let continueCheckIn = "continue_check_in"
-        public static let playPractice    = "play_practice"
-        public static let stopPractice    = "stop_practice"
-        public static let showPlace       = "show_place"
-        public static let openScreen      = "open_screen"
-        public static let endSession      = "end_session"
+        public static let todayStatus  = "get_today_status"
+        public static let playPractice = "play_practice"
+        public static let stopPractice = "stop_practice"
+        public static let showPlace    = "show_place"
+        public static let openScreen   = "open_screen"
+        public static let endSession   = "end_session"
 
         /// Every name the decoder accepts. `CalToolDescriptorTests` asserts this
         /// matches `CalToolDescriptor.all` in both directions, so a tool added to
         /// one and forgotten in the other fails `swift test` rather than failing
         /// silently in front of Dr. Mia.
         public static let all = [
-            todayStatus, startCheckIn, recordScore, skipRegulation, continueCheckIn,
-            playPractice, stopPractice, showPlace, openScreen, endSession,
+            todayStatus, playPractice, stopPractice, showPlace, openScreen, endSession,
         ]
     }
 
@@ -196,7 +165,6 @@ extension CalTool {
     private struct SlugArgs: Decodable { let slug: String }
     private struct QueryArgs: Decodable { let query: String }
     private struct ScreenArgs: Decodable { let screen: String }
-    private struct ScoreArgs: Decodable { let value: Int }
 }
 
 // MARK: - Results

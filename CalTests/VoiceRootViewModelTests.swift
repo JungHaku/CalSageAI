@@ -322,14 +322,13 @@ struct VoiceRootViewModelTests {
         #expect(model.turns.contains { $0.text.contains("lost you") })
     }
 
-    @Test("beginCheckIn puts the first question on the home banner")
-    func beginCheckInShowsPrompt() async {
+    @Test("presentCheckInForm opens the form sheet flag")
+    func presentCheckInForm() async {
         let (model, router, _) = makeModel([.idle])
         model.start()
         #expect(await waitUntil { model.isLive })
-        model.beginCheckIn()
-        #expect(await waitUntil { router.checkInPrompt != nil })
-        #expect(router.checkInPrompt?.contains("safe") == true)
+        router.presentCheckInForm()
+        #expect(router.showingCheckInForm == true)
         await model.stop()
     }
 }

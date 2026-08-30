@@ -2,12 +2,11 @@
   "name": "C.A.L",
   "conversation_config": {
     "agent": {
-      "first_message": "{{session_opener}}",
+      "first_message": "",
       "language": "en",
       "dynamic_variables": {
         "dynamic_variable_placeholders": {
-          "memory_digest": "none",
-          "session_opener": "Check in today."
+          "memory_digest": "none"
         }
       },
       "prompt": {

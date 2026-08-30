@@ -280,9 +280,6 @@ extension MockVoiceSession {
     /// Cal stating a number that contradicts the tool she just called is a
     /// demonstration of the exact bug that tool exists to prevent.
     public static let greeting: [Beat] = [
-        .calls(VoiceToolCall(id: "c1", name: CalTool.Name.todayStatus)),
-        .says("Check in today."),
-        .calls(VoiceToolCall(id: "c2", name: CalTool.Name.startCheckIn)),
         .idle,
     ]
 

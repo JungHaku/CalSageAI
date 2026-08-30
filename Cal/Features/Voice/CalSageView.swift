@@ -4,7 +4,7 @@ import CalVoice
 import SwiftUI
 
 /// The only home: Cal's orb in the centre, a top-right menu of destinations,
-/// and the live transcript underneath.
+/// and the live transcript underneath.=
 ///
 /// Taps and client tools share `SageRouter.path`. There is nothing behind this
 /// screen — no Close, no tab bar. Backgrounding still stops the session (owned
@@ -131,7 +131,7 @@ struct CalSageView: View {
                 .accessibilityIdentifier("dest-map")
 
                 Button {
-                    model.beginCheckIn()
+                    router.presentCheckInForm()
                 } label: {
                     Label("Check in", systemImage: "checklist")
                 }
@@ -171,44 +171,8 @@ struct CalSageView: View {
                     .accessibilityIdentifier("voice-state")
             }
 
-            if let prompt = router.checkInPrompt {
-                checkInPanel(prompt: prompt, model: model)
-            } else {
-                suggestionChips(model)
-            }
+            suggestionChips(model)
         }
-    }
-
-    @ViewBuilder
-    private func checkInPanel(prompt: String, model: VoiceRootViewModel) -> some View {
-        VStack(spacing: 10) {
-            if let progress = router.checkInProgress {
-                Text("\(progress.answered) of \(progress.total)")
-                    .font(.caption)
-                    .foregroundStyle(Surface.inkSecondary)
-                    .monospacedDigit()
-                    .accessibilityIdentifier("checkin-progress")
-            }
-            Text(prompt)
-                .font(.subheadline.weight(.medium))
-                .multilineTextAlignment(.center)
-                .foregroundStyle(Surface.inkPrimary)
-                .accessibilityIdentifier("question-prompt")
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(0...10, id: \.self) { value in
-                        Button("\(value)") {
-                            model.recordCheckInScore(value)
-                        }
-                        .buttonStyle(.bordered)
-                        .accessibilityIdentifier("score-\(value)")
-                    }
-                }
-            }
-            .accessibilityIdentifier("score-chips")
-        }
-        .padding(.top, 4)
     }
 
     @ViewBuilder
@@ -221,7 +185,7 @@ struct CalSageView: View {
                 .accessibilityIdentifier("chip-ask")
 
                 chip("Check in") {
-                    model.beginCheckIn()
+                    router.presentCheckInForm()
                 }
                 .accessibilityIdentifier("chip-checkin")
 

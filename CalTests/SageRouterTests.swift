@@ -1,4 +1,5 @@
 import CalContent
+import CalData
 import CalKit
 import CalVoice
 import Foundation
@@ -11,11 +12,13 @@ import Testing
 struct SageRouterTests {
 
     private func router(
-        practices: PracticeRunCoordinator = PracticeRunCoordinator()
+        practices: PracticeRunCoordinator = PracticeRunCoordinator(),
+        store: (any CoherenceStoring)? = nil
     ) -> SageRouter {
         SageRouter(
             content: BundledContentRepository(),
             placeSearch: LocalPlaceSearch(),
+            store: store,
             practices: practices
         )
     }
@@ -32,12 +35,12 @@ struct SageRouterTests {
         return condition()
     }
 
-    @Test("with no history, Cal is told to start the spoken check-in")
+    @Test("with no history, Cal is told the form handles check-in")
     func statusWhenEmpty() async {
         let result = await router().perform(.todayStatus)
         #expect(!result.isError)
         #expect(result.text.contains("have not finished a check-in"))
-        #expect(result.text.contains("start_check_in"))
+        #expect(!result.text.contains("start_check_in"))
     }
 
     @Test("reading the status never navigates")
@@ -48,26 +51,35 @@ struct SageRouterTests {
         #expect(router.path.isEmpty, "grounding must not push off Cal")
     }
 
-    @Test("start_check_in returns the first spoken question without a screen")
-    func startsSpokenCheckIn() async {
-        let router = router()
-        let result = await router.perform(.startCheckIn)
-        #expect(!result.isError)
-        #expect(router.path.isEmpty)
-        #expect(router.checkInPrompt != nil)
-        #expect(result.text.contains("How safe does your body feel"))
+    @Test("hasCompletedCheckInToday is false with an empty store")
+    func notCheckedIn() async {
+        let store = InMemoryCoherenceStore([])
+        let router = router(store: store)
+        #expect(await router.hasCompletedCheckInToday() == false)
     }
 
-    @Test("five high scores complete the spoken check-in")
-    func spokenCheckInCompletes() async {
+    @Test("hasCompletedCheckInToday is true after a complete check-in")
+    func checkedIn() async throws {
+        let today = LocalDate(year: 2026, month: 7, day: 29)
+        let checkIn = CheckIn.fixture(band: .moderate, on: today, regulated: false)
+        let store = InMemoryCoherenceStore([checkIn])
+        let router = SageRouter(
+            content: BundledContentRepository(),
+            placeSearch: LocalPlaceSearch(),
+            store: store,
+            dates: FixedDateProvider(day: today)
+        )
+        #expect(await router.hasCompletedCheckInToday() == true)
+    }
+
+    @Test("presentCheckInForm toggles the sheet flag")
+    func presentForm() {
         let router = router()
-        _ = await router.perform(.startCheckIn)
-        for _ in 0..<5 {
-            let result = await router.perform(.recordScore(value: 9))
-            #expect(!result.isError)
-        }
-        #expect(router.checkInFlow == nil)
-        #expect(router.checkInPrompt == nil)
+        #expect(router.showingCheckInForm == false)
+        router.presentCheckInForm()
+        #expect(router.showingCheckInForm == true)
+        router.dismissCheckInForm()
+        #expect(router.showingCheckInForm == false)
     }
 
     @Test("practice then map push on the same path")

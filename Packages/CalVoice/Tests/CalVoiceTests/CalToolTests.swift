@@ -10,25 +10,16 @@ struct CalToolTests {
     @Test("no-argument tools")
     func noArguments() throws {
         #expect(try CalTool(VoiceToolCall(id: "1", name: "get_today_status")) == .todayStatus)
-        #expect(try CalTool(VoiceToolCall(id: "2", name: "start_check_in")) == .startCheckIn)
-        #expect(try CalTool(VoiceToolCall(id: "3", name: "skip_regulation")) == .skipRegulation)
-        #expect(try CalTool(VoiceToolCall(id: "4", name: "continue_check_in")) == .continueCheckIn)
-        #expect(try CalTool(VoiceToolCall(id: "5", name: "stop_practice")) == .stopPractice)
-        #expect(try CalTool(VoiceToolCall(id: "6", name: "end_session")) == .endSession)
+        #expect(try CalTool(VoiceToolCall(id: "2", name: "stop_practice")) == .stopPractice)
+        #expect(try CalTool(VoiceToolCall(id: "3", name: "end_session")) == .endSession)
     }
 
-    @Test("record_score accepts 0–10")
-    func recordScore() throws {
-        #expect(
-            try CalTool(VoiceToolCall(id: "1", name: "record_score", json: #"{"value":7}"#))
-                == .recordScore(value: 7)
-        )
-    }
-
-    @Test("record_score rejects out of range")
-    func recordScoreRange() {
-        #expect(throws: CalToolError.self) {
-            try CalTool(VoiceToolCall(id: "1", name: "record_score", json: #"{"value":11}"#))
+    @Test("spoken check-in tools are retired")
+    func retiredSpokenCheckIn() {
+        for name in ["start_check_in", "record_score", "skip_regulation", "continue_check_in"] {
+            #expect(throws: CalToolError.self) {
+                try CalTool(VoiceToolCall(id: "1", name: name, json: #"{"value":5}"#))
+            }
         }
     }
 

@@ -93,8 +93,7 @@ final class CalUITests: XCTestCase {
 
     func testCheckInOpensOnTheFirstOfFiveQuestions() {
         let app = launch()
-        SageUI.open(app, "start-checkin")
-
+        // Empty scenario: form should appear at startup without opening the menu.
         let prompt = SageUI.element(app, "question-prompt")
         XCTAssertTrue(prompt.waitForExistence(timeout: 10))
         XCTAssertTrue(
@@ -102,9 +101,11 @@ final class CalUITests: XCTestCase {
             "expected safety prompt, got: \(prompt.label)"
         )
         XCTAssertTrue(
-            SageUI.element(app, "score-chips").waitForExistence(timeout: 5),
-            "spoken check-in should offer 0–10 chips"
+            SageUI.element(app, "score-scale").waitForExistence(timeout: 5)
+                || SageUI.element(app, "checkin-progress").waitForExistence(timeout: 2),
+            "check-in form should show the 0–10 scale"
         )
+        XCTAssertTrue(app.buttons["checkin-dismiss"].waitForExistence(timeout: 5))
     }
 
     /// The reminder toggle must never reach the real notification centre in a test

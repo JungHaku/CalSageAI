@@ -399,8 +399,6 @@ final class AppContainer {
         // Instant under test so the suite doesn't wait on scripted pauses; paced
         // otherwise, because the point of the mock is to judge how it feels.
         let beatDelay: Duration = isUITesting ? .zero : .milliseconds(90)
-        let coherenceStore = store
-        let dateProvider = dates
         let makeVoiceSession: @MainActor @Sendable () -> any VoiceSession = {
             if useMockCoach {
                 return MockVoiceSession(script: voiceScript.beats, beatDelay: beatDelay)
@@ -412,9 +410,6 @@ final class AppContainer {
                         return MemoryDigest.noneSentinel
                     }
                     return MemoryDigest.fence(await remoteMemory.digest())
-                },
-                loadSessionOpener: {
-                    await SessionOpener.line(store: coherenceStore, dates: dateProvider)
                 }
             )
         }
@@ -499,28 +494,6 @@ enum VoiceScript: String, CaseIterable {
         case .dropAndRecover: MockVoiceSession.dropAndRecover
         case .dropAndFail:    MockVoiceSession.dropAndFail
         }
-    }
-}
-
-/// First spoken line for a live session, from today's check-in (or the invite).
-enum SessionOpener {
-    static func line(
-        store: any CoherenceStoring,
-        dates: any DateProvider
-    ) async -> String {
-        let today = dates.today
-        let todays = ((try? await store.checkIns(from: today, to: today)) ?? [])
-            .filter(\.isComplete)
-        guard let checkIn = todays.last, let avg = checkIn.averageAfter else {
-            return "Check in today."
-        }
-        if avg >= 8 {
-            return "Seems like you're having a great day. What's on your mind?"
-        }
-        if avg >= 5 {
-            return "How's the rest of today feeling?"
-        }
-        return "I'm here with you. What's been the hardest part today?"
     }
 }
 

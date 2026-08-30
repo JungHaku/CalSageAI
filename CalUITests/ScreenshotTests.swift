@@ -81,6 +81,9 @@ final class ScreenshotTests: XCTestCase {
             SageUI.tap(app.buttons["start-checkin"])
             _ = SageUI.element(app, "question-prompt").waitForExistence(timeout: 10)
             capture(app, "05-checkin")
+            if app.buttons["checkin-dismiss"].waitForExistence(timeout: 3) {
+                SageUI.tap(app.buttons["checkin-dismiss"])
+            }
         }
 
         SageUI.open(app, "dest-settings", timeout: 20)

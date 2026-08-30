@@ -55,7 +55,7 @@ struct CalToolDescriptorTests {
     func numbersRule() throws {
         let descriptor = try #require(CalToolDescriptor.all.first { $0.name == CalTool.Name.todayStatus })
         #expect(descriptor.purpose.lowercased().contains("never state a number"))
-        #expect(descriptor.purpose.lowercased().contains("start_check_in"))
+        #expect(descriptor.purpose.lowercased().contains("do not start a check-in"))
     }
 
     /// Builds a call that should decode, from the descriptor alone. If a

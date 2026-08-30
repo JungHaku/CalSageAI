@@ -74,19 +74,15 @@ struct RootView: View {
         startSageIfNeeded()
     }
 
+    /// Creates sage + router but does **not** connect voice yet — RootNavigation
+    /// waits for today's check-in form (if needed) first.
     private func startSageIfNeeded() {
         guard session == nil else { return }
         let created = SageRouter(
             content: container.content,
             placeSearch: container.placeSearch,
             store: container.store,
-            dates: container.dates,
-            remember: { text in
-                Task {
-                    guard AppContainer.loadMemoryConsent().permitsRemoteMemory else { return }
-                    await container.remoteMemory.remember(text: text, severity: "none")
-                }
-            }
+            dates: container.dates
         )
         let sage = SageSession(
             makeSession: container.makeVoiceSession,
@@ -100,7 +96,6 @@ struct RootView: View {
         )
         router = created
         session = sage
-        sage.connectIfNeeded()
     }
 
     private func stopSage() async {
@@ -111,9 +106,11 @@ struct RootView: View {
 }
 
 private struct RootNavigation: View {
+    @Environment(AppContainer.self) private var container
     @Bindable var router: SageRouter
     @Bindable var session: SageSession
     @State private var showingEmergency = false
+    @State private var voiceGateResolved = false
 
     var body: some View {
         NavigationStack(path: $router.path) {
@@ -124,6 +121,24 @@ private struct RootNavigation: View {
                         .toolbar { emergencyToolbarItem }
                 }
         }
+        .sheet(isPresented: $router.showingCheckInForm, onDismiss: {
+            finishVoiceGateIfNeeded()
+        }) {
+            NavigationStack {
+                CheckInView(kind: .full) {
+                    router.dismissCheckInForm()
+                }
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Not now") {
+                            router.dismissCheckInForm()
+                        }
+                        .accessibilityIdentifier("checkin-dismiss")
+                    }
+                }
+            }
+            .presentationDetents([.large])
+        }
         .sheet(isPresented: $showingEmergency) {
             EmergencyView()
                 .onDisappear { session.acknowledgeCrisis() }
@@ -132,6 +147,28 @@ private struct RootNavigation: View {
             guard severity == .acute, !router.path.isEmpty else { return }
             showingEmergency = true
         }
+        .task {
+            await resolveVoiceGate()
+        }
+    }
+
+    /// If they have not finished today's check-in, show the form first; only
+    /// then connect the voice agent so it waits quietly for them.
+    private func resolveVoiceGate() async {
+        guard !voiceGateResolved else { return }
+        let checkedIn = await router.hasCompletedCheckInToday()
+        if checkedIn {
+            voiceGateResolved = true
+            session.connectIfNeeded()
+        } else {
+            router.presentCheckInForm()
+        }
+    }
+
+    private func finishVoiceGateIfNeeded() {
+        guard !voiceGateResolved else { return }
+        voiceGateResolved = true
+        session.connectIfNeeded()
     }
 
     @ToolbarContentBuilder
@@ -148,39 +185,10 @@ private struct RootNavigation: View {
     }
 }
 
-#Preview("voice home") {
-    RootView().environment(AppContainer.live(arguments: ["-CalUseMockCoach", "1"]))
-}
-
-#Preview("login") {
-    RootView().environment(
-        AppContainer.live(arguments: ["-CalUseMockCoach", "1", "-CalForceLogin", "1"])
-    )
-}
-
-#Preview("welcome") {
-    RootView().environment(
-        AppContainer.live(arguments: ["-CalUseMockCoach", "1", "-CalShowWelcome", "1"])
-    )
-}
-
-#Preview("practice") {
-    RootView().environment(
-        AppContainer.live(arguments: [
+#Preview {
+    RootView()
+        .environment(AppContainer.live(arguments: [
             "-CalUseMockCoach", "1", "-CalVoiceScript", "greeting",
-            "-CalScenario", "empty", "-CalFixedDate", "2026-07-29",
-        ])
-    )
-}
-
-#Preview("crisis") {
-    RootView().environment(
-        AppContainer.live(arguments: ["-CalUseMockCoach", "1", "-CalVoiceScript", "crisis"])
-    )
-}
-
-#Preview("microphone denied") {
-    RootView().environment(
-        AppContainer.live(arguments: ["-CalUseMockCoach", "1", "-CalVoiceScript", "micDenied"])
-    )
+            "-CalScenario", "empty",
+        ]))
 }
