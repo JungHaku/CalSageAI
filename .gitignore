@@ -34,6 +34,7 @@ AuthKey_*.p8
 supabase/.branches/
 supabase/.temp/
 supabase/.env
+supabase/functions/.env
 
 ## Snapshot test failures (the recorded baselines DO get committed)
 **/__Snapshots__/**/*.failure.png

@@ -2,6 +2,10 @@
 .branches
 .temp
 
+# Local Edge Function secrets (OPENAI_API_KEY, ELEVENLABS_API_KEY, etc.)
+.env
+functions/.env
+
 # dotenvx
 .env.keys
 .env.local
